@@ -20,20 +20,12 @@ import {
 } from '@react-navigation/native';
 
 import {
-  getCurrentSession,
-} from '../../services/authService';
-
-import {
-  getCard,
-} from '../../services/cardService';
-
-import {
-  getCardAnalytics,
-  getCardEvents,
+  getAccountAnalytics,
+  getAllCardEvents,
 } from '../../services/analyticsService';
 
 import {
-  getConnections,
+  getAllConnections,
 } from '../../services/connectionService';
 
 export default function InsightsScreen() {
@@ -54,31 +46,23 @@ export default function InsightsScreen() {
       setLoading(true);
 
       try {
-        const session =
-          await getCurrentSession();
-
-        if (!session?.user) return;
-
-        const card =
-          await getCard(
-            session.user.id
-          );
-
         const [
           analyticsData,
           eventData,
           connectionData,
         ] = await Promise.all([
-          getCardAnalytics(card.id),
-          getCardEvents(card.id),
-          getConnections(card.id),
+          getAccountAnalytics(),
+          getAllCardEvents(),
+          getAllConnections(),
         ]);
 
         setAnalytics(
           analyticsData
         );
 
-        setEvents(eventData);
+        setEvents(
+          eventData
+        );
 
         setConnections(
           connectionData
@@ -116,6 +100,18 @@ export default function InsightsScreen() {
         item.stage === 'converted'
     ).length;
 
+  const interested =
+    connections.filter(
+      (item) =>
+        item.stage === 'interested'
+    ).length;
+
+  const followUps =
+    connections.filter(
+      (item) =>
+        item.stage === 'follow_up'
+    ).length;
+
   const conversionRate =
     connections.length > 0
       ? (
@@ -137,8 +133,7 @@ export default function InsightsScreen() {
         </Text>
 
         <Text style={styles.subtitle}>
-          Track your card performance
-          and conversions
+          Performance across all your digital cards
         </Text>
 
         <View style={styles.grid}>
@@ -169,9 +164,34 @@ export default function InsightsScreen() {
           />
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
+        <Text style={styles.sectionTitle}>
+          LEAD PIPELINE
+        </Text>
+
+        <View style={styles.card}>
+          <Row
+            label="Total Connections"
+            value={connections.length}
+          />
+
+          <Row
+            label="Interested"
+            value={interested}
+          />
+
+          <Row
+            label="Follow Ups"
+            value={followUps}
+          />
+
+          <Row
+            label="Converted"
+            value={converted}
+            last
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>
           ENGAGEMENT
         </Text>
 
@@ -220,10 +240,8 @@ export default function InsightsScreen() {
           />
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          LEAD PERFORMANCE
+        <Text style={styles.sectionTitle}>
+          CONVERSION PERFORMANCE
         </Text>
 
         <View style={styles.card}>
@@ -235,7 +253,7 @@ export default function InsightsScreen() {
           />
 
           <Row
-            label="Converted"
+            label="Converted Leads"
             value={converted}
           />
 
@@ -246,30 +264,23 @@ export default function InsightsScreen() {
           />
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          RECENT CARD ACTIVITY
+        <Text style={styles.sectionTitle}>
+          RECENT ACTIVITY
         </Text>
 
         {events.length === 0 ? (
           <View style={styles.empty}>
-            <Text
-              style={styles.emptyTitle}
-            >
+            <Text style={styles.emptyTitle}>
               No activity yet
             </Text>
 
-            <Text
-              style={styles.emptyText}
-            >
-              Card views and link clicks
-              will appear here.
+            <Text style={styles.emptyText}>
+              Public card views and link clicks will appear here.
             </Text>
           </View>
         ) : (
           events
-            .slice(0, 15)
+            .slice(0, 20)
             .map((event) => (
               <View
                 key={event.id}
@@ -315,18 +326,17 @@ export default function InsightsScreen() {
   );
 }
 
-function Metric({ value, label }) {
+function Metric({
+  value,
+  label,
+}) {
   return (
     <View style={styles.metric}>
-      <Text
-        style={styles.metricValue}
-      >
+      <Text style={styles.metricValue}>
         {value}
       </Text>
 
-      <Text
-        style={styles.metricLabel}
-      >
+      <Text style={styles.metricLabel}>
         {label}
       </Text>
     </View>
@@ -474,6 +484,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 5,
     fontSize: 11,
+    textAlign: 'center',
   },
 
   eventCard: {

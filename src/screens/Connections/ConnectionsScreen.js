@@ -39,7 +39,7 @@ import {
   addLeadActivity,
   calculateConnectionStats,
   createConnection,
-  getConnections,
+  getAllConnections,
   STAGE_LABELS,
 } from '../../services/connectionService';
 
@@ -88,9 +88,7 @@ export default function ConnectionsScreen({
       setCard(currentCard);
 
       const data =
-        await getConnections(
-          currentCard.id
-        );
+        await getAllConnections();
 
       setConnections(data);
     } catch (error) {
@@ -976,3 +974,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
+

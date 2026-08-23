@@ -52,17 +52,21 @@ import {
 } from '../../services/portfolioService';
 
 import {
-  getConnections,
+  getAllConnections,
 } from '../../services/connectionService';
 
 import {
-  getCardAnalytics,
+  getAccountAnalytics,
   recordCardEvent,
 } from '../../services/analyticsService';
 
 import {
   CARD_WEB_URL,
 } from '../../constants/config';
+
+import {
+  getNotifications,
+} from '../../services/notificationService';
 
 export default function HomeScreen({
   navigation,
@@ -95,6 +99,9 @@ export default function HomeScreen({
   const [qrVisible, setQrVisible] =
     useState(false);
 
+  const [unreadNotifications, setUnreadNotifications] =
+    useState(0);
+
   const loadDashboard =
     useCallback(async () => {
       setLoading(true);
@@ -120,6 +127,7 @@ export default function HomeScreen({
           loadedPortfolio,
           loadedConnections,
           loadedAnalytics,
+          loadedNotifications,
         ] = await Promise.all([
           ensureDefaultLinks(
             currentCard
@@ -133,12 +141,12 @@ export default function HomeScreen({
             currentCard.id
           ),
 
-          getConnections(
-            currentCard.id
-          ),
+          getAllConnections(),
 
-          getCardAnalytics(
-            currentCard.id
+          getAccountAnalytics(),
+
+          getNotifications(
+            session.user.id
           ),
         ]);
 
@@ -150,6 +158,12 @@ export default function HomeScreen({
         );
         setAnalytics(
           loadedAnalytics
+        );
+
+        setUnreadNotifications(
+          (loadedNotifications || []).filter(
+            (item) => !item.is_read
+          ).length
         );
       } catch (error) {
         console.log(
@@ -400,12 +414,27 @@ export default function HomeScreen({
             style={
               styles.notificationButton
             }
+            onPress={() =>
+              navigation
+                .getParent()
+                ?.navigate('Notifications')
+            }
           >
             <Ionicons
               name="notifications-outline"
               size={22}
               color="#111827"
             />
+
+            {unreadNotifications > 0 ? (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotifications > 9
+                    ? '9+'
+                    : unreadNotifications}
+                </Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         </View>
 
@@ -438,7 +467,11 @@ export default function HomeScreen({
             MY CARD
           </Text>
 
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('MyCards')
+            }
+          >
             <Text
               style={styles.addText}
             >
@@ -535,9 +568,9 @@ export default function HomeScreen({
               icon="create-outline"
               label="Edit"
               onPress={() =>
-                navigation.navigate(
-                  'Profile'
-                )
+                navigation
+                  .getParent()
+                  ?.navigate('CardEditor')
               }
             />
 
@@ -985,6 +1018,26 @@ const styles =
       alignItems: 'center',
       justifyContent:
         'center',
+      position: 'relative',
+    },
+
+    notificationBadge: {
+      position: 'absolute',
+      right: -4,
+      top: -4,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      paddingHorizontal: 4,
+      backgroundColor: '#B7791F',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    notificationBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 9,
+      fontWeight: '900',
     },
 
     welcomeRow: {
@@ -1316,3 +1369,5 @@ const styles =
       fontWeight: '800',
     },
   });
+
+

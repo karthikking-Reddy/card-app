@@ -40,6 +40,19 @@ export async function getConnections(cardId) {
   return data || [];
 }
 
+
+export async function getAllConnections() {
+  const { data, error } = await supabase
+    .from('connections')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
 export async function getConnection(connectionId) {
   const { data, error } = await supabase
     .from('connections')
@@ -153,3 +166,4 @@ export function calculateConnectionStats(connections) {
 
   return stats;
 }
+

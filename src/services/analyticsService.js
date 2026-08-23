@@ -42,9 +42,20 @@ export async function getCardEvents(cardId) {
   return data || [];
 }
 
-export async function getCardAnalytics(cardId) {
-  const events = await getCardEvents(cardId);
+export async function getAllCardEvents() {
+  const { data, error } = await supabase
+    .from('card_events')
+    .select('*')
+    .order('created_at', { ascending: false });
 
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
+function calculateAnalytics(events) {
   const stats = {
     cardViews: 0,
     linkClicks: 0,
@@ -115,4 +126,14 @@ export async function getCardAnalytics(cardId) {
   }
 
   return stats;
+}
+
+export async function getCardAnalytics(cardId) {
+  const events = await getCardEvents(cardId);
+  return calculateAnalytics(events);
+}
+
+export async function getAccountAnalytics() {
+  const events = await getAllCardEvents();
+  return calculateAnalytics(events);
 }

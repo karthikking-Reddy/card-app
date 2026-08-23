@@ -9,9 +9,16 @@ import ServicesScreen from '../screens/Services/ServicesScreen';
 import PortfolioScreen from '../screens/Portfolio/PortfolioScreen';
 import LeadDetailScreen from '../screens/Connections/LeadDetailScreen';
 
-const Stack = createNativeStackNavigator();
+import MyCardsScreen from '../screens/Cards/MyCardsScreen';
+import CardSettingsScreen from '../screens/Settings/CardSettingsScreen';
+import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 
-export default function RootNavigator({ session }) {
+const Stack =
+  createNativeStackNavigator();
+
+export default function RootNavigator({
+  session,
+}) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -53,6 +60,21 @@ export default function RootNavigator({ session }) {
           <Stack.Screen
             name="LeadDetail"
             component={LeadDetailScreen}
+          />
+
+          <Stack.Screen
+            name="MyCards"
+            component={MyCardsScreen}
+          />
+
+          <Stack.Screen
+            name="CardSettings"
+            component={CardSettingsScreen}
+          />
+
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
           />
         </>
       )}
