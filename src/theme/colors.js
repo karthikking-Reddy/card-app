@@ -1,0 +1,15 @@
+export const colors = {
+  background: '#0B1020',
+  surface: '#171D30',
+  white: '#FFFFFF',
+  black: '#111827',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  border: '#E5E7EB',
+  borderDark: '#273044',
+  primary: '#111827',
+  success: '#16A34A',
+  danger: '#DC2626',
+  transparent: 'transparent',
+};
