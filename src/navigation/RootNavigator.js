@@ -1,16 +1,16 @@
-import {
-  createNativeStackNavigator,
-} from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import AuthScreen from '../screens/AuthScreen';
 import TabNavigator from './TabNavigator';
 
-const Stack =
-  createNativeStackNavigator();
+import CardScreen from '../screens/Card/CardScreen';
+import SocialLinksScreen from '../screens/SocialLinks/SocialLinksScreen';
+import ServicesScreen from '../screens/Services/ServicesScreen';
+import PortfolioScreen from '../screens/Portfolio/PortfolioScreen';
 
-export default function RootNavigator({
-  session,
-}) {
+const Stack = createNativeStackNavigator();
+
+export default function RootNavigator({ session }) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -20,17 +20,35 @@ export default function RootNavigator({
       {!session ? (
         <Stack.Screen
           name="Auth"
-          component={
-            AuthScreen
-          }
+          component={AuthScreen}
         />
       ) : (
-        <Stack.Screen
-          name="Main"
-          component={
-            TabNavigator
-          }
-        />
+        <>
+          <Stack.Screen
+            name="MainTabs"
+            component={TabNavigator}
+          />
+
+          <Stack.Screen
+            name="CardEditor"
+            component={CardScreen}
+          />
+
+          <Stack.Screen
+            name="SocialLinks"
+            component={SocialLinksScreen}
+          />
+
+          <Stack.Screen
+            name="Services"
+            component={ServicesScreen}
+          />
+
+          <Stack.Screen
+            name="Portfolio"
+            component={PortfolioScreen}
+          />
+        </>
       )}
     </Stack.Navigator>
   );
