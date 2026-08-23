@@ -7,6 +7,7 @@ import CardScreen from '../screens/Card/CardScreen';
 import SocialLinksScreen from '../screens/SocialLinks/SocialLinksScreen';
 import ServicesScreen from '../screens/Services/ServicesScreen';
 import PortfolioScreen from '../screens/Portfolio/PortfolioScreen';
+import LeadDetailScreen from '../screens/Connections/LeadDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +48,11 @@ export default function RootNavigator({ session }) {
           <Stack.Screen
             name="Portfolio"
             component={PortfolioScreen}
+          />
+
+          <Stack.Screen
+            name="LeadDetail"
+            component={LeadDetailScreen}
           />
         </>
       )}
