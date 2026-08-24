@@ -32,22 +32,22 @@ import {
 } from '../../services/authService';
 
 import {
-  getCard,
-} from '../../services/cardService';
-
-import {
   addLeadActivity,
-  calculateConnectionStats,
   createConnection,
   getAllConnections,
-  STAGE_LABELS,
 } from '../../services/connectionService';
+
+import {
+  getLeadStages,
+} from '../../services/leadStageService';
 
 export default function ConnectionsScreen({
   navigation,
 }) {
-  const [card, setCard] = useState(null);
   const [connections, setConnections] =
+    useState([]);
+
+  const [stages, setStages] =
     useState([]);
 
   const [loading, setLoading] =
@@ -65,41 +65,54 @@ export default function ConnectionsScreen({
   const [saving, setSaving] =
     useState(false);
 
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    company: '',
-    requirement: '',
-  });
+  const [form, setForm] =
+    useState({
+      name: '',
+      phone: '',
+      email: '',
+      company: '',
+      requirement: '',
+    });
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load =
+    useCallback(async () => {
+      setLoading(true);
 
-    try {
-      const session =
-        await getCurrentSession();
+      try {
+        const session =
+          await getCurrentSession();
 
-      if (!session?.user) return;
+        if (!session?.user) {
+          return;
+        }
 
-      const currentCard =
-        await getCard(session.user.id);
+        const [
+          connectionData,
+          stageData,
+        ] = await Promise.all([
+          getAllConnections(),
 
-      setCard(currentCard);
+          getLeadStages(
+            session.user.id
+          ),
+        ]);
 
-      const data =
-        await getAllConnections();
+        setConnections(
+          connectionData
+        );
 
-      setConnections(data);
-    } catch (error) {
-      Alert.alert(
-        'Unable to load connections',
-        error.message
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        setStages(
+          stageData
+        );
+      } catch (error) {
+        Alert.alert(
+          'Unable to load CRM',
+          error.message
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,24 +120,93 @@ export default function ConnectionsScreen({
     }, [load])
   );
 
-  const stats =
+  const activeStages =
     useMemo(
       () =>
-        calculateConnectionStats(
-          connections
+        stages.filter(
+          (stage) =>
+            stage.is_active
         ),
-      [connections]
+      [stages]
     );
+
+  const stageMap =
+    useMemo(() => {
+      const map = {};
+
+      for (const stage of stages) {
+        map[stage.stage_key] =
+          stage;
+      }
+
+      return map;
+    }, [stages]);
+
+  const wonStageKeys =
+    useMemo(
+      () =>
+        new Set(
+          stages
+            .filter(
+              (stage) =>
+                stage.is_won
+            )
+            .map(
+              (stage) =>
+                stage.stage_key
+            )
+        ),
+      [stages]
+    );
+
+  const lostStageKeys =
+    useMemo(
+      () =>
+        new Set(
+          stages
+            .filter(
+              (stage) =>
+                stage.is_lost
+            )
+            .map(
+              (stage) =>
+                stage.stage_key
+            )
+        ),
+      [stages]
+    );
+
+  const wonCount =
+    connections.filter(
+      (item) =>
+        wonStageKeys.has(
+          item.stage
+        )
+    ).length;
+
+  const openCount =
+    connections.filter(
+      (item) =>
+        !wonStageKeys.has(
+          item.stage
+        ) &&
+        !lostStageKeys.has(
+          item.stage
+        )
+    ).length;
 
   const filtered =
     useMemo(() => {
       const term =
-        search.trim().toLowerCase();
+        search
+          .trim()
+          .toLowerCase();
 
       return connections.filter(
         (item) => {
           const stageMatch =
-            selectedStage === 'all' ||
+            selectedStage ===
+              'all' ||
             item.stage ===
               selectedStage;
 
@@ -155,7 +237,10 @@ export default function ConnectionsScreen({
       selectedStage,
     ]);
 
-  function change(key, value) {
+  function change(
+    key,
+    value
+  ) {
     setForm((previous) => ({
       ...previous,
       [key]: value,
@@ -173,35 +258,75 @@ export default function ConnectionsScreen({
   }
 
   async function addConnection() {
-    if (!card) return;
-
     if (!form.name.trim()) {
       Alert.alert(
         'Required',
-        'Please enter the lead name.'
+        'Enter the lead name.'
       );
+
       return;
     }
 
     setSaving(true);
 
     try {
+      const session =
+        await getCurrentSession();
+
+      if (!session?.user) {
+        return;
+      }
+
+      /*
+       * We need a card_id for manually
+       * created leads. Use the user's
+       * primary card.
+       */
+      const {
+        getCard,
+      } = await import(
+        '../../services/cardService'
+      );
+
+      const card =
+        await getCard(
+          session.user.id
+        );
+
+      const defaultStage =
+        activeStages.find(
+          (stage) =>
+            stage.stage_key ===
+            'new'
+        ) ||
+        activeStages[0];
+
       const connection =
         await createConnection(
           card.id,
           {
             name:
               form.name.trim(),
+
             phone:
               form.phone.trim(),
+
             email:
               form.email.trim(),
+
             company:
               form.company.trim(),
+
             requirement:
               form.requirement.trim(),
-            stage: 'new',
-            source: 'mobile_app',
+
+            stage:
+              defaultStage
+                ?.stage_key ||
+              'new',
+
+            source:
+              'mobile_app',
           }
         );
 
@@ -209,11 +334,13 @@ export default function ConnectionsScreen({
         connection.id,
         'lead_created',
         'Lead created',
-        'Lead was added from YNS Card mobile app.'
+        'Lead added from YNS Card.'
       );
 
-      setModalVisible(false);
       resetForm();
+
+      setModalVisible(false);
+
       await load();
     } catch (error) {
       Alert.alert(
@@ -234,7 +361,9 @@ export default function ConnectionsScreen({
     if (!phone) return;
 
     Linking.openURL(
-      `tel:${cleanPhone(phone)}`
+      `tel:${cleanPhone(
+        phone
+      )}`
     );
   }
 
@@ -262,7 +391,9 @@ export default function ConnectionsScreen({
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView
+      style={styles.safe}
+    >
       <ScrollView
         contentContainerStyle={
           styles.container
@@ -278,7 +409,7 @@ export default function ConnectionsScreen({
             <Text
               style={styles.subtitle}
             >
-              Manage leads and follow-ups
+              Professional lead CRM
             </Text>
           </View>
 
@@ -300,18 +431,20 @@ export default function ConnectionsScreen({
           style={styles.summaryRow}
         >
           <Summary
-            number={stats.all}
+            number={
+              connections.length
+            }
             label="Total"
           />
 
           <Summary
-            number={stats.follow_up}
-            label="Follow Up"
+            number={openCount}
+            label="Open"
           />
 
           <Summary
-            number={stats.converted}
-            label="Converted"
+            number={wonCount}
+            label="Won"
           />
         </View>
 
@@ -327,7 +460,7 @@ export default function ConnectionsScreen({
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search connections"
+            placeholder="Search leads"
             placeholderTextColor="#9CA3AF"
             style={styles.searchInput}
           />
@@ -340,206 +473,246 @@ export default function ConnectionsScreen({
           }
           style={styles.filters}
         >
-          {[
-            'all',
-            'new',
-            'pending',
-            'interested',
-            'follow_up',
-            'in_progress',
-            'converted',
-            'dead',
-          ].map((stage) => (
-            <TouchableOpacity
-              key={stage}
-              onPress={() =>
-                setSelectedStage(stage)
-              }
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              selectedStage ===
+                'all' &&
+                styles.filterChipActive,
+            ]}
+            onPress={() =>
+              setSelectedStage(
+                'all'
+              )
+            }
+          >
+            <Text
               style={[
-                styles.filterChip,
+                styles.filterText,
                 selectedStage ===
-                  stage &&
-                  styles.filterChipActive,
+                  'all' &&
+                  styles.filterTextActive,
               ]}
             >
-              <Text
+              All
+            </Text>
+          </TouchableOpacity>
+
+          {activeStages.map(
+            (stage) => (
+              <TouchableOpacity
+                key={stage.id}
+                onPress={() =>
+                  setSelectedStage(
+                    stage.stage_key
+                  )
+                }
                 style={[
-                  styles.filterText,
+                  styles.filterChip,
+
                   selectedStage ===
-                    stage &&
-                    styles.filterTextActive,
+                    stage.stage_key &&
+                    styles.filterChipActive,
                 ]}
               >
-                {stage === 'all'
-                  ? 'All'
-                  : STAGE_LABELS[
-                      stage
-                    ]}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.filterText,
+
+                    selectedStage ===
+                      stage.stage_key &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  {stage.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          )}
         </ScrollView>
 
-        <Text
-          style={styles.sectionTitle}
+        <View
+          style={
+            styles.sectionHeader
+          }
         >
-          LEADS ({filtered.length})
-        </Text>
+          <Text
+            style={
+              styles.sectionTitle
+            }
+          >
+            LEADS ({filtered.length})
+          </Text>
+
+          <TouchableOpacity
+            onPress={() =>
+              navigation
+                .getParent()
+                ?.navigate(
+                  'FollowUps'
+                )
+            }
+          >
+            <Text
+              style={
+                styles.followupLink
+              }
+            >
+              Follow-ups
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons
               name="people-outline"
-              size={46}
+              size={45}
               color="#9CA3AF"
             />
 
             <Text
               style={styles.emptyTitle}
             >
-              No connections yet
+              No leads found
             </Text>
 
             <Text
               style={styles.emptyText}
             >
-              Leads captured from your
-              digital card will appear here.
+              Public-card enquiries and
+              manually added leads will
+              appear here.
             </Text>
-
-            <TouchableOpacity
-              style={
-                styles.emptyButton
-              }
-              onPress={() =>
-                setModalVisible(true)
-              }
-            >
-              <Text
-                style={
-                  styles.emptyButtonText
-                }
-              >
-                Add Test Lead
-              </Text>
-            </TouchableOpacity>
           </View>
         ) : (
-          filtered.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.leadCard}
-              onPress={() =>
-                navigation.navigate(
-                  'LeadDetail',
-                  {
-                    connectionId:
-                      item.id,
-                  }
-                )
-              }
-            >
-              <View
-                style={styles.avatar}
-              >
-                <Text
-                  style={
-                    styles.avatarText
-                  }
-                >
-                  {item.name
-                    ?.charAt(0)
-                    ?.toUpperCase() ||
-                    'L'}
-                </Text>
-              </View>
+          filtered.map(
+            (item) => {
+              const stage =
+                stageMap[
+                  item.stage
+                ];
 
-              <View
-                style={
-                  styles.leadContent
-                }
-              >
-                <Text
+              return (
+                <TouchableOpacity
+                  key={item.id}
                   style={
-                    styles.leadName
+                    styles.leadCard
+                  }
+                  onPress={() =>
+                    navigation
+                      .getParent()
+                      ?.navigate(
+                        'LeadDetail',
+                        {
+                          connectionId:
+                            item.id,
+                        }
+                      )
                   }
                 >
-                  {item.name}
-                </Text>
-
-                <Text
-                  style={
-                    styles.leadCompany
-                  }
-                >
-                  {item.company ||
-                    item.phone ||
-                    item.email ||
-                    'No details'}
-                </Text>
-
-                <View
-                  style={
-                    styles.stageBadge
-                  }
-                >
-                  <Text
+                  <View
                     style={
-                      styles.stageText
+                      styles.avatar
                     }
                   >
-                    {STAGE_LABELS[
-                      item.stage
-                    ] || item.stage}
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={
-                  styles.actions
-                }
-              >
-                {item.phone ? (
-                  <>
-                    <TouchableOpacity
+                    <Text
                       style={
-                        styles.actionIcon
-                      }
-                      onPress={() =>
-                        whatsapp(
-                          item.phone
-                        )
+                        styles.avatarText
                       }
                     >
-                      <Ionicons
-                        name="logo-whatsapp"
-                        size={19}
-                        color="#111827"
-                      />
-                    </TouchableOpacity>
+                      {item.name
+                        ?.charAt(0)
+                        ?.toUpperCase() ||
+                        'L'}
+                    </Text>
+                  </View>
 
-                    <TouchableOpacity
+                  <View
+                    style={
+                      styles.leadContent
+                    }
+                  >
+                    <Text
                       style={
-                        styles.actionIcon
-                      }
-                      onPress={() =>
-                        call(
-                          item.phone
-                        )
+                        styles.leadName
                       }
                     >
-                      <Ionicons
-                        name="call-outline"
-                        size={19}
-                        color="#111827"
-                      />
-                    </TouchableOpacity>
-                  </>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          ))
+                      {item.name}
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.leadCompany
+                      }
+                    >
+                      {item.company ||
+                        item.phone ||
+                        item.email ||
+                        'No details'}
+                    </Text>
+
+                    <View
+                      style={
+                        styles.stageBadge
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.stageText
+                        }
+                      >
+                        {stage?.label ||
+                          item.stage}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {item.phone ? (
+                    <View
+                      style={
+                        styles.actions
+                      }
+                    >
+                      <TouchableOpacity
+                        style={
+                          styles.actionIcon
+                        }
+                        onPress={() =>
+                          whatsapp(
+                            item.phone
+                          )
+                        }
+                      >
+                        <Ionicons
+                          name="logo-whatsapp"
+                          size={19}
+                          color="#111827"
+                        />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={
+                          styles.actionIcon
+                        }
+                        onPress={() =>
+                          call(
+                            item.phone
+                          )
+                        }
+                      >
+                        <Ionicons
+                          name="call-outline"
+                          size={19}
+                          color="#111827"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            }
+          )
         )}
       </ScrollView>
 
@@ -552,9 +725,13 @@ export default function ConnectionsScreen({
         }
       >
         <View
-          style={styles.modalOverlay}
+          style={
+            styles.modalOverlay
+          }
         >
-          <View style={styles.modal}>
+          <View
+            style={styles.modal}
+          >
             <View
               style={
                 styles.modalHeader
@@ -565,7 +742,7 @@ export default function ConnectionsScreen({
                   styles.modalTitle
                 }
               >
-                Add Connection
+                Add Lead
               </Text>
 
               <TouchableOpacity
@@ -586,34 +763,51 @@ export default function ConnectionsScreen({
             <LeadInput
               placeholder="Name *"
               value={form.name}
-              onChangeText={(value) =>
-                change('name', value)
+              onChangeText={(
+                value
+              ) =>
+                change(
+                  'name',
+                  value
+                )
               }
             />
 
             <LeadInput
               placeholder="Phone"
               value={form.phone}
-              onChangeText={(value) =>
-                change('phone', value)
-              }
               keyboardType="phone-pad"
+              onChangeText={(
+                value
+              ) =>
+                change(
+                  'phone',
+                  value
+                )
+              }
             />
 
             <LeadInput
               placeholder="Email"
               value={form.email}
-              onChangeText={(value) =>
-                change('email', value)
-              }
               keyboardType="email-address"
               autoCapitalize="none"
+              onChangeText={(
+                value
+              ) =>
+                change(
+                  'email',
+                  value
+                )
+              }
             />
 
             <LeadInput
               placeholder="Company"
               value={form.company}
-              onChangeText={(value) =>
+              onChangeText={(
+                value
+              ) =>
                 change(
                   'company',
                   value
@@ -622,24 +816,28 @@ export default function ConnectionsScreen({
             />
 
             <LeadInput
-              placeholder="Requirement / enquiry"
+              placeholder="Requirement"
               value={
                 form.requirement
               }
-              onChangeText={(value) =>
+              multiline
+              onChangeText={(
+                value
+              ) =>
                 change(
                   'requirement',
                   value
                 )
               }
-              multiline
             />
 
             <TouchableOpacity
               style={
                 styles.modalSave
               }
-              onPress={addConnection}
+              onPress={
+                addConnection
+              }
               disabled={saving}
             >
               {saving ? (
@@ -652,7 +850,7 @@ export default function ConnectionsScreen({
                     styles.modalSaveText
                   }
                 >
-                  Add Connection
+                  Add Lead
                 </Text>
               )}
             </TouchableOpacity>
@@ -663,13 +861,21 @@ export default function ConnectionsScreen({
   );
 }
 
-function Summary({ number, label }) {
+function Summary({
+  number,
+  label,
+}) {
   return (
     <View style={styles.summary}>
-      <Text style={styles.summaryNumber}>
+      <Text
+        style={styles.summaryNumber}
+      >
         {number}
       </Text>
-      <Text style={styles.summaryLabel}>
+
+      <Text
+        style={styles.summaryLabel}
+      >
         {label}
       </Text>
     </View>
@@ -683,6 +889,7 @@ function LeadInput(props) {
       placeholderTextColor="#9CA3AF"
       style={[
         styles.modalInput,
+
         props.multiline &&
           styles.modalMultiline,
       ]}
@@ -803,13 +1010,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  sectionTitle: {
-    fontSize: 11,
-    letterSpacing: 1,
-    color: '#6B7280',
-    fontWeight: '800',
+  sectionHeader: {
     marginTop: 25,
     marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent:
+      'space-between',
+    alignItems: 'center',
+  },
+
+  sectionTitle: {
+    color: '#6B7280',
+    fontSize: 11,
+    letterSpacing: 1,
+    fontWeight: '800',
+  },
+
+  followupLink: {
+    color: '#B7791F',
+    fontSize: 11,
+    fontWeight: '800',
   },
 
   empty: {
@@ -832,19 +1052,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 5,
     lineHeight: 18,
-  },
-
-  emptyButton: {
-    marginTop: 18,
-    backgroundColor: '#111827',
-    borderRadius: 13,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-  },
-
-  emptyButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
   },
 
   leadCard: {
@@ -974,4 +1181,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

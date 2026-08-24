@@ -7,11 +7,20 @@ import CardScreen from '../screens/Card/CardScreen';
 import SocialLinksScreen from '../screens/SocialLinks/SocialLinksScreen';
 import ServicesScreen from '../screens/Services/ServicesScreen';
 import PortfolioScreen from '../screens/Portfolio/PortfolioScreen';
+
 import LeadDetailScreen from '../screens/Connections/LeadDetailScreen';
 
 import MyCardsScreen from '../screens/Cards/MyCardsScreen';
+
 import CardSettingsScreen from '../screens/Settings/CardSettingsScreen';
+
 import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
+
+import BlockBuilderScreen from '../screens/Blocks/BlockBuilderScreen';
+
+import LeadStagesScreen from '../screens/CRM/LeadStagesScreen';
+
+import FollowUpsScreen from '../screens/FollowUps/FollowUpsScreen';
 
 const Stack =
   createNativeStackNavigator();
@@ -75,6 +84,21 @@ export default function RootNavigator({
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}
+          />
+
+          <Stack.Screen
+            name="BlockBuilder"
+            component={BlockBuilderScreen}
+          />
+
+          <Stack.Screen
+            name="LeadStages"
+            component={LeadStagesScreen}
+          />
+
+          <Stack.Screen
+            name="FollowUps"
+            component={FollowUpsScreen}
           />
         </>
       )}

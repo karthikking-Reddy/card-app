@@ -121,6 +121,17 @@ export default function ProfileScreen({
         />
 
         <Menu
+          icon="grid-outline"
+          title="Card Block Builder"
+          description="Add and reorder custom links, media, documents and actions"
+          onPress={() =>
+            openRoot(
+              'BlockBuilder'
+            )
+          }
+        />
+
+        <Menu
           icon="briefcase-outline"
           title="Services"
           description="Manage services shown on your card"
@@ -136,6 +147,21 @@ export default function ProfileScreen({
           onPress={() =>
             openRoot(
               'Portfolio'
+            )
+          }
+        />
+
+        <Text style={styles.section}>
+          CRM SETTINGS
+        </Text>
+
+        <Menu
+          icon="git-branch-outline"
+          title="CRM Stages"
+          description="Customize your lead pipeline stages"
+          onPress={() =>
+            openRoot(
+              'LeadStages'
             )
           }
         />
@@ -314,3 +340,4 @@ const styles = StyleSheet.create({
     marginTop: 25,
   },
 });
+
