@@ -21,6 +21,7 @@ import BlockBuilderScreen from '../screens/Blocks/BlockBuilderScreen';
 import LeadStagesScreen from '../screens/CRM/LeadStagesScreen';
 
 import FollowUpsScreen from '../screens/FollowUps/FollowUpsScreen';
+import CRMExportScreen from '../screens/CRMExport/CRMExportScreen';
 
 const Stack =
   createNativeStackNavigator();
@@ -100,8 +101,14 @@ export default function RootNavigator({
             name="FollowUps"
             component={FollowUpsScreen}
           />
+
+          <Stack.Screen
+            name="CRMExport"
+            component={CRMExportScreen}
+          />
         </>
       )}
     </Stack.Navigator>
   );
 }
+

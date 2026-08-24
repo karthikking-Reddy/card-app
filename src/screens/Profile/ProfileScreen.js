@@ -166,6 +166,17 @@ export default function ProfileScreen({
           }
         />
 
+        <Menu
+          icon="download-outline"
+          title="Export CRM"
+          description="Export all leads to CSV"
+          onPress={() =>
+            openRoot(
+              'CRMExport'
+            )
+          }
+        />
+
         <Text style={styles.section}>
           ACTIVITY
         </Text>
@@ -340,4 +351,5 @@ const styles = StyleSheet.create({
     marginTop: 25,
   },
 });
+
 
