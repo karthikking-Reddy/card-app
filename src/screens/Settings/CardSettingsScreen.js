@@ -34,6 +34,9 @@ import {
   CARD_WEB_URL,
 } from '../../constants/config';
 
+import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
+import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
+
 const THEMES = [
   {
     id: 'standard',
@@ -84,6 +87,8 @@ export default function CardSettingsScreen({
 
   const [saving, setSaving] =
     useState(false);
+
+  const [approvalVisible, setApprovalVisible] = useState(false);
 
   useEffect(() => {
     load();
@@ -167,6 +172,11 @@ export default function CardSettingsScreen({
   function openPublicCard() {
     if (!card?.card_slug) return;
 
+    if (card.approval_status !== 'approved') {
+      setApprovalVisible(true);
+      return;
+    }
+
     Linking.openURL(
       `${CARD_WEB_URL}/${card.card_slug}`
     );
@@ -219,6 +229,14 @@ export default function CardSettingsScreen({
         <Text style={styles.sectionTitle}>
           CARD VISIBILITY
         </Text>
+
+        <View style={styles.approvalRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingTitle}>Approval Status</Text>
+            <Text style={styles.settingDescription}>Public sharing and QR access require administrator approval.</Text>
+          </View>
+          <ApprovalStatusBadge status={card?.approval_status} compact />
+        </View>
 
         <View style={styles.card}>
           <SettingRow
@@ -370,6 +388,17 @@ export default function CardSettingsScreen({
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <ApprovalRequiredModal
+        visible={approvalVisible}
+        card={card}
+        onClose={() => setApprovalVisible(false)}
+        onUpdated={load}
+        onEdit={() => {
+          setApprovalVisible(false);
+          navigation.navigate('CardEditor');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -517,6 +546,8 @@ const styles = StyleSheet.create({
 
     elevation: 2,
 },
+
+  approvalRow: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#E6EAF0', padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
 
   settingRow: {
     flexDirection: 'row',

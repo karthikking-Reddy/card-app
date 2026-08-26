@@ -1,6 +1,14 @@
 import { supabase } from '../../lib/supabase';
 import { DEFAULT_CARD } from '../constants/config';
 
+const APPROVAL_FIELDS = [
+  'approval_status',
+  'approval_requested_at',
+  'approved_at',
+  'approved_by',
+  'rejection_reason',
+];
+
 function slugify(value) {
   return String(value || 'card')
     .toLowerCase()
@@ -169,10 +177,13 @@ export async function updateCard(
   cardId,
   values
 ) {
+  const safeValues = { ...(values || {}) };
+  APPROVAL_FIELDS.forEach((field) => delete safeValues[field]);
+
   const { data, error } = await supabase
     .from('digital_cards')
     .update({
-      ...values,
+      ...safeValues,
       updated_at:
         new Date().toISOString(),
     })

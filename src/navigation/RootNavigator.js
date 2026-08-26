@@ -53,6 +53,12 @@ import WhatsAppChatScreen
 import WhatsAppTemplatesScreen
   from '../screens/WhatsApp/WhatsAppTemplatesScreen';
 
+import AdminApprovalsScreen
+  from '../screens/Admin/AdminApprovalsScreen';
+
+import AdminCardPreviewScreen
+  from '../screens/Admin/AdminCardPreviewScreen';
+
 
 const Stack =
   createNativeStackNavigator();
@@ -169,6 +175,16 @@ export default function RootNavigator({
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}
+          />
+
+          <Stack.Screen
+            name="AdminApprovals"
+            component={AdminApprovalsScreen}
+          />
+
+          <Stack.Screen
+            name="AdminCardPreview"
+            component={AdminCardPreviewScreen}
           />
 
 

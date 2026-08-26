@@ -1,7 +1,7 @@
 export const PROFILE_BUCKET = 'profile-images';
 
 export const CARD_WEB_URL =
-  'https://yns-card-web.vercel.app/card';
+  'https://card.ynscrm.online/card';
 
 export const DEFAULT_CARD = {
   name: 'Karthik',

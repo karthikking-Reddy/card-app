@@ -36,6 +36,9 @@ import {
   setPrimaryCard,
 } from '../../services/cardService';
 
+import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
+import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
+
 export default function MyCardsScreen({
   navigation,
 }) {
@@ -62,6 +65,8 @@ export default function MyCardsScreen({
 
   const [company, setCompany] =
     useState('');
+
+  const [approvalCard, setApprovalCard] = useState(null);
 
   const load =
     useCallback(async () => {
@@ -332,6 +337,8 @@ export default function MyCardsScreen({
             </Text>
 
             <View style={styles.statusRow}>
+              <ApprovalStatusBadge status={card.approval_status} compact />
+
               <Status
                 active={card.is_active}
                 text={
@@ -359,6 +366,17 @@ export default function MyCardsScreen({
               />
             </View>
 
+            {card.approval_status === 'pending' ? (
+              <Text style={styles.approvalMessage}>Your card is waiting for administrator approval.</Text>
+            ) : null}
+
+            {card.approval_status === 'rejected' && card.rejection_reason ? (
+              <View style={styles.rejectionBox}>
+                <Text style={styles.rejectionLabel}>Rejection reason:</Text>
+                <Text style={styles.rejectionText}>{card.rejection_reason}</Text>
+              </View>
+            ) : null}
+
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.actionButton}
@@ -380,6 +398,13 @@ export default function MyCardsScreen({
                   Edit
                 </Text>
               </TouchableOpacity>
+
+              {card.approval_status === 'draft' || card.approval_status === 'rejected' ? (
+                <TouchableOpacity style={styles.approvalButton} onPress={() => setApprovalCard(card)}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#06162D" />
+                  <Text style={styles.approvalButtonText}>{card.approval_status === 'rejected' ? 'Request Again' : 'Request Approval'}</Text>
+                </TouchableOpacity>
+              ) : null}
 
               {!card.is_primary ? (
                 <TouchableOpacity
@@ -518,6 +543,18 @@ export default function MyCardsScreen({
           </View>
         </View>
       </Modal>
+
+      <ApprovalRequiredModal
+        visible={Boolean(approvalCard)}
+        card={approvalCard}
+        onClose={() => setApprovalCard(null)}
+        onUpdated={load}
+        onEdit={() => {
+          const selected = approvalCard;
+          setApprovalCard(null);
+          if (selected) editCard(selected);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -743,6 +780,13 @@ const styles = StyleSheet.create({
     color: '#667085',
     textTransform: 'capitalize',
   },
+
+  approvalMessage: { color: '#B7791F', fontSize: 10, lineHeight: 16, marginTop: 10, fontWeight: '700' },
+  rejectionBox: { backgroundColor: '#FEF2F2', borderRadius: 11, padding: 10, marginTop: 10 },
+  rejectionLabel: { color: '#991B1B', fontSize: 9, fontWeight: '900' },
+  rejectionText: { color: '#7F1D1D', fontSize: 10, lineHeight: 15, marginTop: 3 },
+  approvalButton: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: '#FFF4D6', paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
+  approvalButtonText: { color: '#06162D', fontSize: 9, fontWeight: '900' },
 
   actions: {
     borderTopWidth: 1,

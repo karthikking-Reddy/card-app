@@ -40,6 +40,9 @@ import {
   supabase,
 } from '../../../lib/supabase';
 
+import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
+import ApprovalStatusBadge, { getApprovalStatusCopy } from '../../components/ApprovalStatusBadge';
+
 
 const COLORS = {
   navy: '#06162D',
@@ -75,7 +78,7 @@ const COLORS = {
 
 
 const PUBLIC_CARD_BASE =
-  'https://yns-card-web.vercel.app/card';
+  'https://card.ynscrm.online/card';
 
 
 export default function HomeScreen({
@@ -125,6 +128,8 @@ export default function HomeScreen({
     qrVisible,
     setQrVisible,
   ] = useState(false);
+
+  const [approvalVisible, setApprovalVisible] = useState(false);
 
 
   const loadDashboard =
@@ -399,6 +404,8 @@ export default function HomeScreen({
       ? `${PUBLIC_CARD_BASE}/${card.card_slug}`
       : null;
 
+  const approvalCopy = getApprovalStatusCopy(card?.approval_status);
+
 
   const firstName =
     useMemo(() => {
@@ -532,6 +539,12 @@ export default function HomeScreen({
       return;
     }
 
+    if (card?.approval_status !== 'approved') {
+      setQrVisible(false);
+      setApprovalVisible(true);
+      return;
+    }
+
 
     try {
       await Share.share({
@@ -561,6 +574,11 @@ export default function HomeScreen({
         'Create a digital card first.'
       );
 
+      return;
+    }
+
+    if (card?.approval_status !== 'approved') {
+      setApprovalVisible(true);
       return;
     }
 
@@ -732,6 +750,8 @@ export default function HomeScreen({
                   </Text>
                 </View>
 
+                {card ? <ApprovalStatusBadge status={card.approval_status} compact /> : null}
+
 
                 <Text
                   style={
@@ -740,6 +760,12 @@ export default function HomeScreen({
                 >
                   Welcome back to your dashboard
                 </Text>
+
+                {card ? (
+                  <Text style={{ color: COLORS.gold, fontSize: 9, fontWeight: '900', marginTop: 8 }}>
+                    {approvalCopy.label} · {approvalCopy.message}
+                  </Text>
+                ) : null}
               </View>
             </View>
 
@@ -960,7 +986,9 @@ export default function HomeScreen({
                         styles.cardUrl
                       }
                     >
-                      yns-card-web.vercel.app/card/{card.card_slug}
+                      {card.approval_status === 'approved'
+                        ? `card.ynscrm.online/card/${card.card_slug}`
+                        : 'Public link available after approval'}
                     </Text>
                   </View>
 
@@ -1525,6 +1553,17 @@ export default function HomeScreen({
           </View>
         </View>
       </Modal>
+
+      <ApprovalRequiredModal
+        visible={approvalVisible}
+        card={card}
+        onClose={() => setApprovalVisible(false)}
+        onUpdated={() => loadDashboard(true)}
+        onEdit={() => {
+          setApprovalVisible(false);
+          openRoot('CardEditor');
+        }}
+      />
     </View>
   );
 }
