@@ -41,3 +41,11 @@ yarn-error.*
 /android
 
 .env
+premium-detail-ui-backup-*/
+premium-main-pages-backup-*/
+src/navigation/*.before-*.js
+src/screens/*.before-*.js
+premium-detail-ui-backup-*/
+premium-main-pages-backup-*/
+src/navigation/*.before-*.js
+src/screens/*.before-*.js

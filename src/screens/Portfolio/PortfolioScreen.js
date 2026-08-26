@@ -105,7 +105,7 @@ export default function PortfolioScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#111827" />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -114,7 +114,7 @@ export default function PortfolioScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={25} color="#111827" />
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Portfolio</Text>
@@ -151,7 +151,7 @@ export default function PortfolioScreen({ navigation }) {
                 ? 'Student name / Project title'
                 : 'Employee name'
             }
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
           />
 
           <TextInput
@@ -163,7 +163,7 @@ export default function PortfolioScreen({ navigation }) {
                 ? 'Course / Skill'
                 : 'Designation / Department'
             }
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
           />
 
           <TextInput
@@ -172,7 +172,7 @@ export default function PortfolioScreen({ navigation }) {
             onChangeText={setDescription}
             placeholder="Description, projects, achievements..."
             multiline
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
           />
 
           <TouchableOpacity style={styles.addButton} onPress={add}>
@@ -190,7 +190,7 @@ export default function PortfolioScreen({ navigation }) {
             <Ionicons
               name={type === 'student' ? 'school-outline' : 'people-outline'}
               size={38}
-              color="#9CA3AF"
+              color="#98A2B3"
             />
 
             <Text style={styles.emptyTitle}>
@@ -238,40 +238,51 @@ function Tab({ label, selected, onPress }) {
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+
+    backgroundColor: '#F5F7FB',
+},
   header: {
-    height: 60,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+      minHeight: 68,
+      paddingHorizontal: 18,
+      backgroundColor: '#06162D',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+      shadowColor: '#06162D',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 5,
+    },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: 0.1,
+    },
   container: {
     padding: 16,
     paddingBottom: 70,
   },
   tabs: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 14,
-    padding: 4,
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
+      backgroundColor: '#E9EEF5',
+      borderRadius: 15,
+      padding: 4,
+      flexDirection: 'row',
+      marginBottom: 15,
+      borderWidth: 1,
+      borderColor: '#E6EAF0',
+    },
   tab: {
     flex: 1,
     paddingVertical: 11,
@@ -279,48 +290,62 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
-  },
+      backgroundColor: '#06162D',
+      borderWidth: 1,
+      borderColor: '#F6B91A',
+    },
   tabText: {
     fontWeight: '700',
-    color: '#6B7280',
+    color: '#667085',
   },
   activeTabText: {
-    color: '#111827',
-  },
+      color: '#FFFFFF',
+      fontWeight: '900',
+    },
   form: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   formTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06162D',
     marginBottom: 13,
   },
   input: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E6EAF0',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
-    color: '#111827',
+    color: '#06162D',
   },
   description: {
     minHeight: 90,
     textAlignVertical: 'top',
   },
   addButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 13,
     paddingVertical: 13,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 7,
-  },
+
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+},
   addText: {
     color: '#FFFFFF',
     fontWeight: '800',
@@ -328,7 +353,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 24,
     marginBottom: 10,
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
@@ -338,10 +363,18 @@ const styles = StyleSheet.create({
     padding: 30,
     borderRadius: 20,
     alignItems: 'center',
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   emptyTitle: {
     marginTop: 10,
-    color: '#6B7280',
+    color: '#667085',
     fontWeight: '700',
   },
   item: {
@@ -352,15 +385,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+    borderWidth: 2,
+    borderColor: '#F6B91A',
+},
   initial: {
     color: '#FFFFFF',
     fontSize: 18,
@@ -371,16 +415,16 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontWeight: '800',
-    color: '#111827',
+    color: '#06162D',
   },
   itemSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#667085',
     marginTop: 2,
   },
   itemDescription: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#98A2B3',
     marginTop: 3,
   },
 });

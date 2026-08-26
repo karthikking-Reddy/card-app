@@ -227,7 +227,7 @@ export default function MyCardsScreen({
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
     );
@@ -244,7 +244,7 @@ export default function MyCardsScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -260,7 +260,7 @@ export default function MyCardsScreen({
           <Ionicons
             name="add-circle-outline"
             size={27}
-            color="#111827"
+            color="#F6B91A"
           />
         </TouchableOpacity>
       </View>
@@ -369,7 +369,7 @@ export default function MyCardsScreen({
                 <Ionicons
                   name="create-outline"
                   size={18}
-                  color="#111827"
+                  color="#06162D"
                 />
 
                 <Text
@@ -391,7 +391,7 @@ export default function MyCardsScreen({
                   <Ionicons
                     name="star-outline"
                     size={18}
-                    color="#111827"
+                    color="#06162D"
                   />
 
                   <Text
@@ -431,7 +431,7 @@ export default function MyCardsScreen({
           <Ionicons
             name="add"
             size={25}
-            color="#111827"
+            color="#06162D"
           />
 
           <Text style={styles.newCardText}>
@@ -467,7 +467,7 @@ export default function MyCardsScreen({
                 <Ionicons
                   name="close"
                   size={26}
-                  color="#111827"
+                  color="#06162D"
                 />
               </TouchableOpacity>
             </View>
@@ -477,7 +477,7 @@ export default function MyCardsScreen({
               value={name}
               onChangeText={setName}
               placeholder="Card / person name *"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
             />
 
             <TextInput
@@ -485,7 +485,7 @@ export default function MyCardsScreen({
               value={designation}
               onChangeText={setDesignation}
               placeholder="Designation"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
             />
 
             <TextInput
@@ -493,7 +493,7 @@ export default function MyCardsScreen({
               value={company}
               onChangeText={setCompany}
               placeholder="Company"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
             />
 
             <TouchableOpacity
@@ -545,33 +545,63 @@ function Status({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
 
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-  },
+    backgroundColor: '#F5F7FB',
+
+
+    backgroundColor: '#F5F7FB',
+},
 
   header: {
-    height: 60,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+
+      minHeight: 68,
+
+      paddingHorizontal: 18,
+
+      backgroundColor: '#06162D',
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent: 'space-between',
+
+      gap: 10,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 5 },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 12,
+
+      elevation: 5,
+
+    },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+
+      fontSize: 18,
+
+      fontWeight: '900',
+
+      color: '#FFFFFF',
+
+      letterSpacing: 0.1,
+
+    },
 
   container: {
     padding: 16,
@@ -579,7 +609,7 @@ const styles = StyleSheet.create({
   },
 
   help: {
-    color: '#6B7280',
+    color: '#667085',
     lineHeight: 20,
     marginBottom: 15,
   },
@@ -591,11 +621,31 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#FFFFFF',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   primaryCard: {
-    borderColor: '#D4A94E',
-  },
+    borderColor: '#F6B91A',
+
+
+    backgroundColor: '#FFFCF3',
+
+    borderWidth: 1.5,
+},
 
   cardTop: {
     flexDirection: 'row',
@@ -606,7 +656,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -625,37 +675,37 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06162D',
   },
 
   designation: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     marginTop: 2,
   },
 
   company: {
-    color: '#111827',
+    color: '#06162D',
     fontSize: 10,
     fontWeight: '700',
     marginTop: 3,
   },
 
   primaryBadge: {
-    backgroundColor: '#FFF7E6',
+    backgroundColor: '#FFF4D6',
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
   },
 
   primaryBadgeText: {
-    color: '#B7791F',
+    color: '#C98B16',
     fontSize: 8,
     fontWeight: '900',
   },
 
   slug: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     fontSize: 10,
     marginTop: 14,
   },
@@ -671,7 +721,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
@@ -685,18 +735,18 @@ const styles = StyleSheet.create({
   },
 
   statusDotInactive: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#98A2B3',
   },
 
   statusText: {
     fontSize: 9,
-    color: '#6B7280',
+    color: '#667085',
     textTransform: 'capitalize',
   },
 
   actions: {
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#F5F7FB',
     marginTop: 14,
     paddingTop: 13,
     flexDirection: 'row',
@@ -707,14 +757,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 10,
   },
 
   actionText: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '700',
     fontSize: 10,
   },
@@ -730,19 +780,31 @@ const styles = StyleSheet.create({
   },
 
   newCard: {
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#9CA3AF',
-    borderRadius: 20,
-    padding: 22,
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
+      borderWidth: 1.5,
+
+      borderStyle: 'dashed',
+
+      borderColor: '#F6B91A',
+
+      backgroundColor: '#FFFCF3',
+
+      borderRadius: 20,
+
+      padding: 22,
+
+      flexDirection: 'row',
+
+      gap: 8,
+
+      justifyContent: 'center',
+
+      alignItems: 'center',
+
+    },
 
   newCardText: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
@@ -759,7 +821,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 27,
     padding: 20,
     paddingBottom: 35,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   modalHeader: {
     flexDirection: 'row',
@@ -771,21 +848,21 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 21,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06162D',
   },
 
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderColor: '#E6EAF0',
+    backgroundColor: '#F8FAFC',
     borderRadius: 13,
     padding: 13,
     marginBottom: 10,
-    color: '#111827',
+    color: '#06162D',
   },
 
   createButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',

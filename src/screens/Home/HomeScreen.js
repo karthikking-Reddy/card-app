@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useMemo,
   useState,
 } from 'react';
 
@@ -7,8 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Linking,
   Modal,
+  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
@@ -26,145 +27,348 @@ import {
 } from '@expo/vector-icons';
 
 import {
-  useFocusEffect,
-} from '@react-navigation/native';
+  LinearGradient,
+} from 'expo-linear-gradient';
 
 import QRCode from 'react-native-qrcode-svg';
 
 import {
-  getCurrentSession,
-} from '../../services/authService';
+  useFocusEffect,
+} from '@react-navigation/native';
 
 import {
-  getCard,
-} from '../../services/cardService';
+  supabase,
+} from '../../../lib/supabase';
 
-import {
-  ensureDefaultLinks,
-} from '../../services/linkService';
 
-import {
-  ensureDefaultServices,
-} from '../../services/serviceService';
+const COLORS = {
+  navy: '#06162D',
+  navy2: '#0B2447',
+  navy3: '#102D52',
 
-import {
-  getPortfolioItems,
-} from '../../services/portfolioService';
+  gold: '#F6B91A',
+  gold2: '#F7C955',
+  goldSoft: '#FFF4D6',
 
-import {
-  getAllConnections,
-} from '../../services/connectionService';
+  white: '#FFFFFF',
 
-import {
-  getAccountAnalytics,
-  recordCardEvent,
-} from '../../services/analyticsService';
+  background: '#F5F7FB',
 
-import {
-  CARD_WEB_URL,
-} from '../../constants/config';
+  text: '#071A33',
+  text2: '#667085',
+  muted: '#98A2B3',
 
-import {
-  getNotifications,
-} from '../../services/notificationService';
+  border: '#E6EAF0',
+
+  green: '#16A34A',
+  greenSoft: '#ECFDF3',
+
+  blue: '#0866FF',
+  blueSoft: '#EFF6FF',
+
+  purple: '#7C3AED',
+  purpleSoft: '#F5F3FF',
+
+  orange: '#EA7B00',
+  orangeSoft: '#FFF7ED',
+};
+
+
+const PUBLIC_CARD_BASE =
+  'https://yns-card-web.vercel.app/card';
+
 
 export default function HomeScreen({
   navigation,
 }) {
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [card, setCard] =
-    useState(null);
+  const [
+    refreshing,
+    setRefreshing,
+  ] = useState(false);
 
-  const [links, setLinks] =
-    useState([]);
+  const [
+    user,
+    setUser,
+  ] = useState(null);
 
-  const [services, setServices] =
-    useState([]);
+  const [
+    card,
+    setCard,
+  ] = useState(null);
 
-  const [portfolio, setPortfolio] =
-    useState([]);
+  const [
+    cards,
+    setCards,
+  ] = useState([]);
 
-  const [connections, setConnections] =
-    useState([]);
+  const [
+    events,
+    setEvents,
+  ] = useState([]);
 
-  const [analytics, setAnalytics] =
-    useState({
-      cardViews: 0,
-      linkClicks: 0,
-      leadSubmits: 0,
-    });
+  const [
+    connections,
+    setConnections,
+  ] = useState([]);
 
-  const [qrVisible, setQrVisible] =
-    useState(false);
+  const [
+    notificationCount,
+    setNotificationCount,
+  ] = useState(0);
 
-  const [unreadNotifications, setUnreadNotifications] =
-    useState(0);
+  const [
+    qrVisible,
+    setQrVisible,
+  ] = useState(false);
+
 
   const loadDashboard =
-    useCallback(async () => {
-      setLoading(true);
+    useCallback(async (
+      refresh = false
+    ) => {
+      if (refresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
 
       try {
-        const session =
-          await getCurrentSession();
+        const {
+          data:
+            sessionData,
+          error:
+            sessionError,
+        } =
+          await supabase.auth
+            .getSession();
 
-        if (!session?.user) {
+
+        if (sessionError) {
+          throw sessionError;
+        }
+
+
+        const currentUser =
+          sessionData
+            ?.session
+            ?.user;
+
+
+        if (!currentUser) {
           return;
         }
 
-        const currentCard =
-          await getCard(
-            session.user.id
+
+        setUser(
+          currentUser
+        );
+
+
+        const {
+          data:
+            cardData,
+          error:
+            cardsError,
+        } =
+          await supabase
+            .from(
+              'digital_cards'
+            )
+            .select('*')
+            .eq(
+              'user_id',
+              currentUser.id
+            )
+            .order(
+              'is_primary',
+              {
+                ascending:
+                  false,
+              }
+            )
+            .order(
+              'created_at',
+              {
+                ascending:
+                  true,
+              }
+            );
+
+
+        if (cardsError) {
+          throw cardsError;
+        }
+
+
+        const userCards =
+          cardData || [];
+
+
+        setCards(
+          userCards
+        );
+
+
+        const primary =
+          userCards.find(
+            (item) =>
+              item.is_primary
+          ) ||
+          userCards[0] ||
+          null;
+
+
+        setCard(
+          primary
+        );
+
+
+        const cardIds =
+          userCards.map(
+            (item) =>
+              item.id
           );
 
-        setCard(currentCard);
 
-        const [
-          loadedLinks,
-          loadedServices,
-          loadedPortfolio,
-          loadedConnections,
-          loadedAnalytics,
-          loadedNotifications,
-        ] = await Promise.all([
-          ensureDefaultLinks(
-            currentCard
-          ),
+        let eventData = [];
+        let leadData = [];
 
-          ensureDefaultServices(
-            currentCard.id
-          ),
 
-          getPortfolioItems(
-            currentCard.id
-          ),
+        if (
+          cardIds.length >
+          0
+        ) {
+          const [
+            eventsResult,
+            leadsResult,
+          ] =
+            await Promise.all([
+              supabase
+                .from(
+                  'card_events'
+                )
+                .select('*')
+                .in(
+                  'card_id',
+                  cardIds
+                )
+                .order(
+                  'created_at',
+                  {
+                    ascending:
+                      false,
+                  }
+                ),
 
-          getAllConnections(),
+              supabase
+                .from(
+                  'connections'
+                )
+                .select('*')
+                .eq(
+                  'owner_user_id',
+                  currentUser.id
+                )
+                .order(
+                  'created_at',
+                  {
+                    ascending:
+                      false,
+                  }
+                ),
+            ]);
 
-          getAccountAnalytics(),
 
-          getNotifications(
-            session.user.id
-          ),
-        ]);
+          if (
+            eventsResult.error
+          ) {
+            throw eventsResult.error;
+          }
 
-        setLinks(loadedLinks);
-        setServices(loadedServices);
-        setPortfolio(loadedPortfolio);
+
+          if (
+            leadsResult.error
+          ) {
+            throw leadsResult.error;
+          }
+
+
+          eventData =
+            eventsResult.data ||
+            [];
+
+          leadData =
+            leadsResult.data ||
+            [];
+        }
+
+
+        setEvents(
+          eventData
+        );
+
         setConnections(
-          loadedConnections
-        );
-        setAnalytics(
-          loadedAnalytics
+          leadData
         );
 
-        setUnreadNotifications(
-          (loadedNotifications || []).filter(
-            (item) => !item.is_read
-          ).length
-        );
+
+        /*
+         * Notification count.
+         * If an older notifications
+         * schema differs, dashboard
+         * still works normally.
+         */
+        try {
+          const {
+            count,
+            error:
+              notificationError,
+          } =
+            await supabase
+              .from(
+                'notifications'
+              )
+              .select(
+                'id',
+                {
+                  count:
+                    'exact',
+
+                  head: true,
+                }
+              )
+              .eq(
+                'user_id',
+                currentUser.id
+              )
+              .eq(
+                'is_read',
+                false
+              );
+
+
+          if (
+            !notificationError
+          ) {
+            setNotificationCount(
+              count || 0
+            );
+          } else {
+            setNotificationCount(
+              0
+            );
+          }
+        } catch {
+          setNotificationCount(
+            0
+          );
+        }
       } catch (error) {
         console.log(
           'Home dashboard error:',
@@ -178,8 +382,10 @@ export default function HomeScreen({
         );
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     }, []);
+
 
   useFocusEffect(
     useCallback(() => {
@@ -187,657 +393,1017 @@ export default function HomeScreen({
     }, [loadDashboard])
   );
 
-  function getPublicUrl() {
-    if (!card?.card_slug) {
-      return CARD_WEB_URL;
-    }
 
-    return `${CARD_WEB_URL}/${card.card_slug}`;
-  }
+  const publicUrl =
+    card?.card_slug
+      ? `${PUBLIC_CARD_BASE}/${card.card_slug}`
+      : null;
 
-  async function handleShare() {
-    try {
-      await Share.share({
-        title:
-          `${card?.name || 'YNS'} - YNS CARD`,
-        message: [
-          card?.name || '',
-          card?.designation || '',
-          card?.company || '',
-          '',
-          'View my digital card:',
-          getPublicUrl(),
-        ].join('\n'),
-      });
-    } catch (error) {
-      Alert.alert(
-        'Share failed',
-        error?.message ||
-          'Unable to share the card.'
+
+  const firstName =
+    useMemo(() => {
+      const source =
+        card?.name ||
+        user?.email ||
+        'there';
+
+      return String(
+        source
+      )
+        .trim()
+        .split(/\s+/)[0];
+    }, [
+      card?.name,
+      user?.email,
+    ]);
+
+
+  const stats =
+    useMemo(() => {
+      const start =
+        new Date();
+
+      start.setDate(1);
+      start.setHours(
+        0,
+        0,
+        0,
+        0
       );
-    }
-  }
 
-  function cleanPhone(value) {
-    return String(value || '')
-      .replace(/[^\d+]/g, '');
-  }
 
-  function normalizeUrl(value) {
-    if (!value) {
-      return '';
-    }
+      const monthlyEvents =
+        events.filter(
+          (item) =>
+            new Date(
+              item.created_at
+            ) >= start
+        );
 
-    if (
-      value.startsWith('http://') ||
-      value.startsWith('https://')
-    ) {
-      return value;
-    }
 
-    return `https://${value}`;
-  }
+      const monthlyLeads =
+        connections.filter(
+          (item) =>
+            new Date(
+              item.created_at
+            ) >= start
+        );
 
-  async function openLink(link) {
-    if (!link?.value) {
-      Alert.alert(
-        link?.label || 'Link',
-        'Add this link from your card settings first.'
+
+      const views =
+        monthlyEvents.filter(
+          (item) =>
+            item.event_type ===
+            'card_view'
+        ).length;
+
+
+      const clicks =
+        monthlyEvents.filter(
+          (item) =>
+            String(
+              item.event_type ||
+                ''
+            ).endsWith(
+              '_click'
+            ) ||
+            item.event_type ===
+              'block_click'
+        ).length;
+
+
+      const whatsapp =
+        monthlyEvents.filter(
+          (item) =>
+            String(
+              item.event_type ||
+                ''
+            ).includes(
+              'whatsapp'
+            )
+        ).length;
+
+
+      return {
+        views,
+        clicks,
+        whatsapp,
+        leads:
+          monthlyLeads.length,
+      };
+    }, [
+      events,
+      connections,
+    ]);
+
+
+  function openRoot(
+    routeName,
+    params
+  ) {
+    const parent =
+      navigation.getParent?.();
+
+
+    if (parent) {
+      parent.navigate(
+        routeName,
+        params
       );
+
       return;
     }
 
-    let url = '';
-    let eventType =
-      `${link.link_type}_click`;
 
-    switch (link.link_type) {
-      case 'whatsapp':
-        url =
-          `https://wa.me/${
-            cleanPhone(link.value)
-              .replace('+', '')
-          }`;
-        eventType =
-          'whatsapp_click';
-        break;
+    navigation.navigate(
+      routeName,
+      params
+    );
+  }
 
-      case 'phone':
-        url =
-          `tel:${cleanPhone(
-            link.value
-          )}`;
-        eventType =
-          'phone_click';
-        break;
 
-      case 'email':
-        url =
-          `mailto:${link.value}`;
-        eventType =
-          'email_click';
-        break;
+  async function shareCard() {
+    if (!publicUrl) {
+      Alert.alert(
+        'Card unavailable',
+        'Create a digital card first.'
+      );
 
-      case 'website':
-        url =
-          normalizeUrl(
-            link.value
-          );
-        eventType =
-          'website_click';
-        break;
-
-      case 'google_reviews':
-        url =
-          normalizeUrl(
-            link.value
-          );
-        eventType =
-          'google_review_click';
-        break;
-
-      case 'location':
-        url =
-          link.value.startsWith(
-            'http'
-          )
-            ? link.value
-            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                link.value
-              )}`;
-        eventType =
-          'location_click';
-        break;
-
-      default:
-        url =
-          normalizeUrl(
-            link.value
-          );
+      return;
     }
 
-    try {
-      if (card?.id) {
-        await recordCardEvent(
-          card.id,
-          eventType,
-          {
-            linkId:
-              link.id || null,
-            source: 'mobile_app',
-          }
-        );
-      }
 
-      await Linking.openURL(url);
+    try {
+      await Share.share({
+        title:
+          'YNS Card',
+
+        message:
+          `View my digital business card: ${publicUrl}`,
+
+        url:
+          publicUrl,
+      });
     } catch (error) {
       Alert.alert(
-        'Unable to open',
+        'Unable to share',
         error?.message ||
-          'Please check this link.'
+          'Please try again.'
       );
     }
   }
 
-  const activeLinks =
-    links.filter(
-      (item) =>
-        item.is_active &&
-        item.value
-    );
 
-  const students =
-    portfolio.filter(
-      (item) =>
-        item.portfolio_type ===
-        'student'
-    );
+  function showQr() {
+    if (!publicUrl) {
+      Alert.alert(
+        'Card unavailable',
+        'Create a digital card first.'
+      );
 
-  const employees =
-    portfolio.filter(
-      (item) =>
-        item.portfolio_type ===
-        'employee'
-    );
+      return;
+    }
 
-  if (loading) {
-    return (
-      <SafeAreaView
-        style={styles.loadingScreen}
-      >
-        <ActivityIndicator
-          size="large"
-          color="#111827"
-        />
 
-        <Text
-          style={styles.loadingText}
-        >
-          Preparing your dashboard...
-        </Text>
-      </SafeAreaView>
+    setQrVisible(
+      true
     );
   }
 
-  return (
-    <SafeAreaView
-      style={styles.safeArea}
-    >
-      <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
-        showsVerticalScrollIndicator={
-          false
+
+  if (loading) {
+    return (
+      <View
+        style={
+          styles.loading
         }
       >
-        <View
-          style={styles.header}
+        <ActivityIndicator
+          size="large"
+          color={
+            COLORS.gold
+          }
+        />
+
+        <Text
+          style={
+            styles.loadingText
+          }
         >
-          <View>
-            <Text
-              style={styles.brand}
-            >
-              YNS CARD
-            </Text>
+          Loading your dashboard...
+        </Text>
+      </View>
+    );
+  }
 
-            <Text
-              style={
-                styles.headerSubtitle
+
+  return (
+    <View
+      style={styles.root}
+    >
+      <LinearGradient
+        colors={[
+          '#06162D',
+          '#081D39',
+          '#0B2447',
+        ]}
+        style={
+          styles.headerBackground
+        }
+      />
+
+
+      <SafeAreaView
+        style={styles.safe}
+        edges={[
+          'top',
+        ]}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.scrollContent
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={
+                refreshing
               }
-            >
-              Your digital identity
-            </Text>
-          </View>
-
-          <TouchableOpacity
+              onRefresh={() =>
+                loadDashboard(
+                  true
+                )
+              }
+              tintColor={
+                COLORS.gold
+              }
+            />
+          }
+        >
+          <View
             style={
-              styles.notificationButton
-            }
-            onPress={() =>
-              navigation
-                .getParent()
-                ?.navigate('Notifications')
+              styles.hero
             }
           >
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color="#111827"
-            />
+            <View
+              style={
+                styles.heroIdentity
+              }
+            >
+              <View
+                style={
+                  styles.avatarWrap
+                }
+              >
+                {card
+                  ?.profile_image_url ? (
+                  <Image
+                    source={{
+                      uri:
+                        card.profile_image_url,
+                    }}
+                    style={
+                      styles.avatar
+                    }
+                  />
+                ) : (
+                  <View
+                    style={
+                      styles.avatarFallback
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.avatarInitial
+                      }
+                    >
+                      {firstName
+                        ?.charAt(
+                          0
+                        )
+                        ?.toUpperCase()}
+                    </Text>
+                  </View>
+                )}
 
-            {unreadNotifications > 0 ? (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {unreadNotifications > 9
-                    ? '9+'
-                    : unreadNotifications}
+
+                <View
+                  style={
+                    styles.onlineDot
+                  }
+                />
+              </View>
+
+
+              <View
+                style={{
+                  flex: 1,
+                }}
+              >
+                <View
+                  style={
+                    styles.helloRow
+                  }
+                >
+                  <Text
+                    style={
+                      styles.helloWhite
+                    }
+                  >
+                    Hello,
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.helloGold
+                    }
+                  >
+                    {firstName}!
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.wave
+                    }
+                  >
+                    {'\uD83D\uDC4B'}
+                  </Text>
+                </View>
+
+
+                <Text
+                  style={
+                    styles.welcomeText
+                  }
+                >
+                  Welcome back to your dashboard
                 </Text>
               </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
+            </View>
 
-        <View
-          style={styles.welcomeRow}
-        >
-          <View>
-            <Text
-              style={styles.hello}
-            >
-              Hello,{' '}
-              {card?.name ||
-                'Welcome'}
-            </Text>
 
-            <Text
-              style={styles.welcome}
+            <TouchableOpacity
+              style={
+                styles.notificationButton
+              }
+              onPress={() =>
+                openRoot(
+                  'Notifications'
+                )
+              }
             >
-              Welcome Back
-            </Text>
+              <Ionicons
+                name="notifications-outline"
+                size={25}
+                color={
+                  COLORS.white
+                }
+              />
+
+
+              {notificationCount >
+              0 ? (
+                <View
+                  style={
+                    styles.notificationBadge
+                  }
+                >
+                  <Text
+                    style={
+                      styles.notificationBadgeText
+                    }
+                  >
+                    {notificationCount >
+                    99
+                      ? '99+'
+                      : notificationCount}
+                  </Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
           </View>
-        </View>
 
-        <View
-          style={styles.sectionHeader}
-        >
-          <Text
-            style={styles.sectionTitle}
-          >
-            MY CARD
-          </Text>
 
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('MyCards')
-            }
-          >
-            <Text
-              style={styles.addText}
-            >
-              + Add New
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View
-          style={styles.businessCard}
-        >
-          {card?.profile_image_url ? (
-            <Image
-              source={{
-                uri:
-                  card.profile_image_url,
+          {card ? (
+            <LinearGradient
+              colors={[
+                '#102D52',
+                '#081D39',
+                '#06162D',
+              ]}
+              start={{
+                x: 0,
+                y: 0,
+              }}
+              end={{
+                x: 1,
+                y: 1,
               }}
               style={
-                styles.profileImage
+                styles.digitalCard
               }
-            />
+            >
+              <View
+                style={
+                  styles.cardTop
+                }
+              >
+                <View
+                  style={[
+                    styles.activeBadge,
+
+                    !card.is_active &&
+                      styles.inactiveBadge,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.activeDot,
+
+                      !card.is_active && {
+                        backgroundColor:
+                          COLORS.muted,
+                      },
+                    ]}
+                  />
+
+                  <Text
+                    style={[
+                      styles.activeText,
+
+                      !card.is_active && {
+                        color:
+                          COLORS.muted,
+                      },
+                    ]}
+                  >
+                    {card.is_active
+                      ? 'Active'
+                      : 'Inactive'}
+                  </Text>
+                </View>
+
+
+                <View
+                  style={
+                    styles.cardTopRight
+                  }
+                >
+                  <Text
+                    style={
+                      styles.cardLabel
+                    }
+                  >
+                    Your Digital Card
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      openRoot(
+                        'CardSettings'
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name="ellipsis-vertical"
+                      size={22}
+                      color={
+                        COLORS.white
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+
+              <View
+                style={
+                  styles.cardBody
+                }
+              >
+                <View
+                  style={
+                    styles.cardLogo
+                  }
+                >
+                  <Ionicons
+                    name="id-card-outline"
+                    size={30}
+                    color={
+                      COLORS.gold
+                    }
+                  />
+
+                  <Text
+                    style={
+                      styles.cardLogoText
+                    }
+                  >
+                    YNS
+                  </Text>
+                </View>
+
+
+                <Text
+                  style={
+                    styles.cardName
+                  }
+                >
+                  {card.name ||
+                    'Digital Card'}
+                </Text>
+
+
+                <Text
+                  style={
+                    styles.cardDesignation
+                  }
+                >
+                  {card.designation ||
+                    card.company ||
+                    'Digital Business Professional'}
+                </Text>
+
+
+                <View
+                  style={
+                    styles.goldLine
+                  }
+                />
+
+
+                <View
+                  style={
+                    styles.cardBottom
+                  }
+                >
+                  <View
+                    style={
+                      styles.urlRow
+                    }
+                  >
+                    <Ionicons
+                      name="globe-outline"
+                      size={20}
+                      color={
+                        COLORS.gold
+                      }
+                    />
+
+                    <Text
+                      numberOfLines={
+                        1
+                      }
+                      style={
+                        styles.cardUrl
+                      }
+                    >
+                      yns-card-web.vercel.app/card/{card.card_slug}
+                    </Text>
+                  </View>
+
+
+                  <TouchableOpacity
+                    style={
+                      styles.shareCircle
+                    }
+                    onPress={
+                      shareCard
+                    }
+                  >
+                    <Ionicons
+                      name="share-social-outline"
+                      size={22}
+                      color={
+                        COLORS.gold
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+
+              <View
+                style={
+                  styles.cardGoldBottom
+                }
+              />
+            </LinearGradient>
           ) : (
             <View
               style={
-                styles.profilePlaceholder
+                styles.noCard
+              }
+            >
+              <Ionicons
+                name="card-outline"
+                size={35}
+                color={
+                  COLORS.gold
+                }
+              />
+
+              <Text
+                style={
+                  styles.noCardTitle
+                }
+              >
+                Create your first digital card
+              </Text>
+
+              <TouchableOpacity
+                style={
+                  styles.noCardButton
+                }
+                onPress={() =>
+                  openRoot(
+                    'MyCards'
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.noCardButtonText
+                  }
+                >
+                  Create Card
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+
+          <View
+            style={
+              styles.mainContent
+            }
+          >
+            <View
+              style={
+                styles.sectionTop
               }
             >
               <Text
                 style={
-                  styles.profileInitial
+                  styles.sectionTitle
                 }
               >
-                {card?.name
-                  ?.charAt(0)
-                  ?.toUpperCase() ||
-                  'Y'}
+                Quick Actions
               </Text>
-            </View>
-          )}
 
-          <Text
-            style={styles.name}
-          >
-            {card?.name}
-          </Text>
-
-          <Text
-            style={
-              styles.designation
-            }
-          >
-            {card?.designation}
-          </Text>
-
-          <Text
-            style={styles.company}
-          >
-            {card?.company}
-          </Text>
-
-          <View
-            style={
-              styles.servicePills
-            }
-          >
-            {services
-              .filter(
-                (item) =>
-                  item.is_active
-              )
-              .slice(0, 3)
-              .map((service) => (
-                <View
-                  key={service.id}
-                  style={
-                    styles.servicePill
-                  }
-                >
-                  <Text
-                    style={
-                      styles.servicePillText
-                    }
-                  >
-                    {service.title}
-                  </Text>
-                </View>
-              ))}
-          </View>
-
-          <View
-            style={styles.actionRow}
-          >
-            <CardAction
-              icon="create-outline"
-              label="Edit"
-              onPress={() =>
-                navigation
-                  .getParent()
-                  ?.navigate('CardEditor')
-              }
-            />
-
-            <CardAction
-              icon="share-social-outline"
-              label="Share"
-              onPress={
-                handleShare
-              }
-            />
-
-            <CardAction
-              icon="qr-code-outline"
-              label="QR Code"
-              onPress={() =>
-                setQrVisible(true)
-              }
-            />
-
-            <CardAction
-              icon="ellipsis-horizontal"
-              label="More"
-              onPress={() =>
-                Alert.alert(
-                  'YNS Card',
-                  getPublicUrl()
-                )
-              }
-            />
-          </View>
-        </View>
-
-        <Text
-          style={styles.sectionTitle}
-        >
-          QUICK ACTIONS
-        </Text>
-
-        <View
-          style={styles.quickGrid}
-        >
-          {activeLinks
-            .slice(0, 6)
-            .map((link) => (
               <TouchableOpacity
-                key={link.id}
-                style={
-                  styles.quickAction
-                }
                 onPress={() =>
-                  openLink(link)
+                  openRoot(
+                    'CardEditor'
+                  )
+                }
+                style={
+                  styles.editLink
                 }
               >
-                <View
+                <Text
                   style={
-                    styles.quickIcon
+                    styles.editLinkText
                   }
                 >
-                  <Ionicons
-                    name={
-                      link.icon_name ||
-                      'link-outline'
-                    }
-                    size={22}
-                    color="#111827"
-                  />
-                </View>
+                  Edit
+                </Text>
+
+                <Ionicons
+                  name="create-outline"
+                  size={18}
+                  color={
+                    COLORS.blue
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+
+            <View
+              style={
+                styles.quickGrid
+              }
+            >
+              <QuickAction
+                icon="create-outline"
+                label="Edit Card"
+                tone="blue"
+                onPress={() =>
+                  openRoot(
+                    'CardEditor'
+                  )
+                }
+              />
+
+              <QuickAction
+                icon="share-social-outline"
+                label="Share Card"
+                tone="purple"
+                onPress={
+                  shareCard
+                }
+              />
+
+              <QuickAction
+                icon="qr-code-outline"
+                label="QR Code"
+                tone="green"
+                onPress={
+                  showQr
+                }
+              />
+
+              <QuickAction
+                icon="people-outline"
+                label="My Leads"
+                tone="orange"
+                onPress={() =>
+                  navigation.navigate(
+                    'Connections'
+                  )
+                }
+              />
+
+              <QuickAction
+                icon="logo-whatsapp"
+                label="WhatsApp"
+                tone="green"
+                onPress={() =>
+                  openRoot(
+                    'WhatsAppInbox'
+                  )
+                }
+              />
+
+              <QuickAction
+                icon="bar-chart-outline"
+                label="Analytics"
+                tone="blue"
+                onPress={() =>
+                  navigation.navigate(
+                    'Insights'
+                  )
+                }
+              />
+            </View>
+
+
+            <View
+              style={
+                styles.sectionTop
+              }
+            >
+              <Text
+                style={
+                  styles.sectionTitle
+                }
+              >
+                Overview
+              </Text>
+
+              <View
+                style={
+                  styles.periodLabel
+                }
+              >
+                <Text
+                  style={
+                    styles.periodText
+                  }
+                >
+                  This Month
+                </Text>
+
+                <Ionicons
+                  name="chevron-down"
+                  size={15}
+                  color={
+                    COLORS.blue
+                  }
+                />
+              </View>
+            </View>
+
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={
+                false
+              }
+              contentContainerStyle={
+                styles.statsRow
+              }
+            >
+              <StatCard
+                icon="eye-outline"
+                label="Profile Views"
+                value={
+                  stats.views
+                }
+                tone="blue"
+              />
+
+              <StatCard
+                icon="navigate-outline"
+                label="Card Clicks"
+                value={
+                  stats.clicks
+                }
+                tone="purple"
+              />
+
+              <StatCard
+                icon="logo-whatsapp"
+                label="WhatsApp Clicks"
+                value={
+                  stats.whatsapp
+                }
+                tone="green"
+              />
+
+              <StatCard
+                icon="person-add-outline"
+                label="New Leads"
+                value={
+                  stats.leads
+                }
+                tone="orange"
+              />
+            </ScrollView>
+
+
+            <LinearGradient
+              colors={[
+                '#081D39',
+                '#06162D',
+              ]}
+              style={
+                styles.premiumBanner
+              }
+            >
+              <View
+                style={
+                  styles.premiumIcon
+                }
+              >
+                <Ionicons
+                  name="diamond-outline"
+                  size={26}
+                  color={
+                    COLORS.gold
+                  }
+                />
+              </View>
+
+
+              <View
+                style={{
+                  flex: 1,
+                }}
+              >
+                <Text
+                  style={
+                    styles.premiumTitle
+                  }
+                >
+                  YNS Premium
+                </Text>
 
                 <Text
-                  numberOfLines={1}
                   style={
-                    styles.quickLabel
+                    styles.premiumText
                   }
                 >
-                  {link.label}
+                  Premium themes, custom domains and advanced business tools.
                 </Text>
-              </TouchableOpacity>
-            ))}
-        </View>
+              </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          OUR SERVICES
-        </Text>
 
-        <View>
-          {services
-            .filter(
-              (item) =>
-                item.is_active
-            )
-            .slice(0, 4)
-            .map((service) => (
-              <View
-                key={service.id}
+              <TouchableOpacity
                 style={
-                  styles.serviceCard
+                  styles.upgradeButton
+                }
+                onPress={() =>
+                  Alert.alert(
+                    'YNS Premium',
+                    'Premium plans will be activated after the core production app is completed.'
+                  )
                 }
               >
-                <View
+                <Text
                   style={
-                    styles.serviceIcon
+                    styles.upgradeButtonText
                   }
                 >
-                  <Ionicons
-                    name={
-                      service.icon_name ||
-                      'briefcase-outline'
-                    }
-                    size={22}
-                    color="#111827"
-                  />
-                </View>
-
-                <View
-                  style={{
-                    flex: 1,
-                  }}
-                >
-                  <Text
-                    style={
-                      styles.serviceTitle
-                    }
-                  >
-                    {service.title}
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.serviceDescription
-                    }
-                  >
-                    {service.short_description ||
-                      ''}
-                  </Text>
-                </View>
+                  Upgrade
+                </Text>
 
                 <Ionicons
                   name="chevron-forward"
-                  size={20}
-                  color="#9CA3AF"
+                  size={17}
+                  color={
+                    COLORS.navy
+                  }
                 />
+              </TouchableOpacity>
+            </LinearGradient>
+
+
+            <View
+              style={
+                styles.accountSummary
+              }
+            >
+              <View>
+                <Text
+                  style={
+                    styles.accountSummaryLabel
+                  }
+                >
+                  DIGITAL CARDS
+                </Text>
+
+                <Text
+                  style={
+                    styles.accountSummaryValue
+                  }
+                >
+                  {cards.length}
+                </Text>
               </View>
-            ))}
-        </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          PORTFOLIO
-        </Text>
 
-        <View
-          style={
-            styles.portfolioRow
-          }
-        >
-          <TouchableOpacity
-            style={
-              styles.portfolioCard
-            }
-          >
-            <Ionicons
-              name="school-outline"
-              size={28}
-              color="#111827"
-            />
+              <View
+                style={
+                  styles.summaryDivider
+                }
+              />
 
-            <Text
-              style={
-                styles.portfolioNumber
-              }
-            >
-              {students.length}
-            </Text>
 
-            <Text
-              style={
-                styles.portfolioLabel
-              }
-            >
-              Students
-            </Text>
-          </TouchableOpacity>
+              <View>
+                <Text
+                  style={
+                    styles.accountSummaryLabel
+                  }
+                >
+                  TOTAL LEADS
+                </Text>
 
-          <TouchableOpacity
-            style={
-              styles.portfolioCard
-            }
-          >
-            <Ionicons
-              name="people-outline"
-              size={28}
-              color="#111827"
-            />
+                <Text
+                  style={
+                    styles.accountSummaryValue
+                  }
+                >
+                  {connections.length}
+                </Text>
+              </View>
 
-            <Text
-              style={
-                styles.portfolioNumber
-              }
-            >
-              {employees.length}
-            </Text>
 
-            <Text
-              style={
-                styles.portfolioLabel
-              }
-            >
-              Employees
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={
+                  styles.manageCardsButton
+                }
+                onPress={() =>
+                  openRoot(
+                    'MyCards'
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.manageCardsText
+                  }
+                >
+                  Manage
+                </Text>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          CONNECTIONS STATUS
-        </Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={16}
+                  color={
+                    COLORS.blue
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
 
-        <View
-          style={styles.statsGrid}
-        >
-          <StatBox
-            number={
-              connections.length
-            }
-            label="Connections"
-          />
-
-          <StatBox
-            number={
-              analytics.cardViews
-            }
-            label="Card Views"
-          />
-
-          <StatBox
-            number={
-              analytics.linkClicks
-            }
-            label="Link Clicks"
-          />
-
-          <StatBox
-            number={
-              analytics.leadSubmits
-            }
-            label="Leads"
-          />
-        </View>
-
-        <Text
-          style={styles.footer}
-        >
-          Powered by YUVARAJ NETWORKS
-          & SOLUTIONS
-        </Text>
-      </ScrollView>
 
       <Modal
-        visible={qrVisible}
+        visible={
+          qrVisible
+        }
         transparent
         animationType="fade"
         onRequestClose={() =>
-          setQrVisible(false)
+          setQrVisible(
+            false
+          )
         }
       >
         <View
@@ -850,88 +1416,166 @@ export default function HomeScreen({
               styles.qrModal
             }
           >
-            <Text
+            <TouchableOpacity
               style={
-                styles.qrModalTitle
+                styles.qrClose
+              }
+              onPress={() =>
+                setQrVisible(
+                  false
+                )
               }
             >
-              Your Digital Card
-            </Text>
+              <Ionicons
+                name="close"
+                size={23}
+                color={
+                  COLORS.text
+                }
+              />
+            </TouchableOpacity>
 
-            <Text
-              style={
-                styles.qrModalSubtitle
-              }
-            >
-              Scan to open your public
-              profile
-            </Text>
 
             <View
               style={
-                styles.largeQr
+                styles.qrLogo
               }
             >
-              <QRCode
-                value={
-                  getPublicUrl()
+              <Ionicons
+                name="id-card-outline"
+                size={25}
+                color={
+                  COLORS.gold
                 }
-                size={220}
-                backgroundColor="#FFFFFF"
-                color="#111827"
               />
             </View>
 
+
             <Text
               style={
-                styles.cardUrl
+                styles.qrTitle
               }
             >
-              {getPublicUrl()}
+              Scan My YNS Card
             </Text>
+
+            <Text
+              style={
+                styles.qrSubtitle
+              }
+            >
+              Scan to open the digital business card
+            </Text>
+
+
+            {publicUrl ? (
+              <View
+                style={
+                  styles.qrBox
+                }
+              >
+                <QRCode
+                  value={
+                    publicUrl
+                  }
+                  size={205}
+                  backgroundColor="#FFFFFF"
+                  color="#071A33"
+                />
+              </View>
+            ) : null}
+
+
+            <Text
+              numberOfLines={
+                1
+              }
+              style={
+                styles.qrUrl
+              }
+            >
+              {publicUrl}
+            </Text>
+
 
             <TouchableOpacity
               style={
-                styles.closeButton
+                styles.qrShareButton
               }
-              onPress={() =>
-                setQrVisible(false)
+              onPress={
+                shareCard
               }
             >
+              <Ionicons
+                name="share-social-outline"
+                size={19}
+                color={
+                  COLORS.white
+                }
+              />
+
               <Text
                 style={
-                  styles.closeButtonText
+                  styles.qrShareText
                 }
               >
-                Close
+                Share Card
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
-function CardAction({
+
+function QuickAction({
   icon,
   label,
+  tone,
   onPress,
 }) {
+  const palette =
+    getTone(
+      tone
+    );
+
+
   return (
     <TouchableOpacity
-      style={styles.cardAction}
-      onPress={onPress}
+      activeOpacity={
+        0.72
+      }
+      onPress={
+        onPress
+      }
+      style={
+        styles.quickAction
+      }
     >
-      <Ionicons
-        name={icon}
-        size={20}
-        color="#111827"
-      />
+      <View
+        style={[
+          styles.quickIcon,
+
+          {
+            backgroundColor:
+              palette.soft,
+          },
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={25}
+          color={
+            palette.main
+          }
+        />
+      </View>
 
       <Text
         style={
-          styles.cardActionText
+          styles.quickText
         }
       >
         {label}
@@ -940,434 +1584,1261 @@ function CardAction({
   );
 }
 
-function StatBox({
-  number,
+
+function StatCard({
+  icon,
   label,
+  value,
+  tone,
 }) {
+  const palette =
+    getTone(
+      tone
+    );
+
+
   return (
     <View
-      style={styles.statBox}
+      style={[
+        styles.statCard,
+
+        {
+          backgroundColor:
+            palette.soft,
+        },
+      ]}
     >
-      <Text
-        style={styles.statNumber}
-      >
-        {number}
-      </Text>
+      <Ionicons
+        name={icon}
+        size={27}
+        color={
+          palette.main
+        }
+      />
 
       <Text
-        style={styles.statLabel}
+        style={
+          styles.statLabel
+        }
       >
         {label}
       </Text>
+
+      <Text
+        style={
+          styles.statValue
+        }
+      >
+        {formatNumber(
+          value
+        )}
+      </Text>
+
+      <View
+        style={
+          styles.statTrend
+        }
+      >
+        <Ionicons
+          name="arrow-up"
+          size={13}
+          color={
+            COLORS.green
+          }
+        />
+
+        <Text
+          style={
+            styles.statTrendText
+          }
+        >
+          This month
+        </Text>
+      </View>
     </View>
   );
 }
 
+
+function getTone(
+  tone
+) {
+  if (
+    tone === 'green'
+  ) {
+    return {
+      main:
+        COLORS.green,
+
+      soft:
+        COLORS.greenSoft,
+    };
+  }
+
+
+  if (
+    tone === 'purple'
+  ) {
+    return {
+      main:
+        COLORS.purple,
+
+      soft:
+        COLORS.purpleSoft,
+    };
+  }
+
+
+  if (
+    tone === 'orange'
+  ) {
+    return {
+      main:
+        COLORS.orange,
+
+      soft:
+        COLORS.orangeSoft,
+    };
+  }
+
+
+  return {
+    main:
+      COLORS.blue,
+
+    soft:
+      COLORS.blueSoft,
+  };
+}
+
+
+function formatNumber(
+  value
+) {
+  const number =
+    Number(value || 0);
+
+
+  if (
+    number >= 1000000
+  ) {
+    return `${(
+      number /
+      1000000
+    ).toFixed(1)}M`;
+  }
+
+
+  if (
+    number >= 1000
+  ) {
+    return `${(
+      number /
+      1000
+    ).toFixed(1)}K`;
+  }
+
+
+  return String(
+    number
+  );
+}
+
+
 const styles =
   StyleSheet.create({
-    safeArea: {
+    root: {
       flex: 1,
+
       backgroundColor:
-        '#F3F4F6',
+        COLORS.background,
     },
 
-    loadingScreen: {
+    safe: {
       flex: 1,
+    },
+
+    headerBackground: {
+      position:
+        'absolute',
+
+      left: 0,
+      right: 0,
+      top: 0,
+
+      height: 430,
+    },
+
+    loading: {
+      flex: 1,
+
       backgroundColor:
-        '#F3F4F6',
-      alignItems: 'center',
+        COLORS.navy,
+
       justifyContent:
         'center',
-    },
 
-    loadingText: {
-      marginTop: 12,
-      color: '#6B7280',
-    },
-
-    container: {
-      padding: 18,
-      paddingBottom: 110,
-    },
-
-    header: {
-      flexDirection: 'row',
-      justifyContent:
-        'space-between',
-      alignItems: 'center',
-    },
-
-    brand: {
-      fontSize: 23,
-      fontWeight: '900',
-      color: '#111827',
-    },
-
-    headerSubtitle: {
-      fontSize: 12,
-      color: '#6B7280',
-      marginTop: 2,
-    },
-
-    notificationButton: {
-      width: 42,
-      height: 42,
-      borderRadius: 14,
-      backgroundColor:
-        '#FFFFFF',
-      alignItems: 'center',
-      justifyContent:
+      alignItems:
         'center',
-      position: 'relative',
-    },
 
-    notificationBadge: {
-      position: 'absolute',
-      right: -4,
-      top: -4,
-      minWidth: 18,
-      height: 18,
-      borderRadius: 9,
-      paddingHorizontal: 4,
-      backgroundColor: '#B7791F',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-
-    notificationBadgeText: {
-      color: '#FFFFFF',
-      fontSize: 9,
-      fontWeight: '900',
-    },
-
-    welcomeRow: {
-      marginTop: 24,
-      marginBottom: 22,
-    },
-
-    hello: {
-      color: '#6B7280',
-      fontSize: 14,
-    },
-
-    welcome: {
-      color: '#111827',
-      fontSize: 25,
-      fontWeight: '800',
-      marginTop: 3,
-    },
-
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent:
-        'space-between',
-      alignItems: 'center',
-    },
-
-    sectionTitle: {
-      color: '#6B7280',
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 1,
-      marginTop: 20,
-      marginBottom: 11,
-    },
-
-    addText: {
-      color: '#B7791F',
-      fontSize: 13,
-      fontWeight: '800',
-      marginTop: 20,
-    },
-
-    businessCard: {
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 24,
-      padding: 22,
-      alignItems: 'center',
-    },
-
-    profileImage: {
-      width: 82,
-      height: 82,
-      borderRadius: 41,
-      marginBottom: 12,
-    },
-
-    profilePlaceholder: {
-      width: 82,
-      height: 82,
-      borderRadius: 41,
-      backgroundColor:
-        '#111827',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-      marginBottom: 12,
-    },
-
-    profileInitial: {
-      color: '#FFFFFF',
-      fontSize: 30,
-      fontWeight: '800',
-    },
-
-    name: {
-      fontSize: 24,
-      fontWeight: '900',
-      color: '#111827',
-    },
-
-    designation: {
-      marginTop: 3,
-      color: '#6B7280',
-      fontSize: 14,
-    },
-
-    company: {
-      marginTop: 7,
-      color: '#111827',
-      fontWeight: '700',
-      fontSize: 12,
-      textAlign: 'center',
-    },
-
-    servicePills: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent:
-        'center',
-      gap: 6,
-      marginTop: 16,
-    },
-
-    servicePill: {
-      backgroundColor:
-        '#F3F4F6',
-      borderRadius: 20,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-    },
-
-    servicePillText: {
-      color: '#4B5563',
-      fontSize: 10,
-      fontWeight: '700',
-    },
-
-    actionRow: {
-      width: '100%',
-      flexDirection: 'row',
-      justifyContent:
-        'space-between',
-      borderTopWidth: 1,
-      borderTopColor:
-        '#E5E7EB',
-      marginTop: 20,
-      paddingTop: 17,
-    },
-
-    cardAction: {
-      alignItems: 'center',
-      minWidth: 55,
-    },
-
-    cardActionText: {
-      marginTop: 5,
-      color: '#6B7280',
-      fontSize: 10,
-      fontWeight: '700',
-    },
-
-    quickGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-
-    quickAction: {
-      width: '31%',
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 18,
-      padding: 13,
-      alignItems: 'center',
-    },
-
-    quickIcon: {
-      width: 42,
-      height: 42,
-      borderRadius: 14,
-      backgroundColor:
-        '#F3F4F6',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-    },
-
-    quickLabel: {
-      marginTop: 7,
-      fontSize: 10,
-      fontWeight: '700',
-      color: '#111827',
-      maxWidth: '100%',
-    },
-
-    serviceCard: {
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 18,
-      padding: 15,
-      marginBottom: 9,
-      flexDirection: 'row',
-      alignItems: 'center',
       gap: 12,
     },
 
-    serviceIcon: {
-      width: 45,
-      height: 45,
-      borderRadius: 14,
+    loadingText: {
+      color:
+        '#D2DBE8',
+
+      fontSize: 11,
+    },
+
+    scrollContent: {
+      paddingBottom: 35,
+    },
+
+
+    /*
+     * HEADER
+     */
+
+    hero: {
+      paddingHorizontal: 18,
+
+      paddingTop: 15,
+
+      paddingBottom: 20,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    heroIdentity: {
+      flex: 1,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 12,
+    },
+
+    avatarWrap: {
+      position:
+        'relative',
+    },
+
+    avatar: {
+      width: 62,
+      height: 62,
+
+      borderRadius: 21,
+
+      borderWidth: 2,
+
+      borderColor:
+        'rgba(255,255,255,0.75)',
+    },
+
+    avatarFallback: {
+      width: 62,
+      height: 62,
+
+      borderRadius: 21,
+
       backgroundColor:
-        '#F3F4F6',
-      alignItems: 'center',
+        COLORS.goldSoft,
+
+      alignItems:
+        'center',
+
       justifyContent:
         'center',
+
+      borderWidth: 2,
+
+      borderColor:
+        COLORS.gold,
     },
 
-    serviceTitle: {
-      fontSize: 14,
+    avatarInitial: {
+      color:
+        COLORS.navy,
+
+      fontSize: 24,
+
+      fontWeight: '900',
+    },
+
+    onlineDot: {
+      width: 15,
+      height: 15,
+
+      borderRadius: 8,
+
+      backgroundColor:
+        COLORS.green,
+
+      borderWidth: 2,
+
+      borderColor:
+        COLORS.navy,
+
+      position:
+        'absolute',
+
+      bottom: 1,
+      right: 0,
+    },
+
+    helloRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      flexWrap:
+        'wrap',
+
+      gap: 4,
+    },
+
+    helloWhite: {
+      color:
+        COLORS.white,
+
+      fontSize: 23,
+
       fontWeight: '800',
-      color: '#111827',
     },
 
-    serviceDescription: {
-      color: '#6B7280',
-      fontSize: 11,
-      marginTop: 3,
-    },
+    helloGold: {
+      color:
+        COLORS.gold,
 
-    portfolioRow: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-
-    portfolioCard: {
-      flex: 1,
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 20,
-      padding: 18,
-      alignItems: 'center',
-    },
-
-    portfolioNumber: {
       fontSize: 23,
+
       fontWeight: '900',
-      color: '#111827',
-      marginTop: 8,
     },
 
-    portfolioLabel: {
-      color: '#6B7280',
-      fontSize: 12,
-      marginTop: 2,
+    wave: {
+      fontSize: 20,
     },
 
-    statsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
+    welcomeText: {
+      color:
+        '#C8D1DF',
 
-    statBox: {
-      width: '48%',
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 18,
-      padding: 17,
-    },
+      fontSize: 10,
 
-    statNumber: {
-      fontSize: 23,
-      fontWeight: '900',
-      color: '#111827',
-    },
-
-    statLabel: {
-      color: '#6B7280',
-      fontSize: 11,
       marginTop: 4,
     },
 
-    footer: {
-      textAlign: 'center',
-      color: '#9CA3AF',
-      fontSize: 10,
-      marginTop: 28,
+    notificationButton: {
+      width: 48,
+      height: 48,
+
+      borderRadius: 15,
+
+      borderWidth: 1,
+
+      borderColor:
+        'rgba(255,255,255,0.18)',
+
+      backgroundColor:
+        'rgba(255,255,255,0.08)',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginLeft: 10,
     },
+
+    notificationBadge: {
+      minWidth: 20,
+
+      height: 20,
+
+      paddingHorizontal: 4,
+
+      borderRadius: 10,
+
+      position:
+        'absolute',
+
+      top: -4,
+      right: -4,
+
+      backgroundColor:
+        COLORS.gold,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    notificationBadgeText: {
+      color:
+        COLORS.navy,
+
+      fontSize: 8,
+
+      fontWeight: '900',
+    },
+
+
+    /*
+     * DIGITAL CARD
+     */
+
+    digitalCard: {
+      marginHorizontal: 18,
+
+      borderRadius: 24,
+
+      borderWidth: 1,
+
+      borderColor:
+        'rgba(255,255,255,0.35)',
+
+      overflow:
+        'hidden',
+
+      shadowColor:
+        '#000',
+
+      shadowOffset: {
+        width: 0,
+        height: 12,
+      },
+
+      shadowOpacity: 0.25,
+
+      shadowRadius: 20,
+
+      elevation: 10,
+    },
+
+    cardTop: {
+      paddingHorizontal: 17,
+
+      paddingTop: 17,
+
+      flexDirection:
+        'row',
+
+      justifyContent:
+        'space-between',
+
+      alignItems:
+        'center',
+    },
+
+    activeBadge: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 6,
+
+      paddingHorizontal: 10,
+
+      paddingVertical: 7,
+
+      borderRadius: 20,
+
+      backgroundColor:
+        'rgba(22,163,74,0.12)',
+
+      borderWidth: 1,
+
+      borderColor:
+        'rgba(22,163,74,0.30)',
+    },
+
+    inactiveBadge: {
+      backgroundColor:
+        'rgba(255,255,255,0.08)',
+
+      borderColor:
+        'rgba(255,255,255,0.13)',
+    },
+
+    activeDot: {
+      width: 7,
+      height: 7,
+
+      borderRadius: 4,
+
+      backgroundColor:
+        '#18D67D',
+    },
+
+    activeText: {
+      color:
+        '#18D67D',
+
+      fontSize: 10,
+
+      fontWeight: '800',
+    },
+
+    cardTopRight: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 8,
+    },
+
+    cardLabel: {
+      color:
+        '#D8E0EB',
+
+      fontSize: 10,
+    },
+
+    cardBody: {
+      paddingHorizontal: 18,
+
+      paddingTop: 22,
+
+      paddingBottom: 17,
+    },
+
+    cardLogo: {
+      width: 70,
+      height: 70,
+
+      borderRadius: 20,
+
+      borderWidth: 2,
+
+      borderColor:
+        COLORS.gold,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    cardLogoText: {
+      color:
+        COLORS.gold,
+
+      fontSize: 10,
+
+      fontWeight: '900',
+
+      marginTop: 1,
+    },
+
+    cardName: {
+      color:
+        COLORS.white,
+
+      fontSize: 24,
+
+      fontWeight: '900',
+
+      marginTop: 18,
+    },
+
+    cardDesignation: {
+      color:
+        '#D2DAE5',
+
+      fontSize: 12,
+
+      marginTop: 4,
+    },
+
+    goldLine: {
+      width: 55,
+
+      height: 3,
+
+      borderRadius: 3,
+
+      backgroundColor:
+        COLORS.gold,
+
+      marginTop: 14,
+    },
+
+    cardBottom: {
+      marginTop: 20,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    urlRow: {
+      flex: 1,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 8,
+
+      paddingRight: 10,
+    },
+
+    cardUrl: {
+      flex: 1,
+
+      color:
+        COLORS.gold,
+
+      fontSize: 10,
+    },
+
+    shareCircle: {
+      width: 44,
+      height: 44,
+
+      borderRadius: 22,
+
+      borderWidth: 1,
+
+      borderColor:
+        'rgba(246,185,26,0.4)',
+
+      backgroundColor:
+        'rgba(246,185,26,0.08)',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    cardGoldBottom: {
+      height: 4,
+
+      backgroundColor:
+        COLORS.gold,
+    },
+
+    noCard: {
+      marginHorizontal: 18,
+
+      backgroundColor:
+        COLORS.navy2,
+
+      borderRadius: 22,
+
+      padding: 28,
+
+      alignItems:
+        'center',
+    },
+
+    noCardTitle: {
+      color:
+        COLORS.white,
+
+      fontSize: 15,
+
+      fontWeight: '800',
+
+      marginTop: 10,
+    },
+
+    noCardButton: {
+      backgroundColor:
+        COLORS.gold,
+
+      paddingHorizontal: 20,
+
+      paddingVertical: 11,
+
+      borderRadius: 12,
+
+      marginTop: 15,
+    },
+
+    noCardButtonText: {
+      color:
+        COLORS.navy,
+
+      fontWeight: '900',
+    },
+
+
+    /*
+     * WHITE CONTENT
+     */
+
+    mainContent: {
+      backgroundColor:
+        COLORS.background,
+
+      borderTopLeftRadius: 28,
+
+      borderTopRightRadius: 28,
+
+      marginTop: 18,
+
+      paddingHorizontal: 18,
+
+      paddingTop: 21,
+    },
+
+    sectionTop: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+
+      marginBottom: 12,
+
+      marginTop: 4,
+    },
+
+    sectionTitle: {
+      color:
+        COLORS.text,
+
+      fontSize: 17,
+
+      fontWeight: '900',
+    },
+
+    editLink: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 5,
+    },
+
+    editLinkText: {
+      color:
+        COLORS.blue,
+
+      fontSize: 11,
+
+      fontWeight: '800',
+    },
+
+
+    /*
+     * QUICK ACTIONS
+     */
+
+    quickGrid: {
+      flexDirection:
+        'row',
+
+      flexWrap:
+        'wrap',
+
+      gap: 9,
+
+      marginBottom: 22,
+    },
+
+    quickAction: {
+      width:
+        '31.5%',
+
+      minHeight: 104,
+
+      backgroundColor:
+        COLORS.white,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
+
+      borderRadius: 18,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      padding: 10,
+    },
+
+    quickIcon: {
+      width: 45,
+      height: 45,
+
+      borderRadius: 15,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    quickText: {
+      color:
+        COLORS.text,
+
+      fontSize: 10,
+
+      fontWeight: '800',
+
+      marginTop: 9,
+
+      textAlign:
+        'center',
+    },
+
+
+    /*
+     * STATS
+     */
+
+    periodLabel: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 4,
+    },
+
+    periodText: {
+      color:
+        COLORS.blue,
+
+      fontSize: 10,
+
+      fontWeight: '700',
+    },
+
+    statsRow: {
+      gap: 10,
+
+      paddingBottom: 4,
+    },
+
+    statCard: {
+      width: 145,
+
+      minHeight: 155,
+
+      borderRadius: 19,
+
+      padding: 15,
+
+      borderWidth: 1,
+
+      borderColor:
+        'rgba(0,0,0,0.025)',
+    },
+
+    statLabel: {
+      color:
+        COLORS.text,
+
+      fontSize: 10,
+
+      marginTop: 13,
+    },
+
+    statValue: {
+      color:
+        COLORS.text,
+
+      fontSize: 27,
+
+      fontWeight: '900',
+
+      marginTop: 5,
+    },
+
+    statTrend: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 3,
+
+      marginTop: 5,
+    },
+
+    statTrendText: {
+      color:
+        COLORS.green,
+
+      fontSize: 8,
+
+      fontWeight: '800',
+    },
+
+
+    /*
+     * PREMIUM
+     */
+
+    premiumBanner: {
+      minHeight: 95,
+
+      borderRadius: 19,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.gold,
+
+      marginTop: 18,
+
+      padding: 14,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 10,
+    },
+
+    premiumIcon: {
+      width: 52,
+      height: 52,
+
+      borderRadius: 16,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.gold,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    premiumTitle: {
+      color:
+        COLORS.gold,
+
+      fontSize: 13,
+
+      fontWeight: '900',
+    },
+
+    premiumText: {
+      color:
+        '#D1D9E5',
+
+      fontSize: 8,
+
+      lineHeight: 12,
+
+      marginTop: 3,
+    },
+
+    upgradeButton: {
+      minHeight: 39,
+
+      backgroundColor:
+        COLORS.gold,
+
+      borderRadius: 11,
+
+      paddingHorizontal: 11,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 3,
+    },
+
+    upgradeButtonText: {
+      color:
+        COLORS.navy,
+
+      fontSize: 9,
+
+      fontWeight: '900',
+    },
+
+
+    /*
+     * ACCOUNT SUMMARY
+     */
+
+    accountSummary: {
+      backgroundColor:
+        COLORS.white,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
+
+      borderRadius: 17,
+
+      marginTop: 14,
+
+      padding: 14,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 14,
+    },
+
+    accountSummaryLabel: {
+      color:
+        COLORS.muted,
+
+      fontSize: 7,
+
+      fontWeight: '900',
+
+      letterSpacing: 0.7,
+    },
+
+    accountSummaryValue: {
+      color:
+        COLORS.text,
+
+      fontSize: 20,
+
+      fontWeight: '900',
+
+      marginTop: 2,
+    },
+
+    summaryDivider: {
+      width: 1,
+
+      height: 35,
+
+      backgroundColor:
+        COLORS.border,
+    },
+
+    manageCardsButton: {
+      marginLeft: 'auto',
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 4,
+
+      padding: 8,
+    },
+
+    manageCardsText: {
+      color:
+        COLORS.blue,
+
+      fontSize: 10,
+
+      fontWeight: '800',
+    },
+
+
+    /*
+     * QR
+     */
 
     modalOverlay: {
       flex: 1,
+
       backgroundColor:
-        'rgba(0,0,0,0.72)',
+        'rgba(3,13,28,0.72)',
+
+      alignItems:
+        'center',
+
       justifyContent:
         'center',
-      alignItems: 'center',
-      padding: 20,
+
+      padding: 24,
     },
 
     qrModal: {
       width: '100%',
+
       maxWidth: 380,
+
       backgroundColor:
-        '#FFFFFF',
-      borderRadius: 26,
+        COLORS.white,
+
+      borderRadius: 28,
+
       padding: 24,
-      alignItems: 'center',
+
+      alignItems:
+        'center',
     },
 
-    qrModalTitle: {
-      fontSize: 22,
+    qrClose: {
+      position:
+        'absolute',
+
+      top: 15,
+      right: 15,
+
+      width: 39,
+      height: 39,
+
+      backgroundColor:
+        COLORS.background,
+
+      borderRadius: 13,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    qrLogo: {
+      width: 55,
+      height: 55,
+
+      borderRadius: 17,
+
+      backgroundColor:
+        COLORS.navy,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    qrTitle: {
+      color:
+        COLORS.text,
+
+      fontSize: 20,
+
       fontWeight: '900',
-      color: '#111827',
+
+      marginTop: 13,
     },
 
-    qrModalSubtitle: {
-      color: '#6B7280',
-      marginTop: 6,
-      textAlign: 'center',
-    },
+    qrSubtitle: {
+      color:
+        COLORS.text2,
 
-    largeQr: {
-      padding: 15,
-      marginTop: 22,
-      backgroundColor:
-        '#FFFFFF',
-    },
-
-    cardUrl: {
       fontSize: 10,
-      color: '#6B7280',
-      textAlign: 'center',
-      marginTop: 14,
+
+      marginTop: 4,
     },
 
-    closeButton: {
+    qrBox: {
+      marginTop: 19,
+
+      padding: 15,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
+
+      borderRadius: 20,
+    },
+
+    qrUrl: {
+      width: '90%',
+
+      color:
+        COLORS.text2,
+
+      fontSize: 8,
+
+      marginTop: 13,
+
+      textAlign:
+        'center',
+    },
+
+    qrShareButton: {
       width: '100%',
-      backgroundColor:
-        '#111827',
-      paddingVertical: 14,
+
+      minHeight: 49,
+
+      marginTop: 18,
+
       borderRadius: 14,
-      alignItems: 'center',
-      marginTop: 20,
+
+      backgroundColor:
+        COLORS.navy,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      gap: 7,
     },
 
-    closeButtonText: {
-      color: '#FFFFFF',
-      fontWeight: '800',
+    qrShareText: {
+      color:
+        COLORS.white,
+
+      fontSize: 12,
+
+      fontWeight: '900',
     },
   });
-
-

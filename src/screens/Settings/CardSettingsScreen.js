@@ -177,7 +177,7 @@ export default function CardSettingsScreen({
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
     );
@@ -194,7 +194,7 @@ export default function CardSettingsScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -323,13 +323,13 @@ export default function CardSettingsScreen({
               <Ionicons
                 name="checkmark-circle"
                 size={23}
-                color="#B7791F"
+                color="#C98B16"
               />
             ) : (
               <Ionicons
                 name="ellipse-outline"
                 size={23}
-                color="#D1D5DB"
+                color="#D0D5DD"
               />
             )}
           </TouchableOpacity>
@@ -342,7 +342,7 @@ export default function CardSettingsScreen({
           <Ionicons
             name="open-outline"
             size={20}
-            color="#111827"
+            color="#06162D"
           />
 
           <Text
@@ -417,38 +417,71 @@ function SettingRow({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
 
   loading: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    backgroundColor: '#F5F7FB',
+},
 
   header: {
-    height: 60,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+
+      minHeight: 68,
+
+      paddingHorizontal: 18,
+
+      backgroundColor: '#06162D',
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent: 'space-between',
+
+      gap: 10,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 5 },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 12,
+
+      elevation: 5,
+
+    },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+
+      fontSize: 18,
+
+      fontWeight: '900',
+
+      color: '#FFFFFF',
+
+      letterSpacing: 0.1,
+
+    },
 
   topSave: {
-    color: '#B7791F',
-    fontWeight: '800',
-  },
+
+      color: '#F6B91A',
+
+      fontWeight: '900',
+
+    },
 
   container: {
     padding: 16,
@@ -456,7 +489,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
@@ -468,7 +501,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 16,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   settingRow: {
     flexDirection: 'row',
@@ -476,7 +524,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F5F7FB',
   },
 
   settingRowLast: {
@@ -484,12 +532,12 @@ const styles = StyleSheet.create({
   },
 
   settingTitle: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   settingDescription: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 3,
@@ -511,12 +559,17 @@ const styles = StyleSheet.create({
   },
 
   selectedOption: {
-    backgroundColor: '#111827',
-    borderColor: '#111827',
-  },
+    backgroundColor: '#06162D',
+    borderColor: '#06162D',
+
+
+    backgroundColor: '#06162D',
+
+    borderColor: '#F6B91A',
+},
 
   typeText: {
-    color: '#6B7280',
+    color: '#667085',
     fontWeight: '700',
     fontSize: 11,
   },
@@ -535,23 +588,41 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   selectedTheme: {
-    borderColor: '#D4A94E',
-  },
+    borderColor: '#F6B91A',
+
+
+    backgroundColor: '#FFFCF3',
+},
 
   themePreview: {
     width: 50,
     height: 50,
     borderRadius: 14,
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   goldPreview: {
-    backgroundColor: '#B7791F',
+    backgroundColor: '#C98B16',
   },
 
   oceanPreview: {
@@ -565,12 +636,12 @@ const styles = StyleSheet.create({
   },
 
   themeName: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   themeDescription: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 10,
     marginTop: 3,
   },
@@ -584,20 +655,40 @@ const styles = StyleSheet.create({
     gap: 8,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   previewText: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   saveButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 15,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 10,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   saveText: {
     color: '#FFFFFF',

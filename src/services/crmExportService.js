@@ -76,7 +76,8 @@ export async function exportConnectionsCsv() {
     );
 
 
-  const csvContent = [
+  // Excel on mobile and Windows uses the BOM to reliably detect UTF-8.
+  const csvContent = `\uFEFF${[
     headers
       .map(escapeCsv)
       .join(','),
@@ -87,7 +88,7 @@ export async function exportConnectionsCsv() {
           .map(escapeCsv)
           .join(',')
     ),
-  ].join('\r\n');
+  ].join('\r\n')}`;
 
 
   const date =
@@ -106,7 +107,8 @@ export async function exportConnectionsCsv() {
     fileUri,
     csvContent,
     {
-      encoding: 'utf8',
+      encoding:
+        FileSystem.EncodingType.UTF8,
     }
   );
 

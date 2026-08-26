@@ -116,7 +116,7 @@ export default function ServicesScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#111827" />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -125,7 +125,7 @@ export default function ServicesScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={25} color="#111827" />
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Services</Text>
@@ -144,7 +144,7 @@ export default function ServicesScreen({ navigation }) {
             value={title}
             onChangeText={setTitle}
             placeholder="Service name"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
           />
 
           <TextInput
@@ -152,7 +152,7 @@ export default function ServicesScreen({ navigation }) {
             value={description}
             onChangeText={setDescription}
             placeholder="Short description"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
             multiline
           />
 
@@ -177,7 +177,7 @@ export default function ServicesScreen({ navigation }) {
               <Ionicons
                 name={service.icon_name || 'briefcase-outline'}
                 size={22}
-                color="#111827"
+                color="#06162D"
               />
             </View>
 
@@ -190,7 +190,7 @@ export default function ServicesScreen({ navigation }) {
             </View>
 
             <TouchableOpacity onPress={() => edit(service)}>
-              <Ionicons name="create-outline" size={21} color="#111827" />
+              <Ionicons name="create-outline" size={21} color="#06162D" />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => confirmDelete(service)}>
@@ -205,29 +205,38 @@ export default function ServicesScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+
+    backgroundColor: '#F5F7FB',
+},
   header: {
-    height: 60,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+      minHeight: 68,
+      paddingHorizontal: 18,
+      backgroundColor: '#06162D',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+      shadowColor: '#06162D',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 5,
+    },
   headerTitle: {
-    fontWeight: '800',
-    fontSize: 18,
-    color: '#111827',
-  },
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: 0.1,
+    },
   container: {
     padding: 16,
     paddingBottom: 70,
@@ -236,32 +245,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   formTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06162D',
     marginBottom: 14,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E6EAF0',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
-    color: '#111827',
+    color: '#06162D',
   },
   description: {
     minHeight: 80,
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 13,
     paddingVertical: 13,
     alignItems: 'center',
-  },
+
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+},
   saveText: {
     color: '#FFFFFF',
     fontWeight: '800',
@@ -275,7 +295,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     letterSpacing: 1,
-    color: '#6B7280',
+    color: '#667085',
     fontWeight: '800',
     marginTop: 24,
     marginBottom: 10,
@@ -288,25 +308,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 11,
     alignItems: 'center',
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   serviceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+      width: 44,
+      height: 44,
+      borderRadius: 13,
+      backgroundColor: '#FFF4D6',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#F6B91A',
+    },
   serviceContent: {
     flex: 1,
   },
   serviceTitle: {
     fontWeight: '800',
-    color: '#111827',
+    color: '#06162D',
   },
   serviceDescription: {
     fontSize: 11,
-    color: '#6B7280',
+    color: '#667085',
     marginTop: 3,
   },
 });

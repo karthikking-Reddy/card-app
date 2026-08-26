@@ -143,7 +143,7 @@ export default function NotificationsScreen({
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
     );
@@ -160,7 +160,7 @@ export default function NotificationsScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -193,7 +193,7 @@ export default function NotificationsScreen({
             <Ionicons
               name="notifications-outline"
               size={45}
-              color="#9CA3AF"
+              color="#98A2B3"
             />
 
             <Text
@@ -239,7 +239,7 @@ export default function NotificationsScreen({
                         : 'notifications-outline'
                     }
                     size={21}
-                    color="#111827"
+                    color="#06162D"
                   />
                 </View>
 
@@ -290,39 +290,73 @@ export default function NotificationsScreen({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
 
   loading: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    backgroundColor: '#F5F7FB',
+},
 
   header: {
-    height: 60,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+
+      minHeight: 68,
+
+      paddingHorizontal: 18,
+
+      backgroundColor: '#06162D',
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent: 'space-between',
+
+      gap: 10,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 5 },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 12,
+
+      elevation: 5,
+
+    },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+
+      fontSize: 18,
+
+      fontWeight: '900',
+
+      color: '#FFFFFF',
+
+      letterSpacing: 0.1,
+
+    },
 
   markAll: {
-    color: '#B7791F',
-    fontSize: 11,
-    fontWeight: '800',
-  },
+
+      color: '#F6B91A',
+
+      fontSize: 11,
+
+      fontWeight: '900',
+
+    },
 
   container: {
     padding: 16,
@@ -330,7 +364,7 @@ const styles = StyleSheet.create({
   },
 
   summary: {
-    color: '#6B7280',
+    color: '#667085',
     marginBottom: 13,
   },
 
@@ -344,35 +378,66 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     borderWidth: 1,
     borderColor: '#FFFFFF',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   unread: {
-    borderColor: '#D4A94E',
-  },
+    borderColor: '#F6B91A',
+
+
+    backgroundColor: '#FFFCF3',
+
+    borderWidth: 1.5,
+},
 
   notificationIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
+      width: 43,
+
+      height: 43,
+
+      borderRadius: 13,
+
+      backgroundColor: '#FFF4D6',
+
+      alignItems: 'center',
+
+      justifyContent: 'center',
+
+      borderWidth: 1,
+
+      borderColor: '#F6B91A',
+
+    },
 
   notificationTitle: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   notificationMessage: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     lineHeight: 16,
     marginTop: 3,
   },
 
   notificationDate: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     fontSize: 9,
     marginTop: 6,
   },
@@ -381,7 +446,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#B7791F',
+    backgroundColor: '#C98B16',
     marginTop: 5,
   },
 
@@ -390,16 +455,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   emptyTitle: {
     marginTop: 11,
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   emptyText: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     lineHeight: 17,
     textAlign: 'center',

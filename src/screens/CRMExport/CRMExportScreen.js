@@ -66,7 +66,7 @@ export default function CRMExportScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -97,7 +97,7 @@ export default function CRMExportScreen({
             <Ionicons
               name="download-outline"
               size={30}
-              color="#111827"
+              color="#06162D"
             />
           </View>
 
@@ -213,7 +213,7 @@ function Feature({
         <Ionicons
           name={icon}
           size={20}
-          color="#111827"
+          color="#06162D"
         />
       </View>
 
@@ -244,69 +244,131 @@ function Feature({
 const styles =
   StyleSheet.create({
     safe: {
-      flex: 1,
-      backgroundColor:
-        '#F3F4F6',
-    },
+        flex: 1,
+        backgroundColor: '#F5F7FB',
+      },
 
     header: {
-      height: 60,
-      paddingHorizontal: 18,
-      backgroundColor:
-        '#FFFFFF',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent:
-        'space-between',
-      borderBottomWidth: 1,
-      borderBottomColor:
-        '#E5E7EB',
-    },
+
+        minHeight: 68,
+
+        paddingHorizontal: 18,
+
+        backgroundColor: '#06162D',
+
+        flexDirection: 'row',
+
+        alignItems: 'center',
+
+        justifyContent: 'space-between',
+
+        gap: 10,
+
+        borderBottomWidth: 1,
+
+        borderBottomColor: 'rgba(246,185,26,0.22)',
+
+        shadowColor: '#06162D',
+
+        shadowOffset: { width: 0, height: 5 },
+
+        shadowOpacity: 0.12,
+
+        shadowRadius: 12,
+
+        elevation: 5,
+
+      },
 
     headerTitle: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: '#111827',
-    },
+
+        fontSize: 18,
+
+        fontWeight: '900',
+
+        color: '#FFFFFF',
+
+        letterSpacing: 0.1,
+
+      },
 
     container: {
       padding: 18,
     },
 
     hero: {
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 24,
-      padding: 26,
-      alignItems: 'center',
-    },
+
+        backgroundColor: '#06162D',
+
+        borderRadius: 24,
+
+        padding: 26,
+
+        alignItems: 'center',
+
+        borderWidth: 1,
+
+        borderColor: '#F6B91A',
+
+        shadowColor: '#06162D',
+
+        shadowOffset: { width: 0, height: 7 },
+
+        shadowOpacity: 0.16,
+
+        shadowRadius: 14,
+
+        elevation: 4,
+
+      },
 
     heroIcon: {
-      width: 64,
-      height: 64,
-      borderRadius: 20,
-      backgroundColor:
-        '#F3F4F6',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-    },
+
+        width: 64,
+
+        height: 64,
+
+        borderRadius: 20,
+
+        backgroundColor: 'rgba(246,185,26,0.12)',
+
+        alignItems: 'center',
+
+        justifyContent: 'center',
+
+        borderWidth: 1,
+
+        borderColor: '#F6B91A',
+
+      },
 
     heroTitle: {
-      color: '#111827',
-      fontSize: 22,
-      fontWeight: '900',
-      marginTop: 15,
-    },
+
+        color: '#FFFFFF',
+
+        fontSize: 22,
+
+        fontWeight: '900',
+
+        marginTop: 15,
+
+      },
 
     heroText: {
-      color: '#6B7280',
-      fontSize: 11,
-      lineHeight: 17,
-      textAlign: 'center',
-      marginTop: 6,
-      maxWidth: 270,
-    },
+
+        color: '#D0D5DD',
+
+        fontSize: 11,
+
+        lineHeight: 17,
+
+        textAlign: 'center',
+
+        marginTop: 6,
+
+        maxWidth: 270,
+
+      },
 
     card: {
       backgroundColor:
@@ -314,7 +376,22 @@ const styles =
       borderRadius: 20,
       padding: 15,
       marginTop: 14,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     feature: {
       flexDirection: 'row',
@@ -323,7 +400,7 @@ const styles =
       paddingVertical: 11,
       borderBottomWidth: 1,
       borderBottomColor:
-        '#F3F4F6',
+        '#F5F7FB',
     },
 
     featureIcon: {
@@ -331,20 +408,20 @@ const styles =
       height: 42,
       borderRadius: 13,
       backgroundColor:
-        '#F3F4F6',
+        '#F5F7FB',
       alignItems: 'center',
       justifyContent:
         'center',
     },
 
     featureTitle: {
-      color: '#111827',
+      color: '#06162D',
       fontWeight: '800',
       fontSize: 12,
     },
 
     featureText: {
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 9,
       lineHeight: 14,
       marginTop: 3,
@@ -353,7 +430,7 @@ const styles =
     exportButton: {
       marginTop: 15,
       backgroundColor:
-        '#111827',
+        '#06162D',
       borderRadius: 15,
       paddingVertical: 15,
       flexDirection: 'row',
@@ -361,7 +438,12 @@ const styles =
       justifyContent:
         'center',
       gap: 8,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#F6B91A',
+},
 
     exportText: {
       color: '#FFFFFF',
@@ -369,7 +451,7 @@ const styles =
     },
 
     help: {
-      color: '#9CA3AF',
+      color: '#98A2B3',
       textAlign: 'center',
       fontSize: 9,
       lineHeight: 14,

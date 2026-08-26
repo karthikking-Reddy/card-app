@@ -260,7 +260,7 @@ export default function LeadStagesScreen({
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
     );
@@ -277,7 +277,7 @@ export default function LeadStagesScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -295,7 +295,7 @@ export default function LeadStagesScreen({
           <Ionicons
             name="add-circle-outline"
             size={27}
-            color="#111827"
+            color="#06162D"
           />
         </TouchableOpacity>
       </View>
@@ -336,8 +336,8 @@ export default function LeadStagesScreen({
                     size={20}
                     color={
                       index === 0
-                        ? '#D1D5DB'
-                        : '#111827'
+                        ? '#D0D5DD'
+                        : '#06162D'
                     }
                   />
                 </TouchableOpacity>
@@ -360,8 +360,8 @@ export default function LeadStagesScreen({
                     color={
                       index ===
                       stages.length - 1
-                        ? '#D1D5DB'
-                        : '#111827'
+                        ? '#D0D5DD'
+                        : '#06162D'
                     }
                   />
                 </TouchableOpacity>
@@ -479,7 +479,7 @@ export default function LeadStagesScreen({
                 <Ionicons
                   name="close"
                   size={26}
-                  color="#111827"
+                  color="#06162D"
                 />
               </TouchableOpacity>
             </View>
@@ -488,7 +488,7 @@ export default function LeadStagesScreen({
               value={label}
               onChangeText={setLabel}
               placeholder="Example: Meeting Scheduled"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
               style={styles.input}
             />
 
@@ -596,34 +596,63 @@ function Option({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
 
   loading: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    backgroundColor: '#F5F7FB',
+},
 
   header: {
-    height: 60,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent:
-      'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+
+      minHeight: 68,
+
+      paddingHorizontal: 18,
+
+      backgroundColor: '#06162D',
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent: 'space-between',
+
+      gap: 10,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 5 },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 12,
+
+      elevation: 5,
+
+    },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+
+      fontSize: 18,
+
+      fontWeight: '900',
+
+      color: '#FFFFFF',
+
+      letterSpacing: 0.1,
+
+    },
 
   container: {
     padding: 16,
@@ -631,7 +660,7 @@ const styles = StyleSheet.create({
   },
 
   help: {
-    color: '#6B7280',
+    color: '#667085',
     lineHeight: 19,
     marginBottom: 15,
   },
@@ -644,7 +673,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+},
 
   order: {
     gap: 2,
@@ -655,7 +704,7 @@ const styles = StyleSheet.create({
   },
 
   stageLabel: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
     fontSize: 13,
   },
@@ -668,25 +717,25 @@ const styles = StyleSheet.create({
   },
 
   badge: {
-    backgroundColor: '#FFF7E6',
+    backgroundColor: '#FFF4D6',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
 
   badgeText: {
-    color: '#B7791F',
+    color: '#C98B16',
     fontSize: 8,
     fontWeight: '900',
   },
 
   key: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     fontSize: 8,
   },
 
   addButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 15,
     paddingVertical: 14,
     marginTop: 12,
@@ -694,7 +743,12 @@ const styles = StyleSheet.create({
     gap: 7,
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   addText: {
     color: '#FFFFFF',
@@ -714,7 +768,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     padding: 20,
     paddingBottom: 35,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   modalHeader: {
     flexDirection: 'row',
@@ -727,16 +796,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 21,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06162D',
   },
 
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E6EAF0',
     borderRadius: 13,
     padding: 13,
-    color: '#111827',
+    color: '#06162D',
     marginBottom: 14,
   },
 
@@ -745,16 +814,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F5F7FB',
   },
 
   optionTitle: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   optionDescription: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 3,
@@ -762,11 +831,16 @@ const styles = StyleSheet.create({
 
   saveButton: {
     marginTop: 18,
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   saveText: {
     color: '#FFFFFF',

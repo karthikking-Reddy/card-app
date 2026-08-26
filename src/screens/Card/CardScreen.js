@@ -202,7 +202,7 @@ export default function CardScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#111827" />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -211,7 +211,7 @@ export default function CardScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={25} color="#111827" />
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Edit Card</Text>
@@ -243,7 +243,7 @@ export default function CardScreen({ navigation }) {
             style={styles.photoButton}
             onPress={pickProfilePhoto}
           >
-            <Ionicons name="camera-outline" size={18} color="#111827" />
+            <Ionicons name="camera-outline" size={18} color="#06162D" />
             <Text style={styles.photoButtonText}>Change Photo</Text>
           </TouchableOpacity>
 
@@ -380,7 +380,7 @@ function Field({
           styles.input,
           multiline && styles.multilineInput,
         ]}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor="#98A2B3"
       />
     </View>
   );
@@ -388,34 +388,43 @@ function Field({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-  },
+    backgroundColor: '#F5F7FB',
+
+    backgroundColor: '#F5F7FB',
+},
   header: {
-    height: 60,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+      minHeight: 68,
+      paddingHorizontal: 18,
+      backgroundColor: '#06162D',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+      shadowColor: '#06162D',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 5,
+    },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: 0.1,
+    },
   saveTop: {
-    fontWeight: '800',
-    color: '#B7791F',
-  },
+      fontWeight: '900',
+      color: '#F6B91A',
+    },
   container: {
     padding: 16,
     paddingBottom: 70,
@@ -425,38 +434,54 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 22,
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   photo: {
     width: 105,
     height: 105,
     borderRadius: 53,
-  },
+
+    borderWidth: 3,
+    borderColor: '#F6B91A',
+},
   placeholder: {
     width: 105,
     height: 105,
     borderRadius: 53,
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     justifyContent: 'center',
     alignItems: 'center',
-  },
+
+    borderWidth: 3,
+    borderColor: '#F6B91A',
+},
   initial: {
     color: '#FFFFFF',
     fontSize: 38,
     fontWeight: '900',
   },
   photoButton: {
-    marginTop: 15,
-    flexDirection: 'row',
-    gap: 7,
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
+      marginTop: 15,
+      flexDirection: 'row',
+      gap: 7,
+      alignItems: 'center',
+      backgroundColor: '#FFF4D6',
+      borderRadius: 13,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: '#F6B91A',
+    },
   photoButtonText: {
     fontWeight: '700',
-    color: '#111827',
+    color: '#06162D',
   },
   removeText: {
     marginTop: 12,
@@ -471,31 +496,39 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     fontWeight: '800',
-    color: '#6B7280',
+    color: '#667085',
     marginBottom: 9,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   field: {
     marginBottom: 15,
   },
   label: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#374151',
+    color: '#344054',
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E6EAF0',
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 12,
-    color: '#111827',
+    color: '#06162D',
     fontSize: 14,
   },
   multilineInput: {
@@ -503,15 +536,22 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    marginTop: 25,
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    paddingVertical: 15,
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+      marginTop: 25,
+      backgroundColor: '#06162D',
+      borderRadius: 16,
+      paddingVertical: 15,
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#F6B91A',
+      shadowColor: '#06162D',
+      shadowOffset: { width: 0, height: 7 },
+      shadowOpacity: 0.15,
+      shadowRadius: 14,
+      elevation: 4,
+    },
   saveButtonText: {
     color: '#FFFFFF',
     fontWeight: '800',

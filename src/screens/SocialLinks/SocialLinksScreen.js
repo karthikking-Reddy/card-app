@@ -109,7 +109,7 @@ export default function SocialLinksScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#111827" />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -118,7 +118,7 @@ export default function SocialLinksScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={25} color="#111827" />
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Links & Social</Text>
@@ -141,7 +141,7 @@ export default function SocialLinksScreen({ navigation }) {
               <View style={styles.topRow}>
                 <View style={styles.identity}>
                   <View style={styles.icon}>
-                    <Ionicons name={icon} size={22} color="#111827" />
+                    <Ionicons name={icon} size={22} color="#06162D" />
                   </View>
 
                   <Text style={styles.label}>{label}</Text>
@@ -165,7 +165,7 @@ export default function SocialLinksScreen({ navigation }) {
                 }
                 autoCapitalize="none"
                 style={styles.input}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#98A2B3"
               />
             </View>
           );
@@ -189,39 +189,48 @@ export default function SocialLinksScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+
+    backgroundColor: '#F5F7FB',
+},
   header: {
-    height: 60,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+      minHeight: 68,
+      paddingHorizontal: 18,
+      backgroundColor: '#06162D',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+      shadowColor: '#06162D',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 5,
+    },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: 0.1,
+    },
   topSave: {
-    color: '#B7791F',
-    fontWeight: '800',
-  },
+      color: '#F6B91A',
+      fontWeight: '900',
+    },
   container: {
     padding: 16,
     paddingBottom: 70,
   },
   help: {
-    color: '#6B7280',
+    color: '#667085',
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -230,7 +239,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 15,
     marginBottom: 10,
-  },
+
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+},
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -242,34 +259,39 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+      width: 42,
+      height: 42,
+      borderRadius: 13,
+      backgroundColor: '#FFF4D6',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#F6B91A',
+    },
   label: {
     fontWeight: '800',
-    color: '#111827',
+    color: '#06162D',
   },
   input: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderColor: '#E6EAF0',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    color: '#111827',
+    color: '#06162D',
   },
   saveButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 16,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 15,
-  },
+
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+},
   saveText: {
     color: '#FFFFFF',
     fontWeight: '800',

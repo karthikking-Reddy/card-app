@@ -173,7 +173,7 @@ export default function FollowUpsScreen({
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
     );
@@ -192,7 +192,7 @@ export default function FollowUpsScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -276,7 +276,7 @@ export default function FollowUpsScreen({
             <Ionicons
               name="calendar-outline"
               size={44}
-              color="#9CA3AF"
+              color="#98A2B3"
             />
 
             <Text
@@ -338,7 +338,7 @@ export default function FollowUpsScreen({
                       task.status ===
                       'completed'
                         ? '#16A34A'
-                        : '#111827'
+                        : '#06162D'
                     }
                   />
                 </TouchableOpacity>
@@ -366,7 +366,7 @@ export default function FollowUpsScreen({
                     {lead?.name ||
                       'Lead'}
                     {lead?.company
-                      ? ` • ${lead.company}`
+                      ? ` â€¢ ${lead.company}`
                       : ''}
                   </Text>
 
@@ -380,7 +380,7 @@ export default function FollowUpsScreen({
                       ]}
                     >
                       {isOverdue
-                        ? 'OVERDUE • '
+                        ? 'OVERDUE â€¢ '
                         : ''}
 
                       {new Date(
@@ -433,34 +433,63 @@ function Summary({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
 
   loading: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    backgroundColor: '#F5F7FB',
+},
 
   header: {
-    height: 60,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent:
-      'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+
+      minHeight: 68,
+
+      paddingHorizontal: 18,
+
+      backgroundColor: '#06162D',
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent: 'space-between',
+
+      gap: 10,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 5 },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 12,
+
+      elevation: 5,
+
+    },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+
+      fontSize: 18,
+
+      fontWeight: '900',
+
+      color: '#FFFFFF',
+
+      letterSpacing: 0.1,
+
+    },
 
   container: {
     padding: 16,
@@ -477,16 +506,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 17,
     padding: 15,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   summaryValue: {
-    color: '#111827',
+    color: '#06162D',
     fontSize: 22,
     fontWeight: '900',
   },
 
   summaryLabel: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 10,
     marginTop: 3,
   },
@@ -503,14 +547,34 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   filterActive: {
-    backgroundColor: '#111827',
-  },
+    backgroundColor: '#06162D',
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   filterText: {
-    color: '#6B7280',
+    color: '#667085',
     fontWeight: '700',
     fontSize: 11,
   },
@@ -520,7 +584,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
@@ -533,11 +597,26 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   emptyTitle: {
     marginTop: 10,
-    color: '#6B7280',
+    color: '#667085',
     fontWeight: '700',
   },
 
@@ -551,31 +630,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#FFFFFF',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   overdueTask: {
     borderColor: '#FCA5A5',
-  },
+
+
+    backgroundColor: '#FFF9F9',
+},
 
   taskTitle: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   completed: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     textDecorationLine:
       'line-through',
   },
 
   leadName: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 10,
     marginTop: 3,
   },
 
   date: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     fontSize: 9,
     marginTop: 4,
   },

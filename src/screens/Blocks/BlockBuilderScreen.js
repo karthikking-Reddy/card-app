@@ -489,7 +489,7 @@ export default function BlockBuilderScreen({
       >
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
     );
@@ -510,7 +510,7 @@ export default function BlockBuilderScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -532,7 +532,7 @@ export default function BlockBuilderScreen({
           <Ionicons
             name="add-circle-outline"
             size={28}
-            color="#111827"
+            color="#F6B91A"
           />
         </TouchableOpacity>
       </View>
@@ -656,7 +656,7 @@ export default function BlockBuilderScreen({
           <Ionicons
             name="grid-outline"
             size={28}
-            color="#111827"
+            color="#06162D"
           />
 
           <View
@@ -721,7 +721,7 @@ export default function BlockBuilderScreen({
 
         {loadingBlocks ? (
           <ActivityIndicator
-            color="#111827"
+            color="#06162D"
             style={{
               marginTop: 20,
             }}
@@ -734,7 +734,7 @@ export default function BlockBuilderScreen({
             <Ionicons
               name="grid-outline"
               size={45}
-              color="#9CA3AF"
+              color="#98A2B3"
             />
 
             <Text
@@ -788,7 +788,7 @@ export default function BlockBuilderScreen({
                         definition.icon
                       }
                       size={22}
-                      color="#111827"
+                      color="#06162D"
                     />
                   </View>
 
@@ -866,8 +866,8 @@ export default function BlockBuilderScreen({
                         size={20}
                         color={
                           index === 0
-                            ? '#D1D5DB'
-                            : '#111827'
+                            ? '#D0D5DD'
+                            : '#06162D'
                         }
                       />
                     </TouchableOpacity>
@@ -892,8 +892,8 @@ export default function BlockBuilderScreen({
                           index ===
                           blocks.length -
                             1
-                            ? '#D1D5DB'
-                            : '#111827'
+                            ? '#D0D5DD'
+                            : '#06162D'
                         }
                       />
                     </TouchableOpacity>
@@ -908,7 +908,7 @@ export default function BlockBuilderScreen({
                       <Ionicons
                         name="create-outline"
                         size={19}
-                        color="#111827"
+                        color="#06162D"
                       />
                     </TouchableOpacity>
 
@@ -976,7 +976,7 @@ export default function BlockBuilderScreen({
                 <Ionicons
                   name="close"
                   size={26}
-                  color="#111827"
+                  color="#06162D"
                 />
               </TouchableOpacity>
             </View>
@@ -1030,7 +1030,7 @@ export default function BlockBuilderScreen({
                                   item.icon
                                 }
                                 size={23}
-                                color="#111827"
+                                color="#06162D"
                               />
                             </View>
 
@@ -1104,7 +1104,7 @@ export default function BlockBuilderScreen({
                 <Ionicons
                   name="close"
                   size={26}
-                  color="#111827"
+                  color="#06162D"
                 />
               </TouchableOpacity>
             </View>
@@ -1129,7 +1129,7 @@ export default function BlockBuilderScreen({
                 )
               }
               placeholder="Button title"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
             />
 
             <Text
@@ -1155,7 +1155,7 @@ export default function BlockBuilderScreen({
                 )
               }
               placeholder="Optional description"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
             />
 
             <Text
@@ -1184,7 +1184,7 @@ export default function BlockBuilderScreen({
                     ).placeholder
                   : 'Enter value'
               }
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
               autoCapitalize="none"
             />
 
@@ -1208,7 +1208,7 @@ export default function BlockBuilderScreen({
                 )
               }
               placeholder="Optional URL"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#98A2B3"
               autoCapitalize="none"
             />
 
@@ -1247,39 +1247,65 @@ export default function BlockBuilderScreen({
 const styles =
   StyleSheet.create({
     safe: {
-      flex: 1,
-      backgroundColor:
-        '#F3F4F6',
-    },
+        flex: 1,
+        backgroundColor: '#F5F7FB',
+      },
 
     loading: {
       flex: 1,
       backgroundColor:
-        '#F3F4F6',
+        '#F5F7FB',
       alignItems: 'center',
       justifyContent:
         'center',
-    },
+
+
+      backgroundColor: '#F5F7FB',
+},
 
     header: {
-      height: 60,
-      paddingHorizontal: 18,
-      backgroundColor:
-        '#FFFFFF',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent:
-        'space-between',
-      borderBottomWidth: 1,
-      borderBottomColor:
-        '#E5E7EB',
-    },
+
+        minHeight: 68,
+
+        paddingHorizontal: 18,
+
+        backgroundColor: '#06162D',
+
+        flexDirection: 'row',
+
+        alignItems: 'center',
+
+        justifyContent: 'space-between',
+
+        gap: 10,
+
+        borderBottomWidth: 1,
+
+        borderBottomColor: 'rgba(246,185,26,0.22)',
+
+        shadowColor: '#06162D',
+
+        shadowOffset: { width: 0, height: 5 },
+
+        shadowOpacity: 0.12,
+
+        shadowRadius: 12,
+
+        elevation: 5,
+
+      },
 
     headerTitle: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: '#111827',
-    },
+
+        fontSize: 18,
+
+        fontWeight: '900',
+
+        color: '#FFFFFF',
+
+        letterSpacing: 0.1,
+
+      },
 
     container: {
       padding: 16,
@@ -1289,7 +1315,7 @@ const styles =
     sectionTitle: {
       marginTop: 16,
       marginBottom: 10,
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 11,
       letterSpacing: 1,
       fontWeight: '800',
@@ -1308,18 +1334,36 @@ const styles =
       marginRight: 9,
       borderWidth: 1,
       borderColor:
-        '#E5E7EB',
-    },
+        '#E6EAF0',
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     cardChipActive: {
       backgroundColor:
-        '#111827',
+        '#06162D',
       borderColor:
-        '#111827',
-    },
+        '#06162D',
+
+
+      borderColor: '#F6B91A',
+},
 
     cardChipName: {
-      color: '#111827',
+      color: '#06162D',
       fontWeight: '800',
     },
 
@@ -1328,17 +1372,17 @@ const styles =
     },
 
     cardChipSlug: {
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 9,
       marginTop: 4,
     },
 
     cardChipSlugActive: {
-      color: '#D1D5DB',
+      color: '#D0D5DD',
     },
 
     primaryText: {
-      color: '#B7791F',
+      color: '#C98B16',
       fontSize: 8,
       fontWeight: '900',
       marginTop: 7,
@@ -1350,27 +1394,47 @@ const styles =
 
     selectedCardBox: {
       backgroundColor:
-        '#FFF7E6',
+        '#FFF4D6',
       borderRadius: 15,
       padding: 14,
       marginBottom: 12,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+
+
+      borderWidth: 1,
+
+      borderColor: '#F6B91A',
+},
 
     selectedLabel: {
-      color: '#B7791F',
+      color: '#C98B16',
       fontSize: 9,
       fontWeight: '900',
     },
 
     selectedName: {
-      color: '#111827',
+      color: '#06162D',
       fontWeight: '900',
       fontSize: 16,
       marginTop: 3,
     },
 
     selectedSlug: {
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 10,
       marginTop: 3,
     },
@@ -1383,16 +1447,31 @@ const styles =
       flexDirection: 'row',
       gap: 13,
       alignItems: 'center',
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     introTitle: {
-      color: '#111827',
+      color: '#06162D',
       fontSize: 17,
       fontWeight: '900',
     },
 
     introText: {
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 11,
       lineHeight: 17,
       marginTop: 4,
@@ -1400,7 +1479,7 @@ const styles =
 
     addBlock: {
       backgroundColor:
-        '#111827',
+        '#06162D',
       borderRadius: 15,
       paddingVertical: 14,
       marginTop: 12,
@@ -1409,7 +1488,12 @@ const styles =
       alignItems: 'center',
       justifyContent:
         'center',
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#F6B91A',
+},
 
     addBlockText: {
       color: '#FFFFFF',
@@ -1426,12 +1510,12 @@ const styles =
 
     emptyTitle: {
       marginTop: 10,
-      color: '#111827',
+      color: '#06162D',
       fontWeight: '800',
     },
 
     emptyText: {
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 11,
       textAlign: 'center',
       lineHeight: 17,
@@ -1447,38 +1531,62 @@ const styles =
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     blockIcon: {
-      width: 43,
-      height: 43,
-      borderRadius: 13,
-      backgroundColor:
-        '#F3F4F6',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-    },
+
+        width: 43,
+
+        height: 43,
+
+        borderRadius: 13,
+
+        backgroundColor: '#FFF4D6',
+
+        alignItems: 'center',
+
+        justifyContent: 'center',
+
+        borderWidth: 1,
+
+        borderColor: '#F6B91A',
+
+      },
 
     blockInfo: {
       flex: 1,
     },
 
     blockTitle: {
-      color: '#111827',
+      color: '#06162D',
       fontWeight: '800',
       fontSize: 13,
     },
 
     blockType: {
-      color: '#B7791F',
+      color: '#C98B16',
       fontSize: 9,
       fontWeight: '800',
       marginTop: 2,
     },
 
     blockValue: {
-      color: '#9CA3AF',
+      color: '#98A2B3',
       fontSize: 9,
       marginTop: 3,
     },
@@ -1505,7 +1613,22 @@ const styles =
         28,
       padding: 20,
       paddingBottom: 35,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     editorModal: {
       backgroundColor:
@@ -1516,7 +1639,22 @@ const styles =
         28,
       padding: 20,
       paddingBottom: 35,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     modalHeader: {
       flexDirection: 'row',
@@ -1527,13 +1665,13 @@ const styles =
     },
 
     modalTitle: {
-      color: '#111827',
+      color: '#06162D',
       fontSize: 21,
       fontWeight: '900',
     },
 
     category: {
-      color: '#6B7280',
+      color: '#667085',
       fontSize: 10,
       fontWeight: '900',
       letterSpacing: 1,
@@ -1550,11 +1688,26 @@ const styles =
     libraryItem: {
       width: '31%',
       backgroundColor:
-        '#F9FAFB',
+        '#F8FAFC',
       borderRadius: 16,
       padding: 12,
       alignItems: 'center',
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#E6EAF0',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 4 },
+
+      shadowOpacity: 0.045,
+
+      shadowRadius: 10,
+
+      elevation: 2,
+},
 
     libraryIcon: {
       width: 43,
@@ -1568,7 +1721,7 @@ const styles =
     },
 
     libraryLabel: {
-      color: '#111827',
+      color: '#06162D',
       fontSize: 10,
       fontWeight: '700',
       textAlign: 'center',
@@ -1576,7 +1729,7 @@ const styles =
     },
 
     label: {
-      color: '#374151',
+      color: '#344054',
       fontSize: 11,
       fontWeight: '800',
       marginBottom: 5,
@@ -1584,24 +1737,29 @@ const styles =
 
     input: {
       backgroundColor:
-        '#F9FAFB',
+        '#F8FAFC',
       borderWidth: 1,
       borderColor:
-        '#E5E7EB',
+        '#E6EAF0',
       borderRadius: 12,
       padding: 12,
-      color: '#111827',
+      color: '#06162D',
       marginBottom: 12,
     },
 
     saveButton: {
       backgroundColor:
-        '#111827',
+        '#06162D',
       borderRadius: 14,
       paddingVertical: 14,
       alignItems: 'center',
       marginTop: 5,
-    },
+
+
+      borderWidth: 1,
+
+      borderColor: '#F6B91A',
+},
 
     saveButtonText: {
       color: '#FFFFFF',

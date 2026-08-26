@@ -53,8 +53,8 @@ export default function LeadDetailScreen({
   navigation,
   route,
 }) {
-  const { connectionId } =
-    route.params;
+  const connectionId =
+    route.params?.connectionId;
 
   const [user, setUser] =
     useState(null);
@@ -89,6 +89,11 @@ export default function LeadDetailScreen({
   const load =
     useCallback(async () => {
       setLoading(true);
+
+      if (!connectionId) {
+        setLoading(false);
+        return;
+      }
 
       try {
         const session =
@@ -440,14 +445,32 @@ export default function LeadDetailScreen({
     );
   }
 
-  if (loading || !lead) {
+  if (loading) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#111827"
+          color="#06162D"
         />
       </View>
+    );
+  }
+
+  if (!connectionId || !lead) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Lead Detail</Text>
+          <View style={{ width: 25 }} />
+        </View>
+        <View style={styles.loading}>
+          <Ionicons name="alert-circle-outline" size={42} color="#98A2B3" />
+          <Text style={{ color: '#667085', marginTop: 10 }}>Lead unavailable</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -464,7 +487,7 @@ export default function LeadDetailScreen({
           <Ionicons
             name="arrow-back"
             size={25}
-            color="#111827"
+            color="#FFFFFF"
           />
         </TouchableOpacity>
 
@@ -522,7 +545,7 @@ export default function LeadDetailScreen({
                 <Ionicons
                   name="logo-whatsapp"
                   size={20}
-                  color="#111827"
+                  color="#06162D"
                 />
 
                 <Text
@@ -543,7 +566,7 @@ export default function LeadDetailScreen({
                 <Ionicons
                   name="call-outline"
                   size={20}
-                  color="#111827"
+                  color="#06162D"
                 />
 
                 <Text
@@ -655,7 +678,7 @@ export default function LeadDetailScreen({
               setTaskTitle
             }
             placeholder="Call client"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
             style={styles.input}
           />
 
@@ -669,7 +692,7 @@ export default function LeadDetailScreen({
               setTaskDate
             }
             placeholder="YYYY-MM-DD"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
             style={styles.input}
           />
 
@@ -736,7 +759,7 @@ export default function LeadDetailScreen({
                     task.status ===
                     'completed'
                       ? '#16A34A'
-                      : '#111827'
+                      : '#06162D'
                   }
                 />
               </TouchableOpacity>
@@ -795,7 +818,7 @@ export default function LeadDetailScreen({
             value={notes}
             onChangeText={setNotes}
             placeholder="Add lead notes..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#98A2B3"
             multiline
             style={[
               styles.input,
@@ -917,34 +940,63 @@ function Info({
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
+      flex: 1,
+      backgroundColor: '#F5F7FB',
+    },
 
   loading: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F7FB',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    backgroundColor: '#F5F7FB',
+},
 
   header: {
-    height: 60,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent:
-      'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
+
+      minHeight: 68,
+
+      paddingHorizontal: 18,
+
+      backgroundColor: '#06162D',
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent: 'space-between',
+
+      gap: 10,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor: 'rgba(246,185,26,0.22)',
+
+      shadowColor: '#06162D',
+
+      shadowOffset: { width: 0, height: 5 },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 12,
+
+      elevation: 5,
+
+    },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
+
+      fontSize: 18,
+
+      fontWeight: '900',
+
+      color: '#FFFFFF',
+
+      letterSpacing: 0.1,
+
+    },
 
   container: {
     padding: 16,
@@ -956,16 +1008,41 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 22,
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   avatar: {
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+
+
+    borderWidth: 2,
+
+    borderColor: '#F6B91A',
+},
 
   initial: {
     color: '#FFFFFF',
@@ -977,11 +1054,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 22,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06162D',
   },
 
   company: {
-    color: '#6B7280',
+    color: '#667085',
     marginTop: 3,
   },
 
@@ -992,22 +1069,34 @@ const styles = StyleSheet.create({
   },
 
   contactButton: {
-    flexDirection: 'row',
-    gap: 7,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+
+      flexDirection: 'row',
+
+      gap: 7,
+
+      backgroundColor: '#FFF4D6',
+
+      paddingHorizontal: 16,
+
+      paddingVertical: 10,
+
+      borderRadius: 12,
+
+      alignItems: 'center',
+
+      borderWidth: 1,
+
+      borderColor: '#F6B91A',
+
+    },
 
   contactText: {
     fontWeight: '700',
-    color: '#111827',
+    color: '#06162D',
   },
 
   sectionTitle: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
@@ -1019,20 +1108,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 16,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   info: {
     marginBottom: 13,
   },
 
   infoLabel: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     fontSize: 10,
     fontWeight: '700',
   },
 
   infoValue: {
-    color: '#111827',
+    color: '#06162D',
     fontSize: 14,
     marginTop: 3,
   },
@@ -1046,11 +1150,16 @@ const styles = StyleSheet.create({
   },
 
   stageChipActive: {
-    backgroundColor: '#111827',
-  },
+    backgroundColor: '#06162D',
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   stageChipText: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1060,21 +1169,21 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: '#374151',
+    color: '#344054',
     fontWeight: '700',
     fontSize: 12,
     marginBottom: 6,
   },
 
   input: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E6EAF0',
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 11,
     marginBottom: 14,
-    color: '#111827',
+    color: '#06162D',
   },
 
   notes: {
@@ -1083,14 +1192,19 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06162D',
     borderRadius: 13,
     paddingVertical: 13,
     flexDirection: 'row',
     gap: 7,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+},
 
   saveText: {
     color: '#FFFFFF',
@@ -1105,31 +1219,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   taskCheck: {
     padding: 2,
   },
 
   taskTitle: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   taskCompleted: {
     textDecorationLine:
       'line-through',
-    color: '#9CA3AF',
+    color: '#98A2B3',
   },
 
   taskDate: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 10,
     marginTop: 3,
   },
 
   noActivity: {
-    color: '#6B7280',
+    color: '#667085',
     textAlign: 'center',
   },
 
@@ -1140,29 +1269,50 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     marginBottom: 8,
-  },
+
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+},
 
   activityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#111827',
-    marginTop: 5,
-  },
+
+      width: 10,
+
+      height: 10,
+
+      borderRadius: 5,
+
+      backgroundColor: '#F6B91A',
+
+      marginTop: 5,
+
+    },
 
   activityTitle: {
-    color: '#111827',
+    color: '#06162D',
     fontWeight: '800',
   },
 
   activityDescription: {
-    color: '#6B7280',
+    color: '#667085',
     fontSize: 11,
     marginTop: 3,
   },
 
   activityDate: {
-    color: '#9CA3AF',
+    color: '#98A2B3',
     fontSize: 9,
     marginTop: 5,
   },
