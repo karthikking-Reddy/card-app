@@ -77,30 +77,24 @@ export default function PortfolioScreen({ navigation }) {
   }
 
   function remove(item) {
-    Alert.alert(
-      'Delete Portfolio Item',
-      `Remove "${item.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deletePortfolioItem(item.id);
-              await load();
-            } catch (error) {
-              Alert.alert('Error', error.message);
-            }
-          },
+    Alert.alert('Delete Portfolio Item', `Remove "${item.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deletePortfolioItem(item.id);
+            await load();
+          } catch (error) {
+            Alert.alert('Error', error.message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }
 
-  const visibleItems = items.filter(
-    (item) => item.portfolio_type === type
-  );
+  const visibleItems = items.filter((item) => item.portfolio_type === type);
 
   if (loading) {
     return (
@@ -124,11 +118,7 @@ export default function PortfolioScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.tabs}>
-          <Tab
-            label="Students"
-            selected={type === 'student'}
-            onPress={() => setType('student')}
-          />
+          <Tab label="Students" selected={type === 'student'} onPress={() => setType('student')} />
 
           <Tab
             label="Employees"
@@ -138,19 +128,13 @@ export default function PortfolioScreen({ navigation }) {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.formTitle}>
-            Add {type === 'student' ? 'Student' : 'Employee'}
-          </Text>
+          <Text style={styles.formTitle}>Add {type === 'student' ? 'Student' : 'Employee'}</Text>
 
           <TextInput
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder={
-              type === 'student'
-                ? 'Student name / Project title'
-                : 'Employee name'
-            }
+            placeholder={type === 'student' ? 'Student name / Project title' : 'Employee name'}
             placeholderTextColor="#98A2B3"
           />
 
@@ -158,11 +142,7 @@ export default function PortfolioScreen({ navigation }) {
             style={styles.input}
             value={subtitle}
             onChangeText={setSubtitle}
-            placeholder={
-              type === 'student'
-                ? 'Course / Skill'
-                : 'Designation / Department'
-            }
+            placeholder={type === 'student' ? 'Course / Skill' : 'Designation / Department'}
             placeholderTextColor="#98A2B3"
           />
 
@@ -181,9 +161,7 @@ export default function PortfolioScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>
-          {type === 'student' ? 'STUDENTS' : 'EMPLOYEES'}
-        </Text>
+        <Text style={styles.sectionTitle}>{type === 'student' ? 'STUDENTS' : 'EMPLOYEES'}</Text>
 
         {visibleItems.length === 0 ? (
           <View style={styles.empty}>
@@ -201,9 +179,7 @@ export default function PortfolioScreen({ navigation }) {
           visibleItems.map((item) => (
             <View key={item.id} style={styles.item}>
               <View style={styles.avatar}>
-                <Text style={styles.initial}>
-                  {item.title.charAt(0).toUpperCase()}
-                </Text>
+                <Text style={styles.initial}>{item.title.charAt(0).toUpperCase()}</Text>
               </View>
 
               <View style={styles.itemContent}>
@@ -225,64 +201,59 @@ export default function PortfolioScreen({ navigation }) {
 
 function Tab({ label, selected, onPress }) {
   return (
-    <TouchableOpacity
-      style={[styles.tab, selected && styles.activeTab]}
-      onPress={onPress}
-    >
-      <Text style={[styles.tabText, selected && styles.activeTabText]}>
-        {label}
-      </Text>
+    <TouchableOpacity style={[styles.tab, selected && styles.activeTab]} onPress={onPress}>
+      <Text style={[styles.tabText, selected && styles.activeTabText]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
 
     backgroundColor: '#F5F7FB',
-},
+  },
   header: {
-      minHeight: 68,
-      paddingHorizontal: 18,
-      backgroundColor: '#06162D',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(246,185,26,0.22)',
-      shadowColor: '#06162D',
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-      elevation: 5,
-    },
+    minHeight: 68,
+    paddingHorizontal: 18,
+    backgroundColor: '#06162D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   headerTitle: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: '#FFFFFF',
-      letterSpacing: 0.1,
-    },
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
+  },
   container: {
     padding: 16,
     paddingBottom: 70,
   },
   tabs: {
-      backgroundColor: '#E9EEF5',
-      borderRadius: 15,
-      padding: 4,
-      flexDirection: 'row',
-      marginBottom: 15,
-      borderWidth: 1,
-      borderColor: '#E6EAF0',
-    },
+    backgroundColor: '#E9EEF5',
+    borderRadius: 15,
+    padding: 4,
+    flexDirection: 'row',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+  },
   tab: {
     flex: 1,
     paddingVertical: 11,
@@ -290,18 +261,18 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   activeTab: {
-      backgroundColor: '#06162D',
-      borderWidth: 1,
-      borderColor: '#F6B91A',
-    },
+    backgroundColor: '#06162D',
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+  },
   tabText: {
     fontWeight: '700',
     color: '#667085',
   },
   activeTabText: {
-      color: '#FFFFFF',
-      fontWeight: '900',
-    },
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
   form: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -314,7 +285,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   formTitle: {
     fontSize: 17,
     fontWeight: '800',
@@ -345,7 +316,7 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
     borderColor: '#F6B91A',
-},
+  },
   addText: {
     color: '#FFFFFF',
     fontWeight: '800',
@@ -371,7 +342,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   emptyTitle: {
     marginTop: 10,
     color: '#667085',
@@ -393,7 +364,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   avatar: {
     width: 48,
     height: 48,
@@ -404,7 +375,7 @@ const styles = StyleSheet.create({
 
     borderWidth: 2,
     borderColor: '#F6B91A',
-},
+  },
   initial: {
     color: '#FFFFFF',
     fontSize: 18,

@@ -113,9 +113,7 @@ export const BLOCK_LIBRARY = [
 
 export function getBlockDefinition(type) {
   return (
-    BLOCK_LIBRARY.find(
-      (item) => item.type === type
-    ) || {
+    BLOCK_LIBRARY.find((item) => item.type === type) || {
       type,
       label: 'Custom',
       icon: 'link-outline',
@@ -144,52 +142,35 @@ export async function getCardBlocks(cardId) {
   return data || [];
 }
 
-export async function createCardBlock(
-  cardId,
-  values
-) {
+export async function createCardBlock(cardId, values) {
   const existing = await getCardBlocks(cardId);
 
-  const definition =
-    getBlockDefinition(values.block_type);
+  const definition = getBlockDefinition(values.block_type);
 
   const { data, error } = await supabase
     .from('card_blocks')
     .insert({
       card_id: cardId,
 
-      block_type:
-        values.block_type,
+      block_type: values.block_type,
 
-      title:
-        values.title ||
-        definition.label,
+      title: values.title || definition.label,
 
-      subtitle:
-        values.subtitle || null,
+      subtitle: values.subtitle || null,
 
-      value:
-        values.value || null,
+      value: values.value || null,
 
-      url:
-        values.url || null,
+      url: values.url || null,
 
-      image_url:
-        values.image_url || null,
+      image_url: values.image_url || null,
 
-      icon_name:
-        values.icon_name ||
-        definition.icon,
+      icon_name: values.icon_name || definition.icon,
 
-      sort_order:
-        values.sort_order ??
-        existing.length + 1,
+      sort_order: values.sort_order ?? existing.length + 1,
 
-      is_active:
-        values.is_active !== false,
+      is_active: values.is_active !== false,
 
-      metadata:
-        values.metadata || {},
+      metadata: values.metadata || {},
     })
     .select()
     .single();
@@ -201,16 +182,12 @@ export async function createCardBlock(
   return data;
 }
 
-export async function updateCardBlock(
-  blockId,
-  values
-) {
+export async function updateCardBlock(blockId, values) {
   const { data, error } = await supabase
     .from('card_blocks')
     .update({
       ...values,
-      updated_at:
-        new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq('id', blockId)
     .select()
@@ -223,22 +200,15 @@ export async function updateCardBlock(
   return data;
 }
 
-export async function deleteCardBlock(
-  blockId
-) {
-  const { error } = await supabase
-    .from('card_blocks')
-    .delete()
-    .eq('id', blockId);
+export async function deleteCardBlock(blockId) {
+  const { error } = await supabase.from('card_blocks').delete().eq('id', blockId);
 
   if (error) {
     throw error;
   }
 }
 
-export async function reorderCardBlocks(
-  blocks
-) {
+export async function reorderCardBlocks(blocks) {
   await Promise.all(
     blocks.map((block, index) =>
       updateCardBlock(block.id, {
@@ -247,10 +217,8 @@ export async function reorderCardBlocks(
     )
   );
 
-  return blocks.map(
-    (block, index) => ({
-      ...block,
-      sort_order: index + 1,
-    })
-  );
+  return blocks.map((block, index) => ({
+    ...block,
+    sort_order: index + 1,
+  }));
 }

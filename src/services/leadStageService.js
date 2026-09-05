@@ -1,8 +1,6 @@
 import { supabase } from '../../lib/supabase';
 
-export async function getLeadStages(
-  userId
-) {
+export async function getLeadStages(userId) {
   const { data, error } = await supabase
     .from('lead_stages')
     .select('*')
@@ -18,25 +16,16 @@ export async function getLeadStages(
   return data || [];
 }
 
-export async function createLeadStage(
-  userId,
-  values
-) {
-  const existing =
-    await getLeadStages(userId);
+export async function createLeadStage(userId, values) {
+  const existing = await getLeadStages(userId);
 
-  const baseKey = String(
-    values.label || 'stage'
-  )
+  const baseKey = String(values.label || 'stage')
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 
-  const stageKey =
-    `${baseKey}_${Date.now()
-      .toString(36)
-      .slice(-4)}`;
+  const stageKey = `${baseKey}_${Date.now().toString(36).slice(-4)}`;
 
   const { data, error } = await supabase
     .from('lead_stages')
@@ -45,17 +34,13 @@ export async function createLeadStage(
 
       stage_key: stageKey,
 
-      label:
-        values.label.trim(),
+      label: values.label.trim(),
 
-      sort_order:
-        existing.length + 1,
+      sort_order: existing.length + 1,
 
-      is_won:
-        Boolean(values.is_won),
+      is_won: Boolean(values.is_won),
 
-      is_lost:
-        Boolean(values.is_lost),
+      is_lost: Boolean(values.is_lost),
 
       is_active: true,
     })
@@ -69,16 +54,12 @@ export async function createLeadStage(
   return data;
 }
 
-export async function updateLeadStage(
-  stageId,
-  values
-) {
+export async function updateLeadStage(stageId, values) {
   const { data, error } = await supabase
     .from('lead_stages')
     .update({
       ...values,
-      updated_at:
-        new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq('id', stageId)
     .select()
@@ -91,18 +72,14 @@ export async function updateLeadStage(
   return data;
 }
 
-export async function deleteLeadStage(
-  stageId,
-  stageKey
-) {
-  const { count, error: countError } =
-    await supabase
-      .from('connections')
-      .select('id', {
-        count: 'exact',
-        head: true,
-      })
-      .eq('stage', stageKey);
+export async function deleteLeadStage(stageId, stageKey) {
+  const { count, error: countError } = await supabase
+    .from('connections')
+    .select('id', {
+      count: 'exact',
+      head: true,
+    })
+    .eq('stage', stageKey);
 
   if (countError) {
     throw countError;
@@ -114,19 +91,14 @@ export async function deleteLeadStage(
     );
   }
 
-  const { error } = await supabase
-    .from('lead_stages')
-    .delete()
-    .eq('id', stageId);
+  const { error } = await supabase.from('lead_stages').delete().eq('id', stageId);
 
   if (error) {
     throw error;
   }
 }
 
-export async function reorderLeadStages(
-  stages
-) {
+export async function reorderLeadStages(stages) {
   await Promise.all(
     stages.map((stage, index) =>
       updateLeadStage(stage.id, {
@@ -135,10 +107,8 @@ export async function reorderLeadStages(
     )
   );
 
-  return stages.map(
-    (stage, index) => ({
-      ...stage,
-      sort_order: index + 1,
-    })
-  );
+  return stages.map((stage, index) => ({
+    ...stage,
+    sort_order: index + 1,
+  }));
 }

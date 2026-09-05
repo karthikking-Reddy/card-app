@@ -16,10 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { getCurrentSession } from '../../services/authService';
 import { getCard, updateCard } from '../../services/cardService';
-import {
-  uploadProfileImage,
-  removeProfileImages,
-} from '../../services/storageService';
+import { uploadProfileImage, removeProfileImages } from '../../services/storageService';
 
 export default function CardScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -110,10 +107,7 @@ export default function CardScreen({ navigation }) {
 
       setCard(updated);
 
-      Alert.alert(
-        'Saved',
-        'Your digital card has been updated successfully.'
-      );
+      Alert.alert('Saved', 'Your digital card has been updated successfully.');
     } catch (error) {
       Alert.alert('Save failed', error.message);
     } finally {
@@ -123,8 +117,7 @@ export default function CardScreen({ navigation }) {
 
   async function pickProfilePhoto() {
     try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
         Alert.alert(
@@ -134,13 +127,12 @@ export default function CardScreen({ navigation }) {
         return;
       }
 
-      const result =
-        await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.8,
-        });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
       if (result.canceled) return;
 
@@ -148,11 +140,7 @@ export default function CardScreen({ navigation }) {
 
       setSaving(true);
 
-      const publicUrl = await uploadProfileImage(
-        user.id,
-        card.id,
-        asset
-      );
+      const publicUrl = await uploadProfileImage(user.id, card.id, asset);
 
       const updated = await updateCard(user.id, card.id, {
         profile_image_url: publicUrl,
@@ -167,18 +155,14 @@ export default function CardScreen({ navigation }) {
   }
 
   function confirmRemovePhoto() {
-    Alert.alert(
-      'Remove profile photo?',
-      'Your current profile photo will be removed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: removePhoto,
-        },
-      ]
-    );
+    Alert.alert('Remove profile photo?', 'Your current profile photo will be removed.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: removePhoto,
+      },
+    ]);
   }
 
   async function removePhoto() {
@@ -221,28 +205,17 @@ export default function CardScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.photoSection}>
           {card?.profile_image_url ? (
-            <Image
-              source={{ uri: card.profile_image_url }}
-              style={styles.photo}
-            />
+            <Image source={{ uri: card.profile_image_url }} style={styles.photo} />
           ) : (
             <View style={styles.placeholder}>
-              <Text style={styles.initial}>
-                {form.name?.charAt(0)?.toUpperCase() || 'Y'}
-              </Text>
+              <Text style={styles.initial}>{form.name?.charAt(0)?.toUpperCase() || 'Y'}</Text>
             </View>
           )}
 
-          <TouchableOpacity
-            style={styles.photoButton}
-            onPress={pickProfilePhoto}
-          >
+          <TouchableOpacity style={styles.photoButton} onPress={pickProfilePhoto}>
             <Ionicons name="camera-outline" size={18} color="#06162D" />
             <Text style={styles.photoButtonText}>Change Photo</Text>
           </TouchableOpacity>
@@ -255,11 +228,7 @@ export default function CardScreen({ navigation }) {
         </View>
 
         <Section title="BASIC INFORMATION">
-          <Field
-            label="Name"
-            value={form.name}
-            onChangeText={(value) => change('name', value)}
-          />
+          <Field label="Name" value={form.name} onChangeText={(value) => change('name', value)} />
 
           <Field
             label="Designation"
@@ -336,11 +305,7 @@ export default function CardScreen({ navigation }) {
           />
         </Section>
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={save}
-          disabled={saving}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
           {saving ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
@@ -364,11 +329,7 @@ function Section({ title, children }) {
   );
 }
 
-function Field({
-  label,
-  multiline,
-  ...props
-}) {
+function Field({ label, multiline, ...props }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -376,10 +337,7 @@ function Field({
       <TextInput
         {...props}
         multiline={multiline}
-        style={[
-          styles.input,
-          multiline && styles.multilineInput,
-        ]}
+        style={[styles.input, multiline && styles.multilineInput]}
         placeholderTextColor="#98A2B3"
       />
     </View>
@@ -388,9 +346,9 @@ function Field({
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
@@ -398,33 +356,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FB',
 
     backgroundColor: '#F5F7FB',
-},
+  },
   header: {
-      minHeight: 68,
-      paddingHorizontal: 18,
-      backgroundColor: '#06162D',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(246,185,26,0.22)',
-      shadowColor: '#06162D',
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-      elevation: 5,
-    },
+    minHeight: 68,
+    paddingHorizontal: 18,
+    backgroundColor: '#06162D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   headerTitle: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: '#FFFFFF',
-      letterSpacing: 0.1,
-    },
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
+  },
   saveTop: {
-      fontWeight: '900',
-      color: '#F6B91A',
-    },
+    fontWeight: '900',
+    color: '#F6B91A',
+  },
   container: {
     padding: 16,
     paddingBottom: 70,
@@ -442,7 +400,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   photo: {
     width: 105,
     height: 105,
@@ -450,7 +408,7 @@ const styles = StyleSheet.create({
 
     borderWidth: 3,
     borderColor: '#F6B91A',
-},
+  },
   placeholder: {
     width: 105,
     height: 105,
@@ -461,24 +419,24 @@ const styles = StyleSheet.create({
 
     borderWidth: 3,
     borderColor: '#F6B91A',
-},
+  },
   initial: {
     color: '#FFFFFF',
     fontSize: 38,
     fontWeight: '900',
   },
   photoButton: {
-      marginTop: 15,
-      flexDirection: 'row',
-      gap: 7,
-      alignItems: 'center',
-      backgroundColor: '#FFF4D6',
-      borderRadius: 13,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderWidth: 1,
-      borderColor: '#F6B91A',
-    },
+    marginTop: 15,
+    flexDirection: 'row',
+    gap: 7,
+    alignItems: 'center',
+    backgroundColor: '#FFF4D6',
+    borderRadius: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+  },
   photoButtonText: {
     fontWeight: '700',
     color: '#06162D',
@@ -511,7 +469,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   field: {
     marginBottom: 15,
   },
@@ -536,22 +494,22 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-      marginTop: 25,
-      backgroundColor: '#06162D',
-      borderRadius: 16,
-      paddingVertical: 15,
-      flexDirection: 'row',
-      gap: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: '#F6B91A',
-      shadowColor: '#06162D',
-      shadowOffset: { width: 0, height: 7 },
-      shadowOpacity: 0.15,
-      shadowRadius: 14,
-      elevation: 4,
-    },
+    marginTop: 25,
+    backgroundColor: '#06162D',
+    borderRadius: 16,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    elevation: 4,
+  },
   saveButtonText: {
     color: '#FFFFFF',
     fontWeight: '800',

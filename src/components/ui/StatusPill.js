@@ -1,70 +1,47 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  colors,
-  radius,
-} from '../../theme';
-
+import { colors, radius } from '../../theme';
 
 const palettes = {
   success: {
-    background:
-      colors.successSoft,
+    background: colors.successSoft,
 
-    foreground:
-      colors.success,
+    foreground: colors.success,
   },
 
   warning: {
-    background:
-      colors.warningSoft,
+    background: colors.warningSoft,
 
-    foreground:
-      colors.warning,
+    foreground: colors.warning,
   },
 
   danger: {
-    background:
-      colors.dangerSoft,
+    background: colors.dangerSoft,
 
-    foreground:
-      colors.danger,
+    foreground: colors.danger,
   },
 
   info: {
-    background:
-      colors.infoSoft,
+    background: colors.infoSoft,
 
-    foreground:
-      colors.info,
+    foreground: colors.info,
   },
 
   neutral: {
-    background:
-      colors.surfaceSoft,
+    background: colors.surfaceSoft,
 
-    foreground:
-      colors.textSecondary,
+    foreground: colors.textSecondary,
   },
 };
-
 
 export default function StatusPill({
   label,
 
-  tone =
-    'neutral',
+  tone = 'neutral',
 
   dot = true,
 }) {
-  const palette =
-    palettes[tone] ||
-    palettes.neutral;
-
+  const palette = palettes[tone] || palettes.neutral;
 
   return (
     <View
@@ -72,8 +49,7 @@ export default function StatusPill({
         styles.container,
 
         {
-          backgroundColor:
-            palette.background,
+          backgroundColor: palette.background,
         },
       ]}
     >
@@ -83,8 +59,7 @@ export default function StatusPill({
             styles.dot,
 
             {
-              backgroundColor:
-                palette.foreground,
+              backgroundColor: palette.foreground,
             },
           ]}
         />
@@ -95,8 +70,7 @@ export default function StatusPill({
           styles.text,
 
           {
-            color:
-              palette.foreground,
+            color: palette.foreground,
           },
         ]}
       >
@@ -106,39 +80,33 @@ export default function StatusPill({
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    alignSelf: 'flex-start',
 
-const styles =
-  StyleSheet.create({
-    container: {
-      alignSelf:
-        'flex-start',
+    flexDirection: 'row',
 
-      flexDirection:
-        'row',
+    alignItems: 'center',
 
-      alignItems:
-        'center',
+    gap: 5,
 
-      gap: 5,
+    paddingHorizontal: 9,
 
-      paddingHorizontal: 9,
+    paddingVertical: 5,
 
-      paddingVertical: 5,
+    borderRadius: radius.round,
+  },
 
-      borderRadius:
-        radius.round,
-    },
+  dot: {
+    width: 6,
+    height: 6,
 
-    dot: {
-      width: 6,
-      height: 6,
+    borderRadius: 3,
+  },
 
-      borderRadius: 3,
-    },
+  text: {
+    fontSize: 9,
 
-    text: {
-      fontSize: 9,
-
-      fontWeight: '800',
-    },
-  });
+    fontWeight: '800',
+  },
+});

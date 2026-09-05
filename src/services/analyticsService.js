@@ -1,27 +1,16 @@
 import { supabase } from '../../lib/supabase';
 
-export async function recordCardEvent(
-  cardId,
-  eventType,
-  options = {}
-) {
-  const {
-    linkId = null,
-    connectionId = null,
-    source = 'app',
-    metadata = {},
-  } = options;
+export async function recordCardEvent(cardId, eventType, options = {}) {
+  const { linkId = null, connectionId = null, source = 'app', metadata = {} } = options;
 
-  const { error } = await supabase
-    .from('card_events')
-    .insert({
-      card_id: cardId,
-      link_id: linkId,
-      connection_id: connectionId,
-      event_type: eventType,
-      source,
-      metadata,
-    });
+  const { error } = await supabase.from('card_events').insert({
+    card_id: cardId,
+    link_id: linkId,
+    connection_id: connectionId,
+    event_type: eventType,
+    source,
+    metadata,
+  });
 
   if (error) {
     throw error;

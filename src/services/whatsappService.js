@@ -1,18 +1,10 @@
-import {
-  supabase,
-} from '../../lib/supabase';
-
+import { supabase } from '../../lib/supabase';
 
 export async function getWhatsAppConversations() {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(
-        'whatsapp_conversations'
-      )
-      .select(`
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .select(
+      `
         id,
         user_id,
         whatsapp_account_id,
@@ -26,42 +18,29 @@ export async function getWhatsAppConversations() {
         metadata,
         created_at,
         updated_at
-      `)
-      .order(
-        'last_message_at',
-        {
-          ascending: false,
-          nullsFirst: false,
-        }
-      );
-
+      `
+    )
+    .order('last_message_at', {
+      ascending: false,
+      nullsFirst: false,
+    });
 
   if (error) {
     throw error;
   }
 
-
   return data || [];
 }
 
-
-export async function getWhatsAppMessages(
-  conversationId
-) {
+export async function getWhatsAppMessages(conversationId) {
   if (!conversationId) {
     return [];
   }
 
-
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(
-        'whatsapp_messages'
-      )
-      .select(`
+  const { data, error } = await supabase
+    .from('whatsapp_messages')
+    .select(
+      `
         id,
         conversation_id,
         wa_message_id,
@@ -74,116 +53,62 @@ export async function getWhatsAppMessages(
         delivered_at,
         read_at,
         created_at
-      `)
-      .eq(
-        'conversation_id',
-        conversationId
-      )
-      .order(
-        'created_at',
-        {
-          ascending: true,
-        }
-      );
-
+      `
+    )
+    .eq('conversation_id', conversationId)
+    .order('created_at', {
+      ascending: true,
+    });
 
   if (error) {
     throw error;
   }
-
 
   return data || [];
 }
 
-
-export async function markConversationRead(
-  conversationId
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(
-        'whatsapp_conversations'
-      )
-      .update({
-        unread_count: 0,
-      })
-      .eq(
-        'id',
-        conversationId
-      )
-      .select()
-      .single();
-
+export async function markConversationRead(conversationId) {
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .update({
+      unread_count: 0,
+    })
+    .eq('id', conversationId)
+    .select()
+    .single();
 
   if (error) {
     throw error;
   }
 
-
   return data;
 }
 
-
-export async function updateConversationStatus(
-  conversationId,
-  status
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(
-        'whatsapp_conversations'
-      )
-      .update({
-        status,
-      })
-      .eq(
-        'id',
-        conversationId
-      )
-      .select()
-      .single();
-
+export async function updateConversationStatus(conversationId, status) {
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .update({
+      status,
+    })
+    .eq('id', conversationId)
+    .select()
+    .single();
 
   if (error) {
     throw error;
   }
 
-
   return data;
 }
-
 
 export async function getWhatsAppInboxStats() {
-  const conversations =
-    await getWhatsAppConversations();
-
+  const conversations = await getWhatsAppConversations();
 
   return {
-    total:
-      conversations.length,
+    total: conversations.length,
 
-    open:
-      conversations.filter(
-        (item) =>
-          item.status ===
-          'open'
-      ).length,
+    open: conversations.filter((item) => item.status === 'open').length,
 
-    unread:
-      conversations.reduce(
-        (sum, item) =>
-          sum +
-          Number(
-            item.unread_count ||
-              0
-          ),
-        0
-      ),
+    unread: conversations.reduce((sum, item) => sum + Number(item.unread_count || 0), 0),
   };
 }

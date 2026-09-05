@@ -1,57 +1,35 @@
-import {
-  supabase,
-} from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
-import {
-  getAllConnections,
-} from './connectionService';
-
+import { getAllConnections } from './connectionService';
 
 async function getCurrentUser() {
-  const {
-    data,
-    error,
-  } =
-    await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
 
   if (error) {
     throw error;
   }
 
   if (!data?.user) {
-    throw new Error(
-      'Please sign in again.'
-    );
+    throw new Error('Please sign in again.');
   }
 
   return data.user;
 }
 
-
 export async function getAvailableCrmLeads() {
   return getAllConnections();
 }
 
-
-export async function getLinkedCrmLead(
-  connectionId
-) {
+export async function getLinkedCrmLead(connectionId) {
   if (!connectionId) {
     return null;
   }
 
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from('connections')
-      .select('*')
-      .eq(
-        'id',
-        connectionId
-      )
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('connections')
+    .select('*')
+    .eq('id', connectionId)
+    .maybeSingle();
 
   if (error) {
     throw error;
@@ -60,29 +38,15 @@ export async function getLinkedCrmLead(
   return data || null;
 }
 
-
-export async function linkConversationToLead(
-  conversationId,
-  connectionId
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(
-        'whatsapp_conversations'
-      )
-      .update({
-        connection_id:
-          connectionId,
-      })
-      .eq(
-        'id',
-        conversationId
-      )
-      .select()
-      .single();
+export async function linkConversationToLead(conversationId, connectionId) {
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .update({
+      connection_id: connectionId,
+    })
+    .eq('id', conversationId)
+    .select()
+    .single();
 
   if (error) {
     throw error;
@@ -91,27 +55,15 @@ export async function linkConversationToLead(
   return data;
 }
 
-
-export async function unlinkConversationFromLead(
-  conversationId
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(
-        'whatsapp_conversations'
-      )
-      .update({
-        connection_id: null,
-      })
-      .eq(
-        'id',
-        conversationId
-      )
-      .select()
-      .single();
+export async function unlinkConversationFromLead(conversationId) {
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .update({
+      connection_id: null,
+    })
+    .eq('id', conversationId)
+    .select()
+    .single();
 
   if (error) {
     throw error;
@@ -120,36 +72,18 @@ export async function unlinkConversationFromLead(
   return data;
 }
 
-
-async function getPrimaryCard(
-  userId
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from('digital_cards')
-      .select(
-        'id, name, card_slug, is_primary'
-      )
-      .eq(
-        'user_id',
-        userId
-      )
-      .order(
-        'is_primary',
-        {
-          ascending: false,
-        }
-      )
-      .order(
-        'created_at',
-        {
-          ascending: true,
-        }
-      )
-      .limit(1);
+async function getPrimaryCard(userId) {
+  const { data, error } = await supabase
+    .from('digital_cards')
+    .select('id, name, card_slug, is_primary')
+    .eq('user_id', userId)
+    .order('is_primary', {
+      ascending: false,
+    })
+    .order('created_at', {
+      ascending: true,
+    })
+    .limit(1);
 
   if (error) {
     throw error;
@@ -158,86 +92,41 @@ async function getPrimaryCard(
   return data?.[0] || null;
 }
 
-
-async function getDefaultLeadStage(
-  userId
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from('lead_stages')
-      .select(
-        'stage_key, sort_order, is_active'
-      )
-      .eq(
-        'user_id',
-        userId
-      )
-      .eq(
-        'is_active',
-        true
-      )
-      .order(
-        'sort_order',
-        {
-          ascending: true,
-        }
-      );
+async function getDefaultLeadStage(userId) {
+  const { data, error } = await supabase
+    .from('lead_stages')
+    .select('stage_key, sort_order, is_active')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('sort_order', {
+      ascending: true,
+    });
 
   if (error) {
     throw error;
   }
 
-  const stages =
-    data || [];
+  const stages = data || [];
 
-  const newStage =
-    stages.find(
-      (item) =>
-        item.stage_key ===
-        'new'
-    );
+  const newStage = stages.find((item) => item.stage_key === 'new');
 
-  return (
-    newStage?.stage_key ||
-    stages[0]?.stage_key ||
-    'new'
-  );
+  return newStage?.stage_key || stages[0]?.stage_key || 'new';
 }
 
-
-async function findLeadByPhone(
-  userId,
-  phone
-) {
+async function findLeadByPhone(userId, phone) {
   if (!phone) {
     return null;
   }
 
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from('connections')
-      .select('*')
-      .eq(
-        'owner_user_id',
-        userId
-      )
-      .eq(
-        'phone',
-        phone
-      )
-      .order(
-        'created_at',
-        {
-          ascending: false,
-        }
-      )
-      .limit(1);
+  const { data, error } = await supabase
+    .from('connections')
+    .select('*')
+    .eq('owner_user_id', userId)
+    .eq('phone', phone)
+    .order('created_at', {
+      ascending: false,
+    })
+    .limit(1);
 
   if (error) {
     throw error;
@@ -246,36 +135,22 @@ async function findLeadByPhone(
   return data?.[0] || null;
 }
 
-
-export async function createLeadFromWhatsApp(
-  conversation
-) {
+export async function createLeadFromWhatsApp(conversation) {
   if (!conversation?.id) {
-    throw new Error(
-      'WhatsApp conversation is missing.'
-    );
+    throw new Error('WhatsApp conversation is missing.');
   }
 
-  const user =
-    await getCurrentUser();
-
+  const user = await getCurrentUser();
 
   /*
    * Prevent duplicate CRM leads
    * when the same phone already
    * exists.
    */
-  const existing =
-    await findLeadByPhone(
-      user.id,
-      conversation.phone
-    );
+  const existing = await findLeadByPhone(user.id, conversation.phone);
 
   if (existing) {
-    await linkConversationToLead(
-      conversation.id,
-      existing.id
-    );
+    await linkConversationToLead(conversation.id, existing.id);
 
     return {
       lead: existing,
@@ -283,86 +158,51 @@ export async function createLeadFromWhatsApp(
     };
   }
 
-
-  const card =
-    await getPrimaryCard(
-      user.id
-    );
+  const card = await getPrimaryCard(user.id);
 
   if (!card) {
-    throw new Error(
-      'Create a digital card before creating CRM leads.'
-    );
+    throw new Error('Create a digital card before creating CRM leads.');
   }
 
+  const stage = await getDefaultLeadStage(user.id);
 
-  const stage =
-    await getDefaultLeadStage(
-      user.id
-    );
+  const { data: lead, error } = await supabase
+    .from('connections')
+    .insert({
+      owner_user_id: user.id,
 
+      card_id: card.id,
 
-  const {
-    data: lead,
-    error,
-  } =
-    await supabase
-      .from('connections')
-      .insert({
-        owner_user_id:
-          user.id,
+      name: conversation.contact_name || conversation.phone || 'WhatsApp Lead',
 
-        card_id:
-          card.id,
+      phone: conversation.phone || null,
 
-        name:
-          conversation.contact_name ||
-          conversation.phone ||
-          'WhatsApp Lead',
+      email: null,
 
-        phone:
-          conversation.phone ||
-          null,
+      company: null,
 
-        email: null,
+      requirement: 'WhatsApp enquiry',
 
-        company: null,
+      stage,
 
-        requirement:
-          'WhatsApp enquiry',
+      source: 'whatsapp',
 
-        stage,
+      source_detail: 'whatsapp_inbox',
 
-        source:
-          'whatsapp',
+      priority: 'normal',
 
-        source_detail:
-          'whatsapp_inbox',
+      notes: 'CRM lead created automatically from WhatsApp Inbox.',
 
-        priority:
-          'normal',
-
-        notes:
-          'CRM lead created automatically from WhatsApp Inbox.',
-
-        last_contacted_at:
-          conversation.last_message_at ||
-          null,
-      })
-      .select()
-      .single();
-
+      last_contacted_at: conversation.last_message_at || null,
+    })
+    .select()
+    .single();
 
   if (error) {
     throw error;
   }
 
-
-  await linkConversationToLead(
-    conversation.id,
-    lead.id
-  );
-
+  await linkConversationToLead(conversation.id, lead.id);
 
   return {
     lead,

@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -15,24 +12,15 @@ import {
   View,
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import {
-  getCurrentSession,
-} from '../../services/authService';
+import { getCurrentSession } from '../../services/authService';
 
-import {
-  getCard,
-  updateCard,
-} from '../../services/cardService';
+import { getCard, updateCard } from '../../services/cardService';
 
-import {
-  CARD_WEB_URL,
-} from '../../constants/config';
+import { CARD_WEB_URL } from '../../constants/config';
 
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
@@ -61,32 +49,22 @@ const CARD_TYPES = [
   ['employee', 'Employee'],
 ];
 
-export default function CardSettingsScreen({
-  navigation,
-}) {
-  const [user, setUser] =
-    useState(null);
+export default function CardSettingsScreen({ navigation }) {
+  const [user, setUser] = useState(null);
 
-  const [card, setCard] =
-    useState(null);
+  const [card, setCard] = useState(null);
 
-  const [theme, setTheme] =
-    useState('standard');
+  const [theme, setTheme] = useState('standard');
 
-  const [cardType, setCardType] =
-    useState('business');
+  const [cardType, setCardType] = useState('business');
 
-  const [isPublic, setIsPublic] =
-    useState(true);
+  const [isPublic, setIsPublic] = useState(true);
 
-  const [isActive, setIsActive] =
-    useState(true);
+  const [isActive, setIsActive] = useState(true);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [approvalVisible, setApprovalVisible] = useState(false);
 
@@ -96,42 +74,25 @@ export default function CardSettingsScreen({
 
   async function load() {
     try {
-      const session =
-        await getCurrentSession();
+      const session = await getCurrentSession();
 
       if (!session?.user) return;
 
       setUser(session.user);
 
-      const currentCard =
-        await getCard(
-          session.user.id
-        );
+      const currentCard = await getCard(session.user.id);
 
       setCard(currentCard);
 
-      setTheme(
-        currentCard.theme ||
-        'standard'
-      );
+      setTheme(currentCard.theme || 'standard');
 
-      setCardType(
-        currentCard.card_type ||
-        'business'
-      );
+      setCardType(currentCard.card_type || 'business');
 
-      setIsPublic(
-        currentCard.is_public !== false
-      );
+      setIsPublic(currentCard.is_public !== false);
 
-      setIsActive(
-        currentCard.is_active !== false
-      );
+      setIsActive(currentCard.is_active !== false);
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error.message
-      );
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -141,29 +102,18 @@ export default function CardSettingsScreen({
     setSaving(true);
 
     try {
-      const updated =
-        await updateCard(
-          user.id,
-          card.id,
-          {
-            theme,
-            card_type: cardType,
-            is_public: isPublic,
-            is_active: isActive,
-          }
-        );
+      const updated = await updateCard(user.id, card.id, {
+        theme,
+        card_type: cardType,
+        is_public: isPublic,
+        is_active: isActive,
+      });
 
       setCard(updated);
 
-      Alert.alert(
-        'Saved',
-        'Card settings updated.'
-      );
+      Alert.alert('Saved', 'Card settings updated.');
     } catch (error) {
-      Alert.alert(
-        'Save failed',
-        error.message
-      );
+      Alert.alert('Save failed', error.message);
     } finally {
       setSaving(false);
     }
@@ -177,18 +127,13 @@ export default function CardSettingsScreen({
       return;
     }
 
-    Linking.openURL(
-      `${CARD_WEB_URL}/${card.card_slug}`
-    );
+    Linking.openURL(`${CARD_WEB_URL}/${card.card_slug}`);
   }
 
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator
-          size="large"
-          color="#06162D"
-        />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -196,44 +141,26 @@ export default function CardSettingsScreen({
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#FFFFFF"
-          />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          Card Settings
-        </Text>
+        <Text style={styles.headerTitle}>Card Settings</Text>
 
-        <TouchableOpacity
-          onPress={save}
-        >
-          <Text style={styles.topSave}>
-            Save
-          </Text>
+        <TouchableOpacity onPress={save}>
+          <Text style={styles.topSave}>Save</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
-      >
-        <Text style={styles.sectionTitle}>
-          CARD VISIBILITY
-        </Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.sectionTitle}>CARD VISIBILITY</Text>
 
         <View style={styles.approvalRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingTitle}>Approval Status</Text>
-            <Text style={styles.settingDescription}>Public sharing and QR access require administrator approval.</Text>
+            <Text style={styles.settingDescription}>
+              Public sharing and QR access require administrator approval.
+            </Text>
           </View>
           <ApprovalStatusBadge status={card?.approval_status} compact />
         </View>
@@ -255,136 +182,63 @@ export default function CardSettingsScreen({
           />
         </View>
 
-        <Text style={styles.sectionTitle}>
-          CARD TYPE
-        </Text>
+        <Text style={styles.sectionTitle}>CARD TYPE</Text>
 
         <View style={styles.optionGrid}>
-          {CARD_TYPES.map(
-            ([id, label]) => (
-              <TouchableOpacity
-                key={id}
-                onPress={() =>
-                  setCardType(id)
-                }
-                style={[
-                  styles.typeButton,
-                  cardType === id &&
-                    styles.selectedOption,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.typeText,
-                    cardType === id &&
-                      styles.selectedText,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
+          {CARD_TYPES.map(([id, label]) => (
+            <TouchableOpacity
+              key={id}
+              onPress={() => setCardType(id)}
+              style={[styles.typeButton, cardType === id && styles.selectedOption]}
+            >
+              <Text style={[styles.typeText, cardType === id && styles.selectedText]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <Text style={styles.sectionTitle}>
-          CARD THEME
-        </Text>
+        <Text style={styles.sectionTitle}>CARD THEME</Text>
 
         {THEMES.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={[
-              styles.themeCard,
-              theme === item.id &&
-                styles.selectedTheme,
-            ]}
-            onPress={() =>
-              setTheme(item.id)
-            }
+            style={[styles.themeCard, theme === item.id && styles.selectedTheme]}
+            onPress={() => setTheme(item.id)}
           >
             <View
               style={[
                 styles.themePreview,
-                item.id === 'gold' &&
-                  styles.goldPreview,
-                item.id === 'ocean' &&
-                  styles.oceanPreview,
+                item.id === 'gold' && styles.goldPreview,
+                item.id === 'ocean' && styles.oceanPreview,
               ]}
             >
-              <Text
-                style={
-                  styles.themeInitial
-                }
-              >
-                Y
-              </Text>
+              <Text style={styles.themeInitial}>Y</Text>
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text
-                style={styles.themeName}
-              >
-                {item.name}
-              </Text>
+              <Text style={styles.themeName}>{item.name}</Text>
 
-              <Text
-                style={
-                  styles.themeDescription
-                }
-              >
-                {item.description}
-              </Text>
+              <Text style={styles.themeDescription}>{item.description}</Text>
             </View>
 
             {theme === item.id ? (
-              <Ionicons
-                name="checkmark-circle"
-                size={23}
-                color="#C98B16"
-              />
+              <Ionicons name="checkmark-circle" size={23} color="#C98B16" />
             ) : (
-              <Ionicons
-                name="ellipse-outline"
-                size={23}
-                color="#D0D5DD"
-              />
+              <Ionicons name="ellipse-outline" size={23} color="#D0D5DD" />
             )}
           </TouchableOpacity>
         ))}
 
-        <TouchableOpacity
-          style={styles.previewButton}
-          onPress={openPublicCard}
-        >
-          <Ionicons
-            name="open-outline"
-            size={20}
-            color="#06162D"
-          />
+        <TouchableOpacity style={styles.previewButton} onPress={openPublicCard}>
+          <Ionicons name="open-outline" size={20} color="#06162D" />
 
-          <Text
-            style={styles.previewText}
-          >
-            Preview Public Card
-          </Text>
+          <Text style={styles.previewText}>Preview Public Card</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={save}
-          disabled={saving}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
           {saving ? (
-            <ActivityIndicator
-              color="#FFFFFF"
-            />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text
-              style={styles.saveText}
-            >
-              Save Card Settings
-            </Text>
+            <Text style={styles.saveText}>Save Card Settings</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -403,52 +257,25 @@ export default function CardSettingsScreen({
   );
 }
 
-function SettingRow({
-  title,
-  description,
-  value,
-  onValueChange,
-  last,
-}) {
+function SettingRow({ title, description, value, onValueChange, last }) {
   return (
-    <View
-      style={[
-        styles.settingRow,
-        last &&
-          styles.settingRowLast,
-      ]}
-    >
+    <View style={[styles.settingRow, last && styles.settingRowLast]}>
       <View style={{ flex: 1 }}>
-        <Text
-          style={styles.settingTitle}
-        >
-          {title}
-        </Text>
+        <Text style={styles.settingTitle}>{title}</Text>
 
-        <Text
-          style={
-            styles.settingDescription
-          }
-        >
-          {description}
-        </Text>
+        <Text style={styles.settingDescription}>{description}</Text>
       </View>
 
-      <Switch
-        value={value}
-        onValueChange={
-          onValueChange
-        }
-      />
+      <Switch value={value} onValueChange={onValueChange} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
 
   loading: {
     flex: 1,
@@ -456,61 +283,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-
     backgroundColor: '#F5F7FB',
-},
+  },
 
   header: {
+    minHeight: 68,
 
-      minHeight: 68,
+    paddingHorizontal: 18,
 
-      paddingHorizontal: 18,
+    backgroundColor: '#06162D',
 
-      backgroundColor: '#06162D',
+    flexDirection: 'row',
 
-      flexDirection: 'row',
+    alignItems: 'center',
 
-      alignItems: 'center',
+    justifyContent: 'space-between',
 
-      justifyContent: 'space-between',
+    gap: 10,
 
-      gap: 10,
+    borderBottomWidth: 1,
 
-      borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
 
-      borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
 
-      shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
 
-      shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
 
-      shadowOpacity: 0.12,
+    shadowRadius: 12,
 
-      shadowRadius: 12,
-
-      elevation: 5,
-
-    },
+    elevation: 5,
+  },
 
   headerTitle: {
+    fontSize: 18,
 
-      fontSize: 18,
+    fontWeight: '900',
 
-      fontWeight: '900',
+    color: '#FFFFFF',
 
-      color: '#FFFFFF',
-
-      letterSpacing: 0.1,
-
-    },
+    letterSpacing: 0.1,
+  },
 
   topSave: {
+    color: '#F6B91A',
 
-      color: '#F6B91A',
-
-      fontWeight: '900',
-
-    },
+    fontWeight: '900',
+  },
 
   container: {
     padding: 16,
@@ -531,7 +351,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -545,9 +364,19 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
-  approvalRow: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#E6EAF0', padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  approvalRow: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
 
   settingRow: {
     flexDirection: 'row',
@@ -593,11 +422,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#06162D',
     borderColor: '#06162D',
 
-
     backgroundColor: '#06162D',
 
     borderColor: '#F6B91A',
-},
+  },
 
   typeText: {
     color: '#667085',
@@ -620,7 +448,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -634,14 +461,13 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   selectedTheme: {
     borderColor: '#F6B91A',
 
-
     backgroundColor: '#FFFCF3',
-},
+  },
 
   themePreview: {
     width: 50,
@@ -687,7 +513,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -701,7 +526,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   previewText: {
     color: '#06162D',
@@ -715,11 +540,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
 
-
     borderWidth: 1,
 
     borderColor: '#F6B91A',
-},
+  },
 
   saveText: {
     color: '#FFFFFF',

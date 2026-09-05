@@ -92,25 +92,21 @@ export default function ServicesScreen({ navigation }) {
   }
 
   function confirmDelete(service) {
-    Alert.alert(
-      'Delete Service',
-      `Remove "${service.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteService(service.id);
-              await load();
-            } catch (error) {
-              Alert.alert('Error', error.message);
-            }
-          },
+    Alert.alert('Delete Service', `Remove "${service.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteService(service.id);
+            await load();
+          } catch (error) {
+            Alert.alert('Error', error.message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }
 
   if (loading) {
@@ -135,9 +131,7 @@ export default function ServicesScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.form}>
-          <Text style={styles.formTitle}>
-            {editingId ? 'Edit Service' : 'Add New Service'}
-          </Text>
+          <Text style={styles.formTitle}>{editingId ? 'Edit Service' : 'Add New Service'}</Text>
 
           <TextInput
             style={styles.input}
@@ -157,9 +151,7 @@ export default function ServicesScreen({ navigation }) {
           />
 
           <TouchableOpacity style={styles.saveButton} onPress={save}>
-            <Text style={styles.saveText}>
-              {editingId ? 'Update Service' : 'Add Service'}
-            </Text>
+            <Text style={styles.saveText}>{editingId ? 'Update Service' : 'Add Service'}</Text>
           </TouchableOpacity>
 
           {editingId ? (
@@ -174,11 +166,7 @@ export default function ServicesScreen({ navigation }) {
         {services.map((service) => (
           <View key={service.id} style={styles.service}>
             <View style={styles.serviceIcon}>
-              <Ionicons
-                name={service.icon_name || 'briefcase-outline'}
-                size={22}
-                color="#06162D"
-              />
+              <Ionicons name={service.icon_name || 'briefcase-outline'} size={22} color="#06162D" />
             </View>
 
             <View style={styles.serviceContent}>
@@ -205,38 +193,38 @@ export default function ServicesScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
 
     backgroundColor: '#F5F7FB',
-},
+  },
   header: {
-      minHeight: 68,
-      paddingHorizontal: 18,
-      backgroundColor: '#06162D',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(246,185,26,0.22)',
-      shadowColor: '#06162D',
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-      elevation: 5,
-    },
+    minHeight: 68,
+    paddingHorizontal: 18,
+    backgroundColor: '#06162D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   headerTitle: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: '#FFFFFF',
-      letterSpacing: 0.1,
-    },
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
+  },
   container: {
     padding: 16,
     paddingBottom: 70,
@@ -253,7 +241,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   formTitle: {
     fontSize: 17,
     fontWeight: '800',
@@ -281,7 +269,7 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
     borderColor: '#F6B91A',
-},
+  },
   saveText: {
     color: '#FFFFFF',
     fontWeight: '800',
@@ -316,17 +304,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   serviceIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 13,
-      backgroundColor: '#FFF4D6',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: '#F6B91A',
-    },
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: '#FFF4D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+  },
   serviceContent: {
     flex: 1,
   },

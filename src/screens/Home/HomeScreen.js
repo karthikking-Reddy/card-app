@@ -1,8 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -18,31 +14,20 @@ import {
   View,
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  Ionicons,
-} from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-import {
-  LinearGradient,
-} from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import QRCode from 'react-native-qrcode-svg';
 
-import {
-  useFocusEffect,
-} from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
-import {
-  supabase,
-} from '../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge, { getApprovalStatusCopy } from '../../components/ApprovalStatusBadge';
-
 
 const COLORS = {
   navy: '#06162D',
@@ -76,321 +61,145 @@ const COLORS = {
   orangeSoft: '#FFF7ED',
 };
 
+const PUBLIC_CARD_BASE = 'https://card.ynscrm.online/card';
 
-const PUBLIC_CARD_BASE =
-  'https://card.ynscrm.online/card';
+export default function HomeScreen({ navigation }) {
+  const [loading, setLoading] = useState(true);
 
+  const [refreshing, setRefreshing] = useState(false);
 
-export default function HomeScreen({
-  navigation,
-}) {
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [user, setUser] = useState(null);
 
-  const [
-    refreshing,
-    setRefreshing,
-  ] = useState(false);
+  const [card, setCard] = useState(null);
 
-  const [
-    user,
-    setUser,
-  ] = useState(null);
+  const [cards, setCards] = useState([]);
 
-  const [
-    card,
-    setCard,
-  ] = useState(null);
+  const [events, setEvents] = useState([]);
 
-  const [
-    cards,
-    setCards,
-  ] = useState([]);
+  const [connections, setConnections] = useState([]);
 
-  const [
-    events,
-    setEvents,
-  ] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
 
-  const [
-    connections,
-    setConnections,
-  ] = useState([]);
-
-  const [
-    notificationCount,
-    setNotificationCount,
-  ] = useState(0);
-
-  const [
-    qrVisible,
-    setQrVisible,
-  ] = useState(false);
+  const [qrVisible, setQrVisible] = useState(false);
 
   const [approvalVisible, setApprovalVisible] = useState(false);
 
+  const loadDashboard = useCallback(async (refresh = false) => {
+    if (refresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
-  const loadDashboard =
-    useCallback(async (
-      refresh = false
-    ) => {
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
       }
 
+      const currentUser = sessionData?.session?.user;
 
-      try {
-        const {
-          data:
-            sessionData,
-          error:
-            sessionError,
-        } =
-          await supabase.auth
-            .getSession();
+      if (!currentUser) {
+        return;
+      }
 
+      setUser(currentUser);
 
-        if (sessionError) {
-          throw sessionError;
-        }
+      const { data: cardData, error: cardsError } = await supabase
+        .from('digital_cards')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('is_primary', {
+          ascending: false,
+        })
+        .order('created_at', {
+          ascending: true,
+        });
 
+      if (cardsError) {
+        throw cardsError;
+      }
 
-        const currentUser =
-          sessionData
-            ?.session
-            ?.user;
+      const userCards = cardData || [];
 
+      setCards(userCards);
 
-        if (!currentUser) {
-          return;
-        }
+      const primary = userCards.find((item) => item.is_primary) || userCards[0] || null;
 
+      setCard(primary);
 
-        setUser(
-          currentUser
-        );
+      const cardIds = userCards.map((item) => item.id);
 
+      let eventData = [];
+      let leadData = [];
 
-        const {
-          data:
-            cardData,
-          error:
-            cardsError,
-        } =
-          await supabase
-            .from(
-              'digital_cards'
-            )
+      if (cardIds.length > 0) {
+        const [eventsResult, leadsResult] = await Promise.all([
+          supabase.from('card_events').select('*').in('card_id', cardIds).order('created_at', {
+            ascending: false,
+          }),
+
+          supabase
+            .from('connections')
             .select('*')
-            .eq(
-              'user_id',
-              currentUser.id
-            )
-            .order(
-              'is_primary',
-              {
-                ascending:
-                  false,
-              }
-            )
-            .order(
-              'created_at',
-              {
-                ascending:
-                  true,
-              }
-            );
+            .eq('owner_user_id', currentUser.id)
+            .order('created_at', {
+              ascending: false,
+            }),
+        ]);
 
-
-        if (cardsError) {
-          throw cardsError;
+        if (eventsResult.error) {
+          throw eventsResult.error;
         }
 
-
-        const userCards =
-          cardData || [];
-
-
-        setCards(
-          userCards
-        );
-
-
-        const primary =
-          userCards.find(
-            (item) =>
-              item.is_primary
-          ) ||
-          userCards[0] ||
-          null;
-
-
-        setCard(
-          primary
-        );
-
-
-        const cardIds =
-          userCards.map(
-            (item) =>
-              item.id
-          );
-
-
-        let eventData = [];
-        let leadData = [];
-
-
-        if (
-          cardIds.length >
-          0
-        ) {
-          const [
-            eventsResult,
-            leadsResult,
-          ] =
-            await Promise.all([
-              supabase
-                .from(
-                  'card_events'
-                )
-                .select('*')
-                .in(
-                  'card_id',
-                  cardIds
-                )
-                .order(
-                  'created_at',
-                  {
-                    ascending:
-                      false,
-                  }
-                ),
-
-              supabase
-                .from(
-                  'connections'
-                )
-                .select('*')
-                .eq(
-                  'owner_user_id',
-                  currentUser.id
-                )
-                .order(
-                  'created_at',
-                  {
-                    ascending:
-                      false,
-                  }
-                ),
-            ]);
-
-
-          if (
-            eventsResult.error
-          ) {
-            throw eventsResult.error;
-          }
-
-
-          if (
-            leadsResult.error
-          ) {
-            throw leadsResult.error;
-          }
-
-
-          eventData =
-            eventsResult.data ||
-            [];
-
-          leadData =
-            leadsResult.data ||
-            [];
+        if (leadsResult.error) {
+          throw leadsResult.error;
         }
 
+        eventData = eventsResult.data || [];
 
-        setEvents(
-          eventData
-        );
-
-        setConnections(
-          leadData
-        );
-
-
-        /*
-         * Notification count.
-         * If an older notifications
-         * schema differs, dashboard
-         * still works normally.
-         */
-        try {
-          const {
-            count,
-            error:
-              notificationError,
-          } =
-            await supabase
-              .from(
-                'notifications'
-              )
-              .select(
-                'id',
-                {
-                  count:
-                    'exact',
-
-                  head: true,
-                }
-              )
-              .eq(
-                'user_id',
-                currentUser.id
-              )
-              .eq(
-                'is_read',
-                false
-              );
-
-
-          if (
-            !notificationError
-          ) {
-            setNotificationCount(
-              count || 0
-            );
-          } else {
-            setNotificationCount(
-              0
-            );
-          }
-        } catch {
-          setNotificationCount(
-            0
-          );
-        }
-      } catch (error) {
-        console.log(
-          'Home dashboard error:',
-          error
-        );
-
-        Alert.alert(
-          'Unable to load dashboard',
-          error?.message ||
-            'Please try again.'
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+        leadData = leadsResult.data || [];
       }
-    }, []);
 
+      setEvents(eventData);
+
+      setConnections(leadData);
+
+      /*
+       * Notification count.
+       * If an older notifications
+       * schema differs, dashboard
+       * still works normally.
+       */
+      try {
+        const { count, error: notificationError } = await supabase
+          .from('notifications')
+          .select('id', {
+            count: 'exact',
+
+            head: true,
+          })
+          .eq('user_id', currentUser.id)
+          .eq('is_read', false);
+
+        if (!notificationError) {
+          setNotificationCount(count || 0);
+        } else {
+          setNotificationCount(0);
+        }
+      } catch {
+        setNotificationCount(0);
+      }
+    } catch (error) {
+      console.log('Home dashboard error:', error);
+
+      Alert.alert('Unable to load dashboard', error?.message || 'Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -398,143 +207,60 @@ export default function HomeScreen({
     }, [loadDashboard])
   );
 
-
-  const publicUrl =
-    card?.card_slug
-      ? `${PUBLIC_CARD_BASE}/${card.card_slug}`
-      : null;
+  const publicUrl = card?.card_slug ? `${PUBLIC_CARD_BASE}/${card.card_slug}` : null;
 
   const approvalCopy = getApprovalStatusCopy(card?.approval_status);
 
+  const firstName = useMemo(() => {
+    const source = card?.name || user?.email || 'there';
 
-  const firstName =
-    useMemo(() => {
-      const source =
-        card?.name ||
-        user?.email ||
-        'there';
+    return String(source).trim().split(/\s+/)[0];
+  }, [card?.name, user?.email]);
 
-      return String(
-        source
-      )
-        .trim()
-        .split(/\s+/)[0];
-    }, [
-      card?.name,
-      user?.email,
-    ]);
+  const stats = useMemo(() => {
+    const start = new Date();
 
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
 
-  const stats =
-    useMemo(() => {
-      const start =
-        new Date();
+    const monthlyEvents = events.filter((item) => new Date(item.created_at) >= start);
 
-      start.setDate(1);
-      start.setHours(
-        0,
-        0,
-        0,
-        0
-      );
+    const monthlyLeads = connections.filter((item) => new Date(item.created_at) >= start);
 
+    const views = monthlyEvents.filter((item) => item.event_type === 'card_view').length;
 
-      const monthlyEvents =
-        events.filter(
-          (item) =>
-            new Date(
-              item.created_at
-            ) >= start
-        );
+    const clicks = monthlyEvents.filter(
+      (item) =>
+        String(item.event_type || '').endsWith('_click') || item.event_type === 'block_click'
+    ).length;
 
+    const whatsapp = monthlyEvents.filter((item) =>
+      String(item.event_type || '').includes('whatsapp')
+    ).length;
 
-      const monthlyLeads =
-        connections.filter(
-          (item) =>
-            new Date(
-              item.created_at
-            ) >= start
-        );
+    return {
+      views,
+      clicks,
+      whatsapp,
+      leads: monthlyLeads.length,
+    };
+  }, [events, connections]);
 
-
-      const views =
-        monthlyEvents.filter(
-          (item) =>
-            item.event_type ===
-            'card_view'
-        ).length;
-
-
-      const clicks =
-        monthlyEvents.filter(
-          (item) =>
-            String(
-              item.event_type ||
-                ''
-            ).endsWith(
-              '_click'
-            ) ||
-            item.event_type ===
-              'block_click'
-        ).length;
-
-
-      const whatsapp =
-        monthlyEvents.filter(
-          (item) =>
-            String(
-              item.event_type ||
-                ''
-            ).includes(
-              'whatsapp'
-            )
-        ).length;
-
-
-      return {
-        views,
-        clicks,
-        whatsapp,
-        leads:
-          monthlyLeads.length,
-      };
-    }, [
-      events,
-      connections,
-    ]);
-
-
-  function openRoot(
-    routeName,
-    params
-  ) {
-    const parent =
-      navigation.getParent?.();
-
+  function openRoot(routeName, params) {
+    const parent = navigation.getParent?.();
 
     if (parent) {
-      parent.navigate(
-        routeName,
-        params
-      );
+      parent.navigate(routeName, params);
 
       return;
     }
 
-
-    navigation.navigate(
-      routeName,
-      params
-    );
+    navigation.navigate(routeName, params);
   }
-
 
   async function shareCard() {
     if (!publicUrl) {
-      Alert.alert(
-        'Card unavailable',
-        'Create a digital card first.'
-      );
+      Alert.alert('Card unavailable', 'Create a digital card first.');
 
       return;
     }
@@ -545,34 +271,22 @@ export default function HomeScreen({
       return;
     }
 
-
     try {
       await Share.share({
-        title:
-          'YNS Card',
+        title: 'YNS Card',
 
-        message:
-          `View my digital business card: ${publicUrl}`,
+        message: `View my digital business card: ${publicUrl}`,
 
-        url:
-          publicUrl,
+        url: publicUrl,
       });
     } catch (error) {
-      Alert.alert(
-        'Unable to share',
-        error?.message ||
-          'Please try again.'
-      );
+      Alert.alert('Unable to share', error?.message || 'Please try again.');
     }
   }
 
-
   function showQr() {
     if (!publicUrl) {
-      Alert.alert(
-        'Card unavailable',
-        'Create a digital card first.'
-      );
+      Alert.alert('Card unavailable', 'Create a digital card first.');
 
       return;
     }
@@ -582,243 +296,100 @@ export default function HomeScreen({
       return;
     }
 
-
-    setQrVisible(
-      true
-    );
+    setQrVisible(true);
   }
-
 
   if (loading) {
     return (
-      <View
-        style={
-          styles.loading
-        }
-      >
-        <ActivityIndicator
-          size="large"
-          color={
-            COLORS.gold
-          }
-        />
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={COLORS.gold} />
 
-        <Text
-          style={
-            styles.loadingText
-          }
-        >
-          Loading your dashboard...
-        </Text>
+        <Text style={styles.loadingText}>Loading your dashboard...</Text>
       </View>
     );
   }
 
-
   return (
-    <View
-      style={styles.root}
-    >
-      <LinearGradient
-        colors={[
-          '#06162D',
-          '#081D39',
-          '#0B2447',
-        ]}
-        style={
-          styles.headerBackground
-        }
-      />
+    <View style={styles.root}>
+      <LinearGradient colors={['#06162D', '#081D39', '#0B2447']} style={styles.headerBackground} />
 
-
-      <SafeAreaView
-        style={styles.safe}
-        edges={[
-          'top',
-        ]}
-      >
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView
-          showsVerticalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.scrollContent
-          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
-              refreshing={
-                refreshing
-              }
-              onRefresh={() =>
-                loadDashboard(
-                  true
-                )
-              }
-              tintColor={
-                COLORS.gold
-              }
+              refreshing={refreshing}
+              onRefresh={() => loadDashboard(true)}
+              tintColor={COLORS.gold}
             />
           }
         >
-          <View
-            style={
-              styles.hero
-            }
-          >
-            <View
-              style={
-                styles.heroIdentity
-              }
-            >
-              <View
-                style={
-                  styles.avatarWrap
-                }
-              >
-                {card
-                  ?.profile_image_url ? (
+          <View style={styles.hero}>
+            <View style={styles.heroIdentity}>
+              <View style={styles.avatarWrap}>
+                {card?.profile_image_url ? (
                   <Image
                     source={{
-                      uri:
-                        card.profile_image_url,
+                      uri: card.profile_image_url,
                     }}
-                    style={
-                      styles.avatar
-                    }
+                    style={styles.avatar}
                   />
                 ) : (
-                  <View
-                    style={
-                      styles.avatarFallback
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.avatarInitial
-                      }
-                    >
-                      {firstName
-                        ?.charAt(
-                          0
-                        )
-                        ?.toUpperCase()}
-                    </Text>
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarInitial}>{firstName?.charAt(0)?.toUpperCase()}</Text>
                   </View>
                 )}
 
-
-                <View
-                  style={
-                    styles.onlineDot
-                  }
-                />
+                <View style={styles.onlineDot} />
               </View>
-
 
               <View
                 style={{
                   flex: 1,
                 }}
               >
-                <View
-                  style={
-                    styles.helloRow
-                  }
-                >
-                  <Text
-                    style={
-                      styles.helloWhite
-                    }
-                  >
-                    Hello,
-                  </Text>
+                <View style={styles.helloRow}>
+                  <Text style={styles.helloWhite}>Hello,</Text>
 
-                  <Text
-                    style={
-                      styles.helloGold
-                    }
-                  >
-                    {firstName}!
-                  </Text>
+                  <Text style={styles.helloGold}>{firstName}!</Text>
 
-                  <Text
-                    style={
-                      styles.wave
-                    }
-                  >
-                    {'\uD83D\uDC4B'}
-                  </Text>
+                  <Text style={styles.wave}>{'\uD83D\uDC4B'}</Text>
                 </View>
 
                 {card ? <ApprovalStatusBadge status={card.approval_status} compact /> : null}
 
-
-                <Text
-                  style={
-                    styles.welcomeText
-                  }
-                >
-                  Welcome back to your dashboard
-                </Text>
+                <Text style={styles.welcomeText}>Welcome back to your dashboard</Text>
 
                 {card ? (
-                  <Text style={{ color: COLORS.gold, fontSize: 9, fontWeight: '900', marginTop: 8 }}>
+                  <Text
+                    style={{ color: COLORS.gold, fontSize: 9, fontWeight: '900', marginTop: 8 }}
+                  >
                     {approvalCopy.label} · {approvalCopy.message}
                   </Text>
                 ) : null}
               </View>
             </View>
 
-
             <TouchableOpacity
-              style={
-                styles.notificationButton
-              }
-              onPress={() =>
-                openRoot(
-                  'Notifications'
-                )
-              }
+              style={styles.notificationButton}
+              onPress={() => openRoot('Notifications')}
             >
-              <Ionicons
-                name="notifications-outline"
-                size={25}
-                color={
-                  COLORS.white
-                }
-              />
+              <Ionicons name="notifications-outline" size={25} color={COLORS.white} />
 
-
-              {notificationCount >
-              0 ? (
-                <View
-                  style={
-                    styles.notificationBadge
-                  }
-                >
-                  <Text
-                    style={
-                      styles.notificationBadgeText
-                    }
-                  >
-                    {notificationCount >
-                    99
-                      ? '99+'
-                      : notificationCount}
+              {notificationCount > 0 ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {notificationCount > 99 ? '99+' : notificationCount}
                   </Text>
                 </View>
               ) : null}
             </TouchableOpacity>
           </View>
 
-
           {card ? (
             <LinearGradient
-              colors={[
-                '#102D52',
-                '#081D39',
-                '#06162D',
-              ]}
+              colors={['#102D52', '#081D39', '#06162D']}
               start={{
                 x: 0,
                 y: 0,
@@ -827,30 +398,16 @@ export default function HomeScreen({
                 x: 1,
                 y: 1,
               }}
-              style={
-                styles.digitalCard
-              }
+              style={styles.digitalCard}
             >
-              <View
-                style={
-                  styles.cardTop
-                }
-              >
-                <View
-                  style={[
-                    styles.activeBadge,
-
-                    !card.is_active &&
-                      styles.inactiveBadge,
-                  ]}
-                >
+              <View style={styles.cardTop}>
+                <View style={[styles.activeBadge, !card.is_active && styles.inactiveBadge]}>
                   <View
                     style={[
                       styles.activeDot,
 
                       !card.is_active && {
-                        backgroundColor:
-                          COLORS.muted,
+                        backgroundColor: COLORS.muted,
                       },
                     ]}
                   />
@@ -860,460 +417,177 @@ export default function HomeScreen({
                       styles.activeText,
 
                       !card.is_active && {
-                        color:
-                          COLORS.muted,
+                        color: COLORS.muted,
                       },
                     ]}
                   >
-                    {card.is_active
-                      ? 'Active'
-                      : 'Inactive'}
+                    {card.is_active ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
 
+                <View style={styles.cardTopRight}>
+                  <Text style={styles.cardLabel}>Your Digital Card</Text>
 
-                <View
-                  style={
-                    styles.cardTopRight
-                  }
-                >
-                  <Text
-                    style={
-                      styles.cardLabel
-                    }
-                  >
-                    Your Digital Card
-                  </Text>
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      openRoot(
-                        'CardSettings'
-                      )
-                    }
-                  >
-                    <Ionicons
-                      name="ellipsis-vertical"
-                      size={22}
-                      color={
-                        COLORS.white
-                      }
-                    />
+                  <TouchableOpacity onPress={() => openRoot('CardSettings')}>
+                    <Ionicons name="ellipsis-vertical" size={22} color={COLORS.white} />
                   </TouchableOpacity>
                 </View>
               </View>
 
+              <View style={styles.cardBody}>
+                <View style={styles.cardLogo}>
+                  <Ionicons name="id-card-outline" size={30} color={COLORS.gold} />
 
-              <View
-                style={
-                  styles.cardBody
-                }
-              >
-                <View
-                  style={
-                    styles.cardLogo
-                  }
-                >
-                  <Ionicons
-                    name="id-card-outline"
-                    size={30}
-                    color={
-                      COLORS.gold
-                    }
-                  />
-
-                  <Text
-                    style={
-                      styles.cardLogoText
-                    }
-                  >
-                    YNS
-                  </Text>
+                  <Text style={styles.cardLogoText}>YNS</Text>
                 </View>
 
+                <Text style={styles.cardName}>{card.name || 'Digital Card'}</Text>
 
-                <Text
-                  style={
-                    styles.cardName
-                  }
-                >
-                  {card.name ||
-                    'Digital Card'}
+                <Text style={styles.cardDesignation}>
+                  {card.designation || card.company || 'Digital Business Professional'}
                 </Text>
 
+                <View style={styles.goldLine} />
 
-                <Text
-                  style={
-                    styles.cardDesignation
-                  }
-                >
-                  {card.designation ||
-                    card.company ||
-                    'Digital Business Professional'}
-                </Text>
+                <View style={styles.cardBottom}>
+                  <View style={styles.urlRow}>
+                    <Ionicons name="globe-outline" size={20} color={COLORS.gold} />
 
-
-                <View
-                  style={
-                    styles.goldLine
-                  }
-                />
-
-
-                <View
-                  style={
-                    styles.cardBottom
-                  }
-                >
-                  <View
-                    style={
-                      styles.urlRow
-                    }
-                  >
-                    <Ionicons
-                      name="globe-outline"
-                      size={20}
-                      color={
-                        COLORS.gold
-                      }
-                    />
-
-                    <Text
-                      numberOfLines={
-                        1
-                      }
-                      style={
-                        styles.cardUrl
-                      }
-                    >
+                    <Text numberOfLines={1} style={styles.cardUrl}>
                       {card.approval_status === 'approved'
                         ? `card.ynscrm.online/card/${card.card_slug}`
                         : 'Public link available after approval'}
                     </Text>
                   </View>
 
-
-                  <TouchableOpacity
-                    style={
-                      styles.shareCircle
-                    }
-                    onPress={
-                      shareCard
-                    }
-                  >
-                    <Ionicons
-                      name="share-social-outline"
-                      size={22}
-                      color={
-                        COLORS.gold
-                      }
-                    />
+                  <TouchableOpacity style={styles.shareCircle} onPress={shareCard}>
+                    <Ionicons name="share-social-outline" size={22} color={COLORS.gold} />
                   </TouchableOpacity>
                 </View>
               </View>
 
-
-              <View
-                style={
-                  styles.cardGoldBottom
-                }
-              />
+              <View style={styles.cardGoldBottom} />
             </LinearGradient>
           ) : (
-            <View
-              style={
-                styles.noCard
-              }
-            >
-              <Ionicons
-                name="card-outline"
-                size={35}
-                color={
-                  COLORS.gold
-                }
-              />
+            <View style={styles.noCard}>
+              <Ionicons name="card-outline" size={35} color={COLORS.gold} />
 
-              <Text
-                style={
-                  styles.noCardTitle
-                }
-              >
-                Create your first digital card
-              </Text>
+              <Text style={styles.noCardTitle}>Create your first digital card</Text>
 
-              <TouchableOpacity
-                style={
-                  styles.noCardButton
-                }
-                onPress={() =>
-                  openRoot(
-                    'MyCards'
-                  )
-                }
-              >
-                <Text
-                  style={
-                    styles.noCardButtonText
-                  }
-                >
-                  Create Card
-                </Text>
+              <TouchableOpacity style={styles.noCardButton} onPress={() => openRoot('MyCards')}>
+                <Text style={styles.noCardButtonText}>Create Card</Text>
               </TouchableOpacity>
             </View>
           )}
 
+          <View style={styles.mainContent}>
+            <View style={styles.sectionTop}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-          <View
-            style={
-              styles.mainContent
-            }
-          >
-            <View
-              style={
-                styles.sectionTop
-              }
-            >
-              <Text
-                style={
-                  styles.sectionTitle
-                }
-              >
-                Quick Actions
-              </Text>
+              <TouchableOpacity onPress={() => openRoot('CardEditor')} style={styles.editLink}>
+                <Text style={styles.editLinkText}>Edit</Text>
 
-              <TouchableOpacity
-                onPress={() =>
-                  openRoot(
-                    'CardEditor'
-                  )
-                }
-                style={
-                  styles.editLink
-                }
-              >
-                <Text
-                  style={
-                    styles.editLinkText
-                  }
-                >
-                  Edit
-                </Text>
-
-                <Ionicons
-                  name="create-outline"
-                  size={18}
-                  color={
-                    COLORS.blue
-                  }
-                />
+                <Ionicons name="create-outline" size={18} color={COLORS.blue} />
               </TouchableOpacity>
             </View>
 
-
-            <View
-              style={
-                styles.quickGrid
-              }
-            >
+            <View style={styles.quickGrid}>
               <QuickAction
                 icon="create-outline"
                 label="Edit Card"
                 tone="blue"
-                onPress={() =>
-                  openRoot(
-                    'CardEditor'
-                  )
-                }
+                onPress={() => openRoot('CardEditor')}
               />
 
               <QuickAction
                 icon="share-social-outline"
                 label="Share Card"
                 tone="purple"
-                onPress={
-                  shareCard
-                }
+                onPress={shareCard}
               />
 
-              <QuickAction
-                icon="qr-code-outline"
-                label="QR Code"
-                tone="green"
-                onPress={
-                  showQr
-                }
-              />
+              <QuickAction icon="qr-code-outline" label="QR Code" tone="green" onPress={showQr} />
 
               <QuickAction
                 icon="people-outline"
                 label="My Leads"
                 tone="orange"
-                onPress={() =>
-                  navigation.navigate(
-                    'Connections'
-                  )
-                }
+                onPress={() => navigation.navigate('Connections')}
               />
 
               <QuickAction
                 icon="logo-whatsapp"
                 label="WhatsApp"
                 tone="green"
-                onPress={() =>
-                  openRoot(
-                    'WhatsAppInbox'
-                  )
-                }
+                onPress={() => openRoot('WhatsAppInbox')}
               />
 
               <QuickAction
                 icon="bar-chart-outline"
                 label="Analytics"
                 tone="blue"
-                onPress={() =>
-                  navigation.navigate(
-                    'Insights'
-                  )
-                }
+                onPress={() => navigation.navigate('Insights')}
               />
             </View>
 
+            <View style={styles.sectionTop}>
+              <Text style={styles.sectionTitle}>Overview</Text>
 
-            <View
-              style={
-                styles.sectionTop
-              }
-            >
-              <Text
-                style={
-                  styles.sectionTitle
-                }
-              >
-                Overview
-              </Text>
+              <View style={styles.periodLabel}>
+                <Text style={styles.periodText}>This Month</Text>
 
-              <View
-                style={
-                  styles.periodLabel
-                }
-              >
-                <Text
-                  style={
-                    styles.periodText
-                  }
-                >
-                  This Month
-                </Text>
-
-                <Ionicons
-                  name="chevron-down"
-                  size={15}
-                  color={
-                    COLORS.blue
-                  }
-                />
+                <Ionicons name="chevron-down" size={15} color={COLORS.blue} />
               </View>
             </View>
 
-
             <ScrollView
               horizontal
-              showsHorizontalScrollIndicator={
-                false
-              }
-              contentContainerStyle={
-                styles.statsRow
-              }
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statsRow}
             >
-              <StatCard
-                icon="eye-outline"
-                label="Profile Views"
-                value={
-                  stats.views
-                }
-                tone="blue"
-              />
+              <StatCard icon="eye-outline" label="Profile Views" value={stats.views} tone="blue" />
 
               <StatCard
                 icon="navigate-outline"
                 label="Card Clicks"
-                value={
-                  stats.clicks
-                }
+                value={stats.clicks}
                 tone="purple"
               />
 
               <StatCard
                 icon="logo-whatsapp"
                 label="WhatsApp Clicks"
-                value={
-                  stats.whatsapp
-                }
+                value={stats.whatsapp}
                 tone="green"
               />
 
               <StatCard
                 icon="person-add-outline"
                 label="New Leads"
-                value={
-                  stats.leads
-                }
+                value={stats.leads}
                 tone="orange"
               />
             </ScrollView>
 
-
-            <LinearGradient
-              colors={[
-                '#081D39',
-                '#06162D',
-              ]}
-              style={
-                styles.premiumBanner
-              }
-            >
-              <View
-                style={
-                  styles.premiumIcon
-                }
-              >
-                <Ionicons
-                  name="diamond-outline"
-                  size={26}
-                  color={
-                    COLORS.gold
-                  }
-                />
+            <LinearGradient colors={['#081D39', '#06162D']} style={styles.premiumBanner}>
+              <View style={styles.premiumIcon}>
+                <Ionicons name="diamond-outline" size={26} color={COLORS.gold} />
               </View>
-
 
               <View
                 style={{
                   flex: 1,
                 }}
               >
-                <Text
-                  style={
-                    styles.premiumTitle
-                  }
-                >
-                  YNS Premium
-                </Text>
+                <Text style={styles.premiumTitle}>YNS Premium</Text>
 
-                <Text
-                  style={
-                    styles.premiumText
-                  }
-                >
+                <Text style={styles.premiumText}>
                   Premium themes, custom domains and advanced business tools.
                 </Text>
               </View>
 
-
               <TouchableOpacity
-                style={
-                  styles.upgradeButton
-                }
+                style={styles.upgradeButton}
                 onPress={() =>
                   Alert.alert(
                     'YNS Premium',
@@ -1321,234 +595,74 @@ export default function HomeScreen({
                   )
                 }
               >
-                <Text
-                  style={
-                    styles.upgradeButtonText
-                  }
-                >
-                  Upgrade
-                </Text>
+                <Text style={styles.upgradeButtonText}>Upgrade</Text>
 
-                <Ionicons
-                  name="chevron-forward"
-                  size={17}
-                  color={
-                    COLORS.navy
-                  }
-                />
+                <Ionicons name="chevron-forward" size={17} color={COLORS.navy} />
               </TouchableOpacity>
             </LinearGradient>
 
-
-            <View
-              style={
-                styles.accountSummary
-              }
-            >
+            <View style={styles.accountSummary}>
               <View>
-                <Text
-                  style={
-                    styles.accountSummaryLabel
-                  }
-                >
-                  DIGITAL CARDS
-                </Text>
+                <Text style={styles.accountSummaryLabel}>DIGITAL CARDS</Text>
 
-                <Text
-                  style={
-                    styles.accountSummaryValue
-                  }
-                >
-                  {cards.length}
-                </Text>
+                <Text style={styles.accountSummaryValue}>{cards.length}</Text>
               </View>
 
-
-              <View
-                style={
-                  styles.summaryDivider
-                }
-              />
-
+              <View style={styles.summaryDivider} />
 
               <View>
-                <Text
-                  style={
-                    styles.accountSummaryLabel
-                  }
-                >
-                  TOTAL LEADS
-                </Text>
+                <Text style={styles.accountSummaryLabel}>TOTAL LEADS</Text>
 
-                <Text
-                  style={
-                    styles.accountSummaryValue
-                  }
-                >
-                  {connections.length}
-                </Text>
+                <Text style={styles.accountSummaryValue}>{connections.length}</Text>
               </View>
-
 
               <TouchableOpacity
-                style={
-                  styles.manageCardsButton
-                }
-                onPress={() =>
-                  openRoot(
-                    'MyCards'
-                  )
-                }
+                style={styles.manageCardsButton}
+                onPress={() => openRoot('MyCards')}
               >
-                <Text
-                  style={
-                    styles.manageCardsText
-                  }
-                >
-                  Manage
-                </Text>
+                <Text style={styles.manageCardsText}>Manage</Text>
 
-                <Ionicons
-                  name="arrow-forward"
-                  size={16}
-                  color={
-                    COLORS.blue
-                  }
-                />
+                <Ionicons name="arrow-forward" size={16} color={COLORS.blue} />
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </SafeAreaView>
 
-
       <Modal
-        visible={
-          qrVisible
-        }
+        visible={qrVisible}
         transparent
         animationType="fade"
-        onRequestClose={() =>
-          setQrVisible(
-            false
-          )
-        }
+        onRequestClose={() => setQrVisible(false)}
       >
-        <View
-          style={
-            styles.modalOverlay
-          }
-        >
-          <View
-            style={
-              styles.qrModal
-            }
-          >
-            <TouchableOpacity
-              style={
-                styles.qrClose
-              }
-              onPress={() =>
-                setQrVisible(
-                  false
-                )
-              }
-            >
-              <Ionicons
-                name="close"
-                size={23}
-                color={
-                  COLORS.text
-                }
-              />
+        <View style={styles.modalOverlay}>
+          <View style={styles.qrModal}>
+            <TouchableOpacity style={styles.qrClose} onPress={() => setQrVisible(false)}>
+              <Ionicons name="close" size={23} color={COLORS.text} />
             </TouchableOpacity>
 
-
-            <View
-              style={
-                styles.qrLogo
-              }
-            >
-              <Ionicons
-                name="id-card-outline"
-                size={25}
-                color={
-                  COLORS.gold
-                }
-              />
+            <View style={styles.qrLogo}>
+              <Ionicons name="id-card-outline" size={25} color={COLORS.gold} />
             </View>
 
+            <Text style={styles.qrTitle}>Scan My YNS Card</Text>
 
-            <Text
-              style={
-                styles.qrTitle
-              }
-            >
-              Scan My YNS Card
-            </Text>
-
-            <Text
-              style={
-                styles.qrSubtitle
-              }
-            >
-              Scan to open the digital business card
-            </Text>
-
+            <Text style={styles.qrSubtitle}>Scan to open the digital business card</Text>
 
             {publicUrl ? (
-              <View
-                style={
-                  styles.qrBox
-                }
-              >
-                <QRCode
-                  value={
-                    publicUrl
-                  }
-                  size={205}
-                  backgroundColor="#FFFFFF"
-                  color="#071A33"
-                />
+              <View style={styles.qrBox}>
+                <QRCode value={publicUrl} size={205} backgroundColor="#FFFFFF" color="#071A33" />
               </View>
             ) : null}
 
-
-            <Text
-              numberOfLines={
-                1
-              }
-              style={
-                styles.qrUrl
-              }
-            >
+            <Text numberOfLines={1} style={styles.qrUrl}>
               {publicUrl}
             </Text>
 
+            <TouchableOpacity style={styles.qrShareButton} onPress={shareCard}>
+              <Ionicons name="share-social-outline" size={19} color={COLORS.white} />
 
-            <TouchableOpacity
-              style={
-                styles.qrShareButton
-              }
-              onPress={
-                shareCard
-              }
-            >
-              <Ionicons
-                name="share-social-outline"
-                size={19}
-                color={
-                  COLORS.white
-                }
-              />
-
-              <Text
-                style={
-                  styles.qrShareText
-                }
-              >
-                Share Card
-              </Text>
+              <Text style={styles.qrShareText}>Share Card</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1568,73 +682,30 @@ export default function HomeScreen({
   );
 }
 
-
-function QuickAction({
-  icon,
-  label,
-  tone,
-  onPress,
-}) {
-  const palette =
-    getTone(
-      tone
-    );
-
+function QuickAction({ icon, label, tone, onPress }) {
+  const palette = getTone(tone);
 
   return (
-    <TouchableOpacity
-      activeOpacity={
-        0.72
-      }
-      onPress={
-        onPress
-      }
-      style={
-        styles.quickAction
-      }
-    >
+    <TouchableOpacity activeOpacity={0.72} onPress={onPress} style={styles.quickAction}>
       <View
         style={[
           styles.quickIcon,
 
           {
-            backgroundColor:
-              palette.soft,
+            backgroundColor: palette.soft,
           },
         ]}
       >
-        <Ionicons
-          name={icon}
-          size={25}
-          color={
-            palette.main
-          }
-        />
+        <Ionicons name={icon} size={25} color={palette.main} />
       </View>
 
-      <Text
-        style={
-          styles.quickText
-        }
-      >
-        {label}
-      </Text>
+      <Text style={styles.quickText}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-
-function StatCard({
-  icon,
-  label,
-  value,
-  tone,
-}) {
-  const palette =
-    getTone(
-      tone
-    );
-
+function StatCard({ icon, label, value, tone }) {
+  const palette = getTone(tone);
 
   return (
     <View
@@ -1642,1242 +713,1008 @@ function StatCard({
         styles.statCard,
 
         {
-          backgroundColor:
-            palette.soft,
+          backgroundColor: palette.soft,
         },
       ]}
     >
-      <Ionicons
-        name={icon}
-        size={27}
-        color={
-          palette.main
-        }
-      />
+      <Ionicons name={icon} size={27} color={palette.main} />
 
-      <Text
-        style={
-          styles.statLabel
-        }
-      >
-        {label}
-      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
 
-      <Text
-        style={
-          styles.statValue
-        }
-      >
-        {formatNumber(
-          value
-        )}
-      </Text>
+      <Text style={styles.statValue}>{formatNumber(value)}</Text>
 
-      <View
-        style={
-          styles.statTrend
-        }
-      >
-        <Ionicons
-          name="arrow-up"
-          size={13}
-          color={
-            COLORS.green
-          }
-        />
+      <View style={styles.statTrend}>
+        <Ionicons name="arrow-up" size={13} color={COLORS.green} />
 
-        <Text
-          style={
-            styles.statTrendText
-          }
-        >
-          This month
-        </Text>
+        <Text style={styles.statTrendText}>This month</Text>
       </View>
     </View>
   );
 }
 
-
-function getTone(
-  tone
-) {
-  if (
-    tone === 'green'
-  ) {
+function getTone(tone) {
+  if (tone === 'green') {
     return {
-      main:
-        COLORS.green,
+      main: COLORS.green,
 
-      soft:
-        COLORS.greenSoft,
+      soft: COLORS.greenSoft,
     };
   }
 
-
-  if (
-    tone === 'purple'
-  ) {
+  if (tone === 'purple') {
     return {
-      main:
-        COLORS.purple,
+      main: COLORS.purple,
 
-      soft:
-        COLORS.purpleSoft,
+      soft: COLORS.purpleSoft,
     };
   }
 
-
-  if (
-    tone === 'orange'
-  ) {
+  if (tone === 'orange') {
     return {
-      main:
-        COLORS.orange,
+      main: COLORS.orange,
 
-      soft:
-        COLORS.orangeSoft,
+      soft: COLORS.orangeSoft,
     };
   }
-
 
   return {
-    main:
-      COLORS.blue,
+    main: COLORS.blue,
 
-    soft:
-      COLORS.blueSoft,
+    soft: COLORS.blueSoft,
   };
 }
 
+function formatNumber(value) {
+  const number = Number(value || 0);
 
-function formatNumber(
-  value
-) {
-  const number =
-    Number(value || 0);
-
-
-  if (
-    number >= 1000000
-  ) {
-    return `${(
-      number /
-      1000000
-    ).toFixed(1)}M`;
+  if (number >= 1000000) {
+    return `${(number / 1000000).toFixed(1)}M`;
   }
 
-
-  if (
-    number >= 1000
-  ) {
-    return `${(
-      number /
-      1000
-    ).toFixed(1)}K`;
+  if (number >= 1000) {
+    return `${(number / 1000).toFixed(1)}K`;
   }
 
-
-  return String(
-    number
-  );
+  return String(number);
 }
 
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
 
-const styles =
-  StyleSheet.create({
-    root: {
-      flex: 1,
+    backgroundColor: COLORS.background,
+  },
 
-      backgroundColor:
-        COLORS.background,
-    },
-
-    safe: {
-      flex: 1,
-    },
-
-    headerBackground: {
-      position:
-        'absolute',
-
-      left: 0,
-      right: 0,
-      top: 0,
+  safe: {
+    flex: 1,
+  },
 
-      height: 430,
-    },
-
-    loading: {
-      flex: 1,
-
-      backgroundColor:
-        COLORS.navy,
+  headerBackground: {
+    position: 'absolute',
 
-      justifyContent:
-        'center',
+    left: 0,
+    right: 0,
+    top: 0,
 
-      alignItems:
-        'center',
+    height: 430,
+  },
 
-      gap: 12,
-    },
+  loading: {
+    flex: 1,
 
-    loadingText: {
-      color:
-        '#D2DBE8',
-
-      fontSize: 11,
-    },
+    backgroundColor: COLORS.navy,
 
-    scrollContent: {
-      paddingBottom: 35,
-    },
+    justifyContent: 'center',
 
+    alignItems: 'center',
 
-    /*
-     * HEADER
-     */
+    gap: 12,
+  },
 
-    hero: {
-      paddingHorizontal: 18,
+  loadingText: {
+    color: '#D2DBE8',
 
-      paddingTop: 15,
+    fontSize: 11,
+  },
 
-      paddingBottom: 20,
+  scrollContent: {
+    paddingBottom: 35,
+  },
 
-      flexDirection:
-        'row',
+  /*
+   * HEADER
+   */
 
-      alignItems:
-        'center',
+  hero: {
+    paddingHorizontal: 18,
 
-      justifyContent:
-        'space-between',
-    },
+    paddingTop: 15,
 
-    heroIdentity: {
-      flex: 1,
+    paddingBottom: 20,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      alignItems:
-        'center',
+    alignItems: 'center',
 
-      gap: 12,
-    },
+    justifyContent: 'space-between',
+  },
 
-    avatarWrap: {
-      position:
-        'relative',
-    },
+  heroIdentity: {
+    flex: 1,
 
-    avatar: {
-      width: 62,
-      height: 62,
+    flexDirection: 'row',
 
-      borderRadius: 21,
+    alignItems: 'center',
 
-      borderWidth: 2,
+    gap: 12,
+  },
 
-      borderColor:
-        'rgba(255,255,255,0.75)',
-    },
+  avatarWrap: {
+    position: 'relative',
+  },
 
-    avatarFallback: {
-      width: 62,
-      height: 62,
+  avatar: {
+    width: 62,
+    height: 62,
 
-      borderRadius: 21,
+    borderRadius: 21,
 
-      backgroundColor:
-        COLORS.goldSoft,
+    borderWidth: 2,
 
-      alignItems:
-        'center',
+    borderColor: 'rgba(255,255,255,0.75)',
+  },
 
-      justifyContent:
-        'center',
+  avatarFallback: {
+    width: 62,
+    height: 62,
 
-      borderWidth: 2,
+    borderRadius: 21,
 
-      borderColor:
-        COLORS.gold,
-    },
+    backgroundColor: COLORS.goldSoft,
 
-    avatarInitial: {
-      color:
-        COLORS.navy,
+    alignItems: 'center',
 
-      fontSize: 24,
+    justifyContent: 'center',
 
-      fontWeight: '900',
-    },
+    borderWidth: 2,
 
-    onlineDot: {
-      width: 15,
-      height: 15,
+    borderColor: COLORS.gold,
+  },
 
-      borderRadius: 8,
+  avatarInitial: {
+    color: COLORS.navy,
 
-      backgroundColor:
-        COLORS.green,
+    fontSize: 24,
 
-      borderWidth: 2,
+    fontWeight: '900',
+  },
 
-      borderColor:
-        COLORS.navy,
+  onlineDot: {
+    width: 15,
+    height: 15,
 
-      position:
-        'absolute',
+    borderRadius: 8,
 
-      bottom: 1,
-      right: 0,
-    },
+    backgroundColor: COLORS.green,
 
-    helloRow: {
-      flexDirection:
-        'row',
+    borderWidth: 2,
 
-      alignItems:
-        'center',
+    borderColor: COLORS.navy,
 
-      flexWrap:
-        'wrap',
+    position: 'absolute',
 
-      gap: 4,
-    },
+    bottom: 1,
+    right: 0,
+  },
 
-    helloWhite: {
-      color:
-        COLORS.white,
+  helloRow: {
+    flexDirection: 'row',
 
-      fontSize: 23,
+    alignItems: 'center',
 
-      fontWeight: '800',
-    },
+    flexWrap: 'wrap',
 
-    helloGold: {
-      color:
-        COLORS.gold,
+    gap: 4,
+  },
 
-      fontSize: 23,
+  helloWhite: {
+    color: COLORS.white,
 
-      fontWeight: '900',
-    },
+    fontSize: 23,
 
-    wave: {
-      fontSize: 20,
-    },
+    fontWeight: '800',
+  },
 
-    welcomeText: {
-      color:
-        '#C8D1DF',
+  helloGold: {
+    color: COLORS.gold,
 
-      fontSize: 10,
+    fontSize: 23,
 
-      marginTop: 4,
-    },
+    fontWeight: '900',
+  },
 
-    notificationButton: {
-      width: 48,
-      height: 48,
+  wave: {
+    fontSize: 20,
+  },
 
-      borderRadius: 15,
+  welcomeText: {
+    color: '#C8D1DF',
 
-      borderWidth: 1,
+    fontSize: 10,
 
-      borderColor:
-        'rgba(255,255,255,0.18)',
+    marginTop: 4,
+  },
 
-      backgroundColor:
-        'rgba(255,255,255,0.08)',
+  notificationButton: {
+    width: 48,
+    height: 48,
 
-      alignItems:
-        'center',
+    borderRadius: 15,
 
-      justifyContent:
-        'center',
+    borderWidth: 1,
 
-      marginLeft: 10,
-    },
+    borderColor: 'rgba(255,255,255,0.18)',
 
-    notificationBadge: {
-      minWidth: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
 
-      height: 20,
+    alignItems: 'center',
 
-      paddingHorizontal: 4,
+    justifyContent: 'center',
 
-      borderRadius: 10,
+    marginLeft: 10,
+  },
 
-      position:
-        'absolute',
+  notificationBadge: {
+    minWidth: 20,
 
-      top: -4,
-      right: -4,
+    height: 20,
 
-      backgroundColor:
-        COLORS.gold,
+    paddingHorizontal: 4,
 
-      alignItems:
-        'center',
+    borderRadius: 10,
 
-      justifyContent:
-        'center',
-    },
+    position: 'absolute',
 
-    notificationBadgeText: {
-      color:
-        COLORS.navy,
+    top: -4,
+    right: -4,
 
-      fontSize: 8,
+    backgroundColor: COLORS.gold,
 
-      fontWeight: '900',
-    },
+    alignItems: 'center',
 
+    justifyContent: 'center',
+  },
 
-    /*
-     * DIGITAL CARD
-     */
+  notificationBadgeText: {
+    color: COLORS.navy,
 
-    digitalCard: {
-      marginHorizontal: 18,
+    fontSize: 8,
 
-      borderRadius: 24,
+    fontWeight: '900',
+  },
 
-      borderWidth: 1,
+  /*
+   * DIGITAL CARD
+   */
 
-      borderColor:
-        'rgba(255,255,255,0.35)',
+  digitalCard: {
+    marginHorizontal: 18,
 
-      overflow:
-        'hidden',
+    borderRadius: 24,
 
-      shadowColor:
-        '#000',
+    borderWidth: 1,
 
-      shadowOffset: {
-        width: 0,
-        height: 12,
-      },
+    borderColor: 'rgba(255,255,255,0.35)',
 
-      shadowOpacity: 0.25,
+    overflow: 'hidden',
 
-      shadowRadius: 20,
+    shadowColor: '#000',
 
-      elevation: 10,
+    shadowOffset: {
+      width: 0,
+      height: 12,
     },
 
-    cardTop: {
-      paddingHorizontal: 17,
+    shadowOpacity: 0.25,
 
-      paddingTop: 17,
+    shadowRadius: 20,
 
-      flexDirection:
-        'row',
+    elevation: 10,
+  },
 
-      justifyContent:
-        'space-between',
+  cardTop: {
+    paddingHorizontal: 17,
 
-      alignItems:
-        'center',
-    },
-
-    activeBadge: {
-      flexDirection:
-        'row',
-
-      alignItems:
-        'center',
+    paddingTop: 17,
 
-      gap: 6,
+    flexDirection: 'row',
 
-      paddingHorizontal: 10,
+    justifyContent: 'space-between',
 
-      paddingVertical: 7,
+    alignItems: 'center',
+  },
 
-      borderRadius: 20,
+  activeBadge: {
+    flexDirection: 'row',
 
-      backgroundColor:
-        'rgba(22,163,74,0.12)',
+    alignItems: 'center',
 
-      borderWidth: 1,
+    gap: 6,
 
-      borderColor:
-        'rgba(22,163,74,0.30)',
-    },
+    paddingHorizontal: 10,
 
-    inactiveBadge: {
-      backgroundColor:
-        'rgba(255,255,255,0.08)',
-
-      borderColor:
-        'rgba(255,255,255,0.13)',
-    },
+    paddingVertical: 7,
 
-    activeDot: {
-      width: 7,
-      height: 7,
+    borderRadius: 20,
 
-      borderRadius: 4,
+    backgroundColor: 'rgba(22,163,74,0.12)',
 
-      backgroundColor:
-        '#18D67D',
-    },
+    borderWidth: 1,
 
-    activeText: {
-      color:
-        '#18D67D',
+    borderColor: 'rgba(22,163,74,0.30)',
+  },
 
-      fontSize: 10,
+  inactiveBadge: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
 
-      fontWeight: '800',
-    },
+    borderColor: 'rgba(255,255,255,0.13)',
+  },
 
-    cardTopRight: {
-      flexDirection:
-        'row',
+  activeDot: {
+    width: 7,
+    height: 7,
 
-      alignItems:
-        'center',
+    borderRadius: 4,
 
-      gap: 8,
-    },
+    backgroundColor: '#18D67D',
+  },
 
-    cardLabel: {
-      color:
-        '#D8E0EB',
+  activeText: {
+    color: '#18D67D',
 
-      fontSize: 10,
-    },
+    fontSize: 10,
 
-    cardBody: {
-      paddingHorizontal: 18,
+    fontWeight: '800',
+  },
 
-      paddingTop: 22,
+  cardTopRight: {
+    flexDirection: 'row',
 
-      paddingBottom: 17,
-    },
+    alignItems: 'center',
 
-    cardLogo: {
-      width: 70,
-      height: 70,
+    gap: 8,
+  },
 
-      borderRadius: 20,
+  cardLabel: {
+    color: '#D8E0EB',
 
-      borderWidth: 2,
+    fontSize: 10,
+  },
 
-      borderColor:
-        COLORS.gold,
+  cardBody: {
+    paddingHorizontal: 18,
 
-      alignItems:
-        'center',
+    paddingTop: 22,
 
-      justifyContent:
-        'center',
-    },
+    paddingBottom: 17,
+  },
 
-    cardLogoText: {
-      color:
-        COLORS.gold,
+  cardLogo: {
+    width: 70,
+    height: 70,
 
-      fontSize: 10,
+    borderRadius: 20,
 
-      fontWeight: '900',
+    borderWidth: 2,
 
-      marginTop: 1,
-    },
+    borderColor: COLORS.gold,
 
-    cardName: {
-      color:
-        COLORS.white,
+    alignItems: 'center',
 
-      fontSize: 24,
+    justifyContent: 'center',
+  },
 
-      fontWeight: '900',
+  cardLogoText: {
+    color: COLORS.gold,
 
-      marginTop: 18,
-    },
+    fontSize: 10,
 
-    cardDesignation: {
-      color:
-        '#D2DAE5',
+    fontWeight: '900',
 
-      fontSize: 12,
+    marginTop: 1,
+  },
 
-      marginTop: 4,
-    },
+  cardName: {
+    color: COLORS.white,
 
-    goldLine: {
-      width: 55,
+    fontSize: 24,
 
-      height: 3,
+    fontWeight: '900',
 
-      borderRadius: 3,
+    marginTop: 18,
+  },
 
-      backgroundColor:
-        COLORS.gold,
+  cardDesignation: {
+    color: '#D2DAE5',
 
-      marginTop: 14,
-    },
+    fontSize: 12,
 
-    cardBottom: {
-      marginTop: 20,
+    marginTop: 4,
+  },
 
-      flexDirection:
-        'row',
+  goldLine: {
+    width: 55,
 
-      alignItems:
-        'center',
+    height: 3,
 
-      justifyContent:
-        'space-between',
-    },
+    borderRadius: 3,
 
-    urlRow: {
-      flex: 1,
+    backgroundColor: COLORS.gold,
 
-      flexDirection:
-        'row',
+    marginTop: 14,
+  },
 
-      alignItems:
-        'center',
+  cardBottom: {
+    marginTop: 20,
 
-      gap: 8,
+    flexDirection: 'row',
 
-      paddingRight: 10,
-    },
+    alignItems: 'center',
 
-    cardUrl: {
-      flex: 1,
+    justifyContent: 'space-between',
+  },
 
-      color:
-        COLORS.gold,
+  urlRow: {
+    flex: 1,
 
-      fontSize: 10,
-    },
+    flexDirection: 'row',
 
-    shareCircle: {
-      width: 44,
-      height: 44,
+    alignItems: 'center',
 
-      borderRadius: 22,
+    gap: 8,
 
-      borderWidth: 1,
+    paddingRight: 10,
+  },
 
-      borderColor:
-        'rgba(246,185,26,0.4)',
+  cardUrl: {
+    flex: 1,
 
-      backgroundColor:
-        'rgba(246,185,26,0.08)',
+    color: COLORS.gold,
 
-      alignItems:
-        'center',
+    fontSize: 10,
+  },
 
-      justifyContent:
-        'center',
-    },
+  shareCircle: {
+    width: 44,
+    height: 44,
 
-    cardGoldBottom: {
-      height: 4,
+    borderRadius: 22,
 
-      backgroundColor:
-        COLORS.gold,
-    },
+    borderWidth: 1,
 
-    noCard: {
-      marginHorizontal: 18,
+    borderColor: 'rgba(246,185,26,0.4)',
 
-      backgroundColor:
-        COLORS.navy2,
+    backgroundColor: 'rgba(246,185,26,0.08)',
 
-      borderRadius: 22,
+    alignItems: 'center',
 
-      padding: 28,
+    justifyContent: 'center',
+  },
 
-      alignItems:
-        'center',
-    },
+  cardGoldBottom: {
+    height: 4,
 
-    noCardTitle: {
-      color:
-        COLORS.white,
+    backgroundColor: COLORS.gold,
+  },
 
-      fontSize: 15,
+  noCard: {
+    marginHorizontal: 18,
 
-      fontWeight: '800',
+    backgroundColor: COLORS.navy2,
 
-      marginTop: 10,
-    },
+    borderRadius: 22,
 
-    noCardButton: {
-      backgroundColor:
-        COLORS.gold,
+    padding: 28,
 
-      paddingHorizontal: 20,
+    alignItems: 'center',
+  },
 
-      paddingVertical: 11,
+  noCardTitle: {
+    color: COLORS.white,
 
-      borderRadius: 12,
+    fontSize: 15,
 
-      marginTop: 15,
-    },
+    fontWeight: '800',
 
-    noCardButtonText: {
-      color:
-        COLORS.navy,
+    marginTop: 10,
+  },
 
-      fontWeight: '900',
-    },
+  noCardButton: {
+    backgroundColor: COLORS.gold,
 
+    paddingHorizontal: 20,
 
-    /*
-     * WHITE CONTENT
-     */
+    paddingVertical: 11,
 
-    mainContent: {
-      backgroundColor:
-        COLORS.background,
+    borderRadius: 12,
 
-      borderTopLeftRadius: 28,
+    marginTop: 15,
+  },
 
-      borderTopRightRadius: 28,
+  noCardButtonText: {
+    color: COLORS.navy,
 
-      marginTop: 18,
+    fontWeight: '900',
+  },
 
-      paddingHorizontal: 18,
+  /*
+   * WHITE CONTENT
+   */
 
-      paddingTop: 21,
-    },
+  mainContent: {
+    backgroundColor: COLORS.background,
 
-    sectionTop: {
-      flexDirection:
-        'row',
+    borderTopLeftRadius: 28,
 
-      alignItems:
-        'center',
+    borderTopRightRadius: 28,
 
-      justifyContent:
-        'space-between',
+    marginTop: 18,
 
-      marginBottom: 12,
+    paddingHorizontal: 18,
 
-      marginTop: 4,
-    },
+    paddingTop: 21,
+  },
 
-    sectionTitle: {
-      color:
-        COLORS.text,
+  sectionTop: {
+    flexDirection: 'row',
 
-      fontSize: 17,
+    alignItems: 'center',
 
-      fontWeight: '900',
-    },
+    justifyContent: 'space-between',
 
-    editLink: {
-      flexDirection:
-        'row',
+    marginBottom: 12,
 
-      alignItems:
-        'center',
+    marginTop: 4,
+  },
 
-      gap: 5,
-    },
+  sectionTitle: {
+    color: COLORS.text,
 
-    editLinkText: {
-      color:
-        COLORS.blue,
+    fontSize: 17,
 
-      fontSize: 11,
+    fontWeight: '900',
+  },
 
-      fontWeight: '800',
-    },
+  editLink: {
+    flexDirection: 'row',
 
+    alignItems: 'center',
 
-    /*
-     * QUICK ACTIONS
-     */
+    gap: 5,
+  },
 
-    quickGrid: {
-      flexDirection:
-        'row',
+  editLinkText: {
+    color: COLORS.blue,
 
-      flexWrap:
-        'wrap',
+    fontSize: 11,
 
-      gap: 9,
+    fontWeight: '800',
+  },
 
-      marginBottom: 22,
-    },
+  /*
+   * QUICK ACTIONS
+   */
 
-    quickAction: {
-      width:
-        '31.5%',
+  quickGrid: {
+    flexDirection: 'row',
 
-      minHeight: 104,
+    flexWrap: 'wrap',
 
-      backgroundColor:
-        COLORS.white,
+    gap: 9,
 
-      borderWidth: 1,
+    marginBottom: 22,
+  },
 
-      borderColor:
-        COLORS.border,
+  quickAction: {
+    width: '31.5%',
 
-      borderRadius: 18,
+    minHeight: 104,
 
-      alignItems:
-        'center',
+    backgroundColor: COLORS.white,
 
-      justifyContent:
-        'center',
+    borderWidth: 1,
 
-      padding: 10,
-    },
+    borderColor: COLORS.border,
 
-    quickIcon: {
-      width: 45,
-      height: 45,
+    borderRadius: 18,
 
-      borderRadius: 15,
+    alignItems: 'center',
 
-      alignItems:
-        'center',
+    justifyContent: 'center',
 
-      justifyContent:
-        'center',
-    },
+    padding: 10,
+  },
 
-    quickText: {
-      color:
-        COLORS.text,
+  quickIcon: {
+    width: 45,
+    height: 45,
 
-      fontSize: 10,
+    borderRadius: 15,
 
-      fontWeight: '800',
+    alignItems: 'center',
 
-      marginTop: 9,
+    justifyContent: 'center',
+  },
 
-      textAlign:
-        'center',
-    },
+  quickText: {
+    color: COLORS.text,
 
+    fontSize: 10,
 
-    /*
-     * STATS
-     */
+    fontWeight: '800',
 
-    periodLabel: {
-      flexDirection:
-        'row',
+    marginTop: 9,
 
-      alignItems:
-        'center',
+    textAlign: 'center',
+  },
 
-      gap: 4,
-    },
+  /*
+   * STATS
+   */
 
-    periodText: {
-      color:
-        COLORS.blue,
+  periodLabel: {
+    flexDirection: 'row',
 
-      fontSize: 10,
+    alignItems: 'center',
 
-      fontWeight: '700',
-    },
+    gap: 4,
+  },
 
-    statsRow: {
-      gap: 10,
+  periodText: {
+    color: COLORS.blue,
 
-      paddingBottom: 4,
-    },
+    fontSize: 10,
 
-    statCard: {
-      width: 145,
+    fontWeight: '700',
+  },
 
-      minHeight: 155,
+  statsRow: {
+    gap: 10,
 
-      borderRadius: 19,
+    paddingBottom: 4,
+  },
 
-      padding: 15,
+  statCard: {
+    width: 145,
 
-      borderWidth: 1,
+    minHeight: 155,
 
-      borderColor:
-        'rgba(0,0,0,0.025)',
-    },
+    borderRadius: 19,
 
-    statLabel: {
-      color:
-        COLORS.text,
+    padding: 15,
 
-      fontSize: 10,
+    borderWidth: 1,
 
-      marginTop: 13,
-    },
+    borderColor: 'rgba(0,0,0,0.025)',
+  },
 
-    statValue: {
-      color:
-        COLORS.text,
+  statLabel: {
+    color: COLORS.text,
 
-      fontSize: 27,
+    fontSize: 10,
 
-      fontWeight: '900',
+    marginTop: 13,
+  },
 
-      marginTop: 5,
-    },
+  statValue: {
+    color: COLORS.text,
 
-    statTrend: {
-      flexDirection:
-        'row',
+    fontSize: 27,
 
-      alignItems:
-        'center',
+    fontWeight: '900',
 
-      gap: 3,
+    marginTop: 5,
+  },
 
-      marginTop: 5,
-    },
+  statTrend: {
+    flexDirection: 'row',
 
-    statTrendText: {
-      color:
-        COLORS.green,
+    alignItems: 'center',
 
-      fontSize: 8,
+    gap: 3,
 
-      fontWeight: '800',
-    },
+    marginTop: 5,
+  },
 
+  statTrendText: {
+    color: COLORS.green,
 
-    /*
-     * PREMIUM
-     */
+    fontSize: 8,
 
-    premiumBanner: {
-      minHeight: 95,
+    fontWeight: '800',
+  },
 
-      borderRadius: 19,
+  /*
+   * PREMIUM
+   */
 
-      borderWidth: 1,
+  premiumBanner: {
+    minHeight: 95,
 
-      borderColor:
-        COLORS.gold,
+    borderRadius: 19,
 
-      marginTop: 18,
+    borderWidth: 1,
 
-      padding: 14,
+    borderColor: COLORS.gold,
 
-      flexDirection:
-        'row',
+    marginTop: 18,
 
-      alignItems:
-        'center',
+    padding: 14,
 
-      gap: 10,
-    },
+    flexDirection: 'row',
 
-    premiumIcon: {
-      width: 52,
-      height: 52,
+    alignItems: 'center',
 
-      borderRadius: 16,
+    gap: 10,
+  },
 
-      borderWidth: 1,
+  premiumIcon: {
+    width: 52,
+    height: 52,
 
-      borderColor:
-        COLORS.gold,
+    borderRadius: 16,
 
-      alignItems:
-        'center',
+    borderWidth: 1,
 
-      justifyContent:
-        'center',
-    },
+    borderColor: COLORS.gold,
 
-    premiumTitle: {
-      color:
-        COLORS.gold,
+    alignItems: 'center',
 
-      fontSize: 13,
+    justifyContent: 'center',
+  },
 
-      fontWeight: '900',
-    },
+  premiumTitle: {
+    color: COLORS.gold,
 
-    premiumText: {
-      color:
-        '#D1D9E5',
+    fontSize: 13,
 
-      fontSize: 8,
+    fontWeight: '900',
+  },
 
-      lineHeight: 12,
+  premiumText: {
+    color: '#D1D9E5',
 
-      marginTop: 3,
-    },
+    fontSize: 8,
 
-    upgradeButton: {
-      minHeight: 39,
+    lineHeight: 12,
 
-      backgroundColor:
-        COLORS.gold,
+    marginTop: 3,
+  },
 
-      borderRadius: 11,
+  upgradeButton: {
+    minHeight: 39,
 
-      paddingHorizontal: 11,
+    backgroundColor: COLORS.gold,
 
-      flexDirection:
-        'row',
+    borderRadius: 11,
 
-      alignItems:
-        'center',
+    paddingHorizontal: 11,
 
-      gap: 3,
-    },
+    flexDirection: 'row',
 
-    upgradeButtonText: {
-      color:
-        COLORS.navy,
+    alignItems: 'center',
 
-      fontSize: 9,
+    gap: 3,
+  },
 
-      fontWeight: '900',
-    },
+  upgradeButtonText: {
+    color: COLORS.navy,
 
+    fontSize: 9,
 
-    /*
-     * ACCOUNT SUMMARY
-     */
+    fontWeight: '900',
+  },
 
-    accountSummary: {
-      backgroundColor:
-        COLORS.white,
+  /*
+   * ACCOUNT SUMMARY
+   */
 
-      borderWidth: 1,
+  accountSummary: {
+    backgroundColor: COLORS.white,
 
-      borderColor:
-        COLORS.border,
+    borderWidth: 1,
 
-      borderRadius: 17,
+    borderColor: COLORS.border,
 
-      marginTop: 14,
+    borderRadius: 17,
 
-      padding: 14,
+    marginTop: 14,
 
-      flexDirection:
-        'row',
+    padding: 14,
 
-      alignItems:
-        'center',
+    flexDirection: 'row',
 
-      gap: 14,
-    },
+    alignItems: 'center',
 
-    accountSummaryLabel: {
-      color:
-        COLORS.muted,
+    gap: 14,
+  },
 
-      fontSize: 7,
+  accountSummaryLabel: {
+    color: COLORS.muted,
 
-      fontWeight: '900',
+    fontSize: 7,
 
-      letterSpacing: 0.7,
-    },
+    fontWeight: '900',
 
-    accountSummaryValue: {
-      color:
-        COLORS.text,
+    letterSpacing: 0.7,
+  },
 
-      fontSize: 20,
+  accountSummaryValue: {
+    color: COLORS.text,
 
-      fontWeight: '900',
+    fontSize: 20,
 
-      marginTop: 2,
-    },
+    fontWeight: '900',
 
-    summaryDivider: {
-      width: 1,
+    marginTop: 2,
+  },
 
-      height: 35,
+  summaryDivider: {
+    width: 1,
 
-      backgroundColor:
-        COLORS.border,
-    },
+    height: 35,
 
-    manageCardsButton: {
-      marginLeft: 'auto',
+    backgroundColor: COLORS.border,
+  },
 
-      flexDirection:
-        'row',
+  manageCardsButton: {
+    marginLeft: 'auto',
 
-      alignItems:
-        'center',
+    flexDirection: 'row',
 
-      gap: 4,
+    alignItems: 'center',
 
-      padding: 8,
-    },
+    gap: 4,
 
-    manageCardsText: {
-      color:
-        COLORS.blue,
+    padding: 8,
+  },
 
-      fontSize: 10,
+  manageCardsText: {
+    color: COLORS.blue,
 
-      fontWeight: '800',
-    },
+    fontSize: 10,
 
+    fontWeight: '800',
+  },
 
-    /*
-     * QR
-     */
+  /*
+   * QR
+   */
 
-    modalOverlay: {
-      flex: 1,
+  modalOverlay: {
+    flex: 1,
 
-      backgroundColor:
-        'rgba(3,13,28,0.72)',
+    backgroundColor: 'rgba(3,13,28,0.72)',
 
-      alignItems:
-        'center',
+    alignItems: 'center',
 
-      justifyContent:
-        'center',
+    justifyContent: 'center',
 
-      padding: 24,
-    },
+    padding: 24,
+  },
 
-    qrModal: {
-      width: '100%',
+  qrModal: {
+    width: '100%',
 
-      maxWidth: 380,
+    maxWidth: 380,
 
-      backgroundColor:
-        COLORS.white,
+    backgroundColor: COLORS.white,
 
-      borderRadius: 28,
+    borderRadius: 28,
 
-      padding: 24,
+    padding: 24,
 
-      alignItems:
-        'center',
-    },
+    alignItems: 'center',
+  },
 
-    qrClose: {
-      position:
-        'absolute',
+  qrClose: {
+    position: 'absolute',
 
-      top: 15,
-      right: 15,
+    top: 15,
+    right: 15,
 
-      width: 39,
-      height: 39,
+    width: 39,
+    height: 39,
 
-      backgroundColor:
-        COLORS.background,
+    backgroundColor: COLORS.background,
 
-      borderRadius: 13,
+    borderRadius: 13,
 
-      alignItems:
-        'center',
+    alignItems: 'center',
 
-      justifyContent:
-        'center',
-    },
+    justifyContent: 'center',
+  },
 
-    qrLogo: {
-      width: 55,
-      height: 55,
+  qrLogo: {
+    width: 55,
+    height: 55,
 
-      borderRadius: 17,
+    borderRadius: 17,
 
-      backgroundColor:
-        COLORS.navy,
+    backgroundColor: COLORS.navy,
 
-      alignItems:
-        'center',
+    alignItems: 'center',
 
-      justifyContent:
-        'center',
-    },
+    justifyContent: 'center',
+  },
 
-    qrTitle: {
-      color:
-        COLORS.text,
+  qrTitle: {
+    color: COLORS.text,
 
-      fontSize: 20,
+    fontSize: 20,
 
-      fontWeight: '900',
+    fontWeight: '900',
 
-      marginTop: 13,
-    },
+    marginTop: 13,
+  },
 
-    qrSubtitle: {
-      color:
-        COLORS.text2,
+  qrSubtitle: {
+    color: COLORS.text2,
 
-      fontSize: 10,
+    fontSize: 10,
 
-      marginTop: 4,
-    },
+    marginTop: 4,
+  },
 
-    qrBox: {
-      marginTop: 19,
+  qrBox: {
+    marginTop: 19,
 
-      padding: 15,
+    padding: 15,
 
-      borderWidth: 1,
+    borderWidth: 1,
 
-      borderColor:
-        COLORS.border,
+    borderColor: COLORS.border,
 
-      borderRadius: 20,
-    },
+    borderRadius: 20,
+  },
 
-    qrUrl: {
-      width: '90%',
+  qrUrl: {
+    width: '90%',
 
-      color:
-        COLORS.text2,
+    color: COLORS.text2,
 
-      fontSize: 8,
+    fontSize: 8,
 
-      marginTop: 13,
+    marginTop: 13,
 
-      textAlign:
-        'center',
-    },
+    textAlign: 'center',
+  },
 
-    qrShareButton: {
-      width: '100%',
+  qrShareButton: {
+    width: '100%',
 
-      minHeight: 49,
+    minHeight: 49,
 
-      marginTop: 18,
+    marginTop: 18,
 
-      borderRadius: 14,
+    borderRadius: 14,
 
-      backgroundColor:
-        COLORS.navy,
+    backgroundColor: COLORS.navy,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      alignItems:
-        'center',
+    alignItems: 'center',
 
-      justifyContent:
-        'center',
+    justifyContent: 'center',
 
-      gap: 7,
-    },
+    gap: 7,
+  },
 
-    qrShareText: {
-      color:
-        COLORS.white,
+  qrShareText: {
+    color: COLORS.white,
 
-      fontSize: 12,
+    fontSize: 12,
 
-      fontWeight: '900',
-    },
-  });
+    fontWeight: '900',
+  },
+});

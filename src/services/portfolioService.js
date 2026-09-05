@@ -14,10 +14,7 @@ export async function getPortfolioItems(cardId) {
   return data || [];
 }
 
-export async function getPortfolioByType(
-  cardId,
-  portfolioType
-) {
+export async function getPortfolioByType(cardId, portfolioType) {
   const { data, error } = await supabase
     .from('portfolio_items')
     .select('*')
@@ -32,10 +29,7 @@ export async function getPortfolioByType(
   return data || [];
 }
 
-export async function createPortfolioItem(
-  cardId,
-  values
-) {
+export async function createPortfolioItem(cardId, values) {
   const { data, error } = await supabase
     .from('portfolio_items')
     .insert({
@@ -52,10 +46,7 @@ export async function createPortfolioItem(
   return data;
 }
 
-export async function updatePortfolioItem(
-  itemId,
-  values
-) {
+export async function updatePortfolioItem(itemId, values) {
   const { data, error } = await supabase
     .from('portfolio_items')
     .update({
@@ -74,10 +65,7 @@ export async function updatePortfolioItem(
 }
 
 export async function deletePortfolioItem(itemId) {
-  const { error } = await supabase
-    .from('portfolio_items')
-    .delete()
-    .eq('id', itemId);
+  const { error } = await supabase.from('portfolio_items').delete().eq('id', itemId);
 
   if (error) {
     throw error;

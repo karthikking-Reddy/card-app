@@ -1,7 +1,4 @@
-import {
-  useCallback,
-  useState,
-} from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -13,19 +10,13 @@ import {
   View,
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import {
-  useFocusEffect,
-} from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
-import {
-  getCurrentSession,
-} from '../../services/authService';
+import { getCurrentSession } from '../../services/authService';
 
 import {
   getNotifications,
@@ -33,49 +24,34 @@ import {
   markNotificationRead,
 } from '../../services/notificationService';
 
-export default function NotificationsScreen({
-  navigation,
-}) {
-  const [user, setUser] =
-    useState(null);
+export default function NotificationsScreen({ navigation }) {
+  const [user, setUser] = useState(null);
 
-  const [
-    notifications,
-    setNotifications,
-  ] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const load =
-    useCallback(async () => {
-      setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
 
-      try {
-        const session =
-          await getCurrentSession();
+    try {
+      const session = await getCurrentSession();
 
-        if (!session?.user) {
-          return;
-        }
-
-        setUser(session.user);
-
-        const data =
-          await getNotifications(
-            session.user.id
-          );
-
-        setNotifications(data);
-      } catch (error) {
-        Alert.alert(
-          'Unable to load notifications',
-          error.message
-        );
-      } finally {
-        setLoading(false);
+      if (!session?.user) {
+        return;
       }
-    }, []);
+
+      setUser(session.user);
+
+      const data = await getNotifications(session.user.id);
+
+      setNotifications(data);
+    } catch (error) {
+      Alert.alert('Unable to load notifications', error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,68 +59,42 @@ export default function NotificationsScreen({
     }, [load])
   );
 
-  async function openNotification(
-    notification
-  ) {
+  async function openNotification(notification) {
     try {
       if (!notification.is_read) {
-        await markNotificationRead(
-          notification.id
-        );
+        await markNotificationRead(notification.id);
       }
 
-      if (
-        notification.notification_type ===
-          'new_lead' &&
-        notification.reference_id
-      ) {
-        navigation.navigate(
-          'LeadDetail',
-          {
-            connectionId:
-              notification.reference_id,
-          }
-        );
+      if (notification.notification_type === 'new_lead' && notification.reference_id) {
+        navigation.navigate('LeadDetail', {
+          connectionId: notification.reference_id,
+        });
 
         return;
       }
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error.message
-      );
+      Alert.alert('Error', error.message);
     }
   }
 
   async function markAll() {
     try {
-      await markAllNotificationsRead(
-        user.id
-      );
+      await markAllNotificationsRead(user.id);
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error.message
-      );
+      Alert.alert('Error', error.message);
     }
   }
 
-  const unread =
-    notifications.filter(
-      (item) => !item.is_read
-    ).length;
+  const unread = notifications.filter((item) => !item.is_read).length;
 
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator
-          size="large"
-          color="#06162D"
-        />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -152,37 +102,18 @@ export default function NotificationsScreen({
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#FFFFFF"
-          />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          Notifications
-        </Text>
+        <Text style={styles.headerTitle}>Notifications</Text>
 
-        <TouchableOpacity
-          onPress={markAll}
-          disabled={unread === 0}
-        >
-          <Text style={styles.markAll}>
-            Read All
-          </Text>
+        <TouchableOpacity onPress={markAll} disabled={unread === 0}>
+          <Text style={styles.markAll}>Read All</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
-      >
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.summary}>
           {unread} unread notification
           {unread === 1 ? '' : 's'}
@@ -190,98 +121,46 @@ export default function NotificationsScreen({
 
         {notifications.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons
-              name="notifications-outline"
-              size={45}
-              color="#98A2B3"
-            />
+            <Ionicons name="notifications-outline" size={45} color="#98A2B3" />
 
-            <Text
-              style={styles.emptyTitle}
-            >
-              No notifications yet
-            </Text>
+            <Text style={styles.emptyTitle}>No notifications yet</Text>
 
-            <Text
-              style={styles.emptyText}
-            >
+            <Text style={styles.emptyText}>
               New leads and important card activity will appear here.
             </Text>
           </View>
         ) : (
-          notifications.map(
-            (notification) => (
-              <TouchableOpacity
-                key={
-                  notification.id
-                }
-                onPress={() =>
-                  openNotification(
-                    notification
-                  )
-                }
-                style={[
-                  styles.notification,
-                  !notification.is_read &&
-                    styles.unread,
-                ]}
-              >
-                <View
-                  style={
-                    styles.notificationIcon
+          notifications.map((notification) => (
+            <TouchableOpacity
+              key={notification.id}
+              onPress={() => openNotification(notification)}
+              style={[styles.notification, !notification.is_read && styles.unread]}
+            >
+              <View style={styles.notificationIcon}>
+                <Ionicons
+                  name={
+                    notification.notification_type === 'new_lead'
+                      ? 'person-add-outline'
+                      : 'notifications-outline'
                   }
-                >
-                  <Ionicons
-                    name={
-                      notification.notification_type ===
-                      'new_lead'
-                        ? 'person-add-outline'
-                        : 'notifications-outline'
-                    }
-                    size={21}
-                    color="#06162D"
-                  />
-                </View>
+                  size={21}
+                  color="#06162D"
+                />
+              </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={
-                      styles.notificationTitle
-                    }
-                  >
-                    {notification.title}
-                  </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.notificationTitle}>{notification.title}</Text>
 
-                  <Text
-                    style={
-                      styles.notificationMessage
-                    }
-                  >
-                    {notification.message ||
-                      ''}
-                  </Text>
+                <Text style={styles.notificationMessage}>{notification.message || ''}</Text>
 
-                  <Text
-                    style={
-                      styles.notificationDate
-                    }
-                  >
-                    {new Date(
-                      notification.created_at
-                    ).toLocaleString()}
-                  </Text>
-                </View>
+                <Text style={styles.notificationDate}>
+                  {new Date(notification.created_at).toLocaleString()}
+                </Text>
+              </View>
 
-                {!notification.is_read ? (
-                  <View
-                    style={
-                      styles.unreadDot
-                    }
-                  />
-                ) : null}
-              </TouchableOpacity>
-            )
-          )
+              {!notification.is_read ? <View style={styles.unreadDot} /> : null}
+            </TouchableOpacity>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -290,9 +169,9 @@ export default function NotificationsScreen({
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
 
   loading: {
     flex: 1,
@@ -300,63 +179,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-
     backgroundColor: '#F5F7FB',
-},
+  },
 
   header: {
+    minHeight: 68,
 
-      minHeight: 68,
+    paddingHorizontal: 18,
 
-      paddingHorizontal: 18,
+    backgroundColor: '#06162D',
 
-      backgroundColor: '#06162D',
+    flexDirection: 'row',
 
-      flexDirection: 'row',
+    alignItems: 'center',
 
-      alignItems: 'center',
+    justifyContent: 'space-between',
 
-      justifyContent: 'space-between',
+    gap: 10,
 
-      gap: 10,
+    borderBottomWidth: 1,
 
-      borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
 
-      borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
 
-      shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
 
-      shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
 
-      shadowOpacity: 0.12,
+    shadowRadius: 12,
 
-      shadowRadius: 12,
-
-      elevation: 5,
-
-    },
+    elevation: 5,
+  },
 
   headerTitle: {
+    fontSize: 18,
 
-      fontSize: 18,
+    fontWeight: '900',
 
-      fontWeight: '900',
+    color: '#FFFFFF',
 
-      color: '#FFFFFF',
-
-      letterSpacing: 0.1,
-
-    },
+    letterSpacing: 0.1,
+  },
 
   markAll: {
+    color: '#F6B91A',
 
-      color: '#F6B91A',
+    fontSize: 11,
 
-      fontSize: 11,
-
-      fontWeight: '900',
-
-    },
+    fontWeight: '900',
+  },
 
   container: {
     padding: 16,
@@ -379,7 +251,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFFFFF',
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -393,36 +264,33 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   unread: {
     borderColor: '#F6B91A',
 
-
     backgroundColor: '#FFFCF3',
 
     borderWidth: 1.5,
-},
+  },
 
   notificationIcon: {
+    width: 43,
 
-      width: 43,
+    height: 43,
 
-      height: 43,
+    borderRadius: 13,
 
-      borderRadius: 13,
+    backgroundColor: '#FFF4D6',
 
-      backgroundColor: '#FFF4D6',
+    alignItems: 'center',
 
-      alignItems: 'center',
+    justifyContent: 'center',
 
-      justifyContent: 'center',
+    borderWidth: 1,
 
-      borderWidth: 1,
-
-      borderColor: '#F6B91A',
-
-    },
+    borderColor: '#F6B91A',
+  },
 
   notificationTitle: {
     color: '#06162D',
@@ -456,7 +324,6 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: 'center',
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -470,7 +337,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   emptyTitle: {
     marginTop: 11,

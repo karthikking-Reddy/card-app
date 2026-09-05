@@ -1,8 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -16,15 +12,11 @@ import {
   View,
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import {
-  useFocusEffect,
-} from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   addLeadActivity,
@@ -33,13 +25,9 @@ import {
   updateConnection,
 } from '../../services/connectionService';
 
-import {
-  getCurrentSession,
-} from '../../services/authService';
+import { getCurrentSession } from '../../services/authService';
 
-import {
-  getLeadStages,
-} from '../../services/leadStageService';
+import { getLeadStages } from '../../services/leadStageService';
 
 import {
   completeFollowupTask,
@@ -49,108 +37,71 @@ import {
   reopenFollowupTask,
 } from '../../services/followupTaskService';
 
-export default function LeadDetailScreen({
-  navigation,
-  route,
-}) {
-  const connectionId =
-    route.params?.connectionId;
+export default function LeadDetailScreen({ navigation, route }) {
+  const connectionId = route.params?.connectionId;
 
-  const [user, setUser] =
-    useState(null);
+  const [user, setUser] = useState(null);
 
-  const [lead, setLead] =
-    useState(null);
+  const [lead, setLead] = useState(null);
 
-  const [stages, setStages] =
-    useState([]);
+  const [stages, setStages] = useState([]);
 
-  const [activities, setActivities] =
-    useState([]);
+  const [activities, setActivities] = useState([]);
 
-  const [tasks, setTasks] =
-    useState([]);
+  const [tasks, setTasks] = useState([]);
 
-  const [notes, setNotes] =
-    useState('');
+  const [notes, setNotes] = useState('');
 
-  const [taskTitle, setTaskTitle] =
-    useState('Follow up');
+  const [taskTitle, setTaskTitle] = useState('Follow up');
 
-  const [taskDate, setTaskDate] =
-    useState('');
+  const [taskDate, setTaskDate] = useState('');
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const load =
-    useCallback(async () => {
-      setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
 
-      if (!connectionId) {
-        setLoading(false);
+    if (!connectionId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const session = await getCurrentSession();
+
+      if (!session?.user) {
         return;
       }
 
-      try {
-        const session =
-          await getCurrentSession();
+      setUser(session.user);
 
-        if (!session?.user) {
-          return;
-        }
+      const [connection, stageData, activityData, taskData] = await Promise.all([
+        getConnection(connectionId),
 
-        setUser(session.user);
+        getLeadStages(session.user.id),
 
-        const [
-          connection,
-          stageData,
-          activityData,
-          taskData,
-        ] = await Promise.all([
-          getConnection(
-            connectionId
-          ),
+        getLeadActivities(connectionId),
 
-          getLeadStages(
-            session.user.id
-          ),
+        getConnectionFollowups(session.user.id, connectionId),
+      ]);
 
-          getLeadActivities(
-            connectionId
-          ),
+      setLead(connection);
 
-          getConnectionFollowups(
-            session.user.id,
-            connectionId
-          ),
-        ]);
+      setStages(stageData);
 
-        setLead(connection);
+      setActivities(activityData);
 
-        setStages(stageData);
+      setTasks(taskData);
 
-        setActivities(
-          activityData
-        );
-
-        setTasks(taskData);
-
-        setNotes(
-          connection.notes || ''
-        );
-      } catch (error) {
-        Alert.alert(
-          'Unable to load lead',
-          error.message
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [connectionId]);
+      setNotes(connection.notes || '');
+    } catch (error) {
+      Alert.alert('Unable to load lead', error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [connectionId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -158,72 +109,33 @@ export default function LeadDetailScreen({
     }, [load])
   );
 
-  const visibleStages =
-    useMemo(() => {
-      const active =
-        stages.filter(
-          (stage) =>
-            stage.is_active
-        );
+  const visibleStages = useMemo(() => {
+    const active = stages.filter((stage) => stage.is_active);
 
-      const current =
-        stages.find(
-          (stage) =>
-            stage.stage_key ===
-            lead?.stage
-        );
+    const current = stages.find((stage) => stage.stage_key === lead?.stage);
 
-      if (
-        current &&
-        !active.some(
-          (stage) =>
-            stage.id ===
-            current.id
-        )
-      ) {
-        return [
-          current,
-          ...active,
-        ];
-      }
+    if (current && !active.some((stage) => stage.id === current.id)) {
+      return [current, ...active];
+    }
 
-      return active;
-    }, [
-      stages,
-      lead?.stage,
-    ]);
+    return active;
+  }, [stages, lead?.stage]);
 
-  async function changeStage(
-    stage
-  ) {
+  async function changeStage(stage) {
     try {
-      const updated =
-        await updateConnection(
-          connectionId,
-          {
-            stage:
-              stage.stage_key,
+      const updated = await updateConnection(connectionId, {
+        stage: stage.stage_key,
 
-            last_contacted_at:
-              new Date()
-                .toISOString(),
-          }
-        );
+        last_contacted_at: new Date().toISOString(),
+      });
 
       setLead(updated);
 
-      await addLeadActivity(
-        connectionId,
-        'stage_changed',
-        `Stage changed to ${stage.label}`
-      );
+      await addLeadActivity(connectionId, 'stage_changed', `Stage changed to ${stage.label}`);
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Stage update failed',
-        error.message
-      );
+      Alert.alert('Stage update failed', error.message);
     }
   }
 
@@ -231,31 +143,17 @@ export default function LeadDetailScreen({
     setSaving(true);
 
     try {
-      await updateConnection(
-        connectionId,
-        {
-          notes:
-            notes.trim(),
-        }
-      );
+      await updateConnection(connectionId, {
+        notes: notes.trim(),
+      });
 
-      await addLeadActivity(
-        connectionId,
-        'note_updated',
-        'Lead notes updated'
-      );
+      await addLeadActivity(connectionId, 'note_updated', 'Lead notes updated');
 
-      Alert.alert(
-        'Saved',
-        'Lead notes updated.'
-      );
+      Alert.alert('Saved', 'Lead notes updated.');
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Save failed',
-        error.message
-      );
+      Alert.alert('Save failed', error.message);
     } finally {
       setSaving(false);
     }
@@ -263,37 +161,21 @@ export default function LeadDetailScreen({
 
   async function addFollowup() {
     if (!taskTitle.trim()) {
-      Alert.alert(
-        'Required',
-        'Enter a follow-up title.'
-      );
+      Alert.alert('Required', 'Enter a follow-up title.');
 
       return;
     }
 
     if (!taskDate.trim()) {
-      Alert.alert(
-        'Required',
-        'Enter the date as YYYY-MM-DD.'
-      );
+      Alert.alert('Required', 'Enter the date as YYYY-MM-DD.');
 
       return;
     }
 
-    const date =
-      new Date(
-        `${taskDate.trim()}T09:00:00`
-      );
+    const date = new Date(`${taskDate.trim()}T09:00:00`);
 
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      Alert.alert(
-        'Invalid date',
-        'Use YYYY-MM-DD format.'
-      );
+    if (Number.isNaN(date.getTime())) {
+      Alert.alert('Invalid date', 'Use YYYY-MM-DD format.');
 
       return;
     }
@@ -301,33 +183,19 @@ export default function LeadDetailScreen({
     setSaving(true);
 
     try {
-      await createFollowupTask(
-        user.id,
-        connectionId,
-        {
-          title:
-            taskTitle.trim(),
+      await createFollowupTask(user.id, connectionId, {
+        title: taskTitle.trim(),
 
-          due_at:
-            date.toISOString(),
+        due_at: date.toISOString(),
 
-          priority: 'normal',
-        }
-      );
+        priority: 'normal',
+      });
 
-      await updateConnection(
-        connectionId,
-        {
-          next_follow_up_at:
-            date.toISOString(),
+      await updateConnection(connectionId, {
+        next_follow_up_at: date.toISOString(),
 
-          stage:
-            lead.stage ===
-              'new'
-              ? 'follow_up'
-              : lead.stage,
-        }
-      );
+        stage: lead.stage === 'new' ? 'follow_up' : lead.stage,
+      });
 
       await addLeadActivity(
         connectionId,
@@ -336,122 +204,79 @@ export default function LeadDetailScreen({
         `${taskTitle.trim()} - ${taskDate}`
       );
 
-      setTaskTitle(
-        'Follow up'
-      );
+      setTaskTitle('Follow up');
 
       setTaskDate('');
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Unable to schedule follow-up',
-        error.message
-      );
+      Alert.alert('Unable to schedule follow-up', error.message);
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggleTask(
-    task
-  ) {
+  async function toggleTask(task) {
     try {
-      if (
-        task.status ===
-        'completed'
-      ) {
-        await reopenFollowupTask(
-          task.id
-        );
+      if (task.status === 'completed') {
+        await reopenFollowupTask(task.id);
       } else {
-        await completeFollowupTask(
-          task.id
-        );
+        await completeFollowupTask(task.id);
 
-        await addLeadActivity(
-          connectionId,
-          'followup_completed',
-          `Completed: ${task.title}`
-        );
+        await addLeadActivity(connectionId, 'followup_completed', `Completed: ${task.title}`);
       }
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Unable to update follow-up',
-        error.message
-      );
+      Alert.alert('Unable to update follow-up', error.message);
     }
   }
 
   function removeTask(task) {
-    Alert.alert(
-      'Delete Follow-up',
-      `Delete "${task.title}"?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
+    Alert.alert('Delete Follow-up', `Delete "${task.title}"?`, [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
 
-          onPress: async () => {
-            try {
-              await deleteFollowupTask(
-                task.id
-              );
+        onPress: async () => {
+          try {
+            await deleteFollowupTask(task.id);
 
-              await load();
-            } catch (error) {
-              Alert.alert(
-                'Unable to delete follow-up',
-                error.message
-              );
-            }
-          },
+            await load();
+          } catch (error) {
+            Alert.alert('Unable to delete follow-up', error.message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }
 
   function cleanPhone(value) {
-    return String(value || '')
-      .replace(/[^\d+]/g, '');
+    return String(value || '').replace(/[^\d+]/g, '');
   }
 
   function call() {
     if (!lead?.phone) return;
 
-    Linking.openURL(
-      `tel:${cleanPhone(
-        lead.phone
-      )}`
-    );
+    Linking.openURL(`tel:${cleanPhone(lead.phone)}`);
   }
 
   function whatsapp() {
     if (!lead?.phone) return;
 
-    const number =
-      cleanPhone(
-        lead.phone
-      ).replace('+', '');
+    const number = cleanPhone(lead.phone).replace('+', '');
 
-    Linking.openURL(
-      `https://wa.me/${number}`
-    );
+    Linking.openURL(`https://wa.me/${number}`);
   }
 
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator
-          size="large"
-          color="#06162D"
-        />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -475,343 +300,147 @@ export default function LeadDetailScreen({
   }
 
   return (
-    <SafeAreaView
-      style={styles.safe}
-    >
+    <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#FFFFFF"
-          />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text
-          style={styles.headerTitle}
-        >
-          Lead Details
-        </Text>
+        <Text style={styles.headerTitle}>Lead Details</Text>
 
-        <View
-          style={{ width: 25 }}
-        />
+        <View style={{ width: 25 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
-      >
+      <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.profile}>
           <View style={styles.avatar}>
-            <Text
-              style={styles.initial}
-            >
-              {lead.name
-                ?.charAt(0)
-                ?.toUpperCase() ||
-                'L'}
-            </Text>
+            <Text style={styles.initial}>{lead.name?.charAt(0)?.toUpperCase() || 'L'}</Text>
           </View>
 
-          <Text style={styles.name}>
-            {lead.name}
-          </Text>
+          <Text style={styles.name}>{lead.name}</Text>
 
-          <Text
-            style={styles.company}
-          >
-            {lead.company ||
-              'No company'}
-          </Text>
+          <Text style={styles.company}>{lead.company || 'No company'}</Text>
 
           {lead.phone ? (
-            <View
-              style={
-                styles.contactRow
-              }
-            >
-              <TouchableOpacity
-                style={
-                  styles.contactButton
-                }
-                onPress={whatsapp}
-              >
-                <Ionicons
-                  name="logo-whatsapp"
-                  size={20}
-                  color="#06162D"
-                />
+            <View style={styles.contactRow}>
+              <TouchableOpacity style={styles.contactButton} onPress={whatsapp}>
+                <Ionicons name="logo-whatsapp" size={20} color="#06162D" />
 
-                <Text
-                  style={
-                    styles.contactText
-                  }
-                >
-                  WhatsApp
-                </Text>
+                <Text style={styles.contactText}>WhatsApp</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={
-                  styles.contactButton
-                }
-                onPress={call}
-              >
-                <Ionicons
-                  name="call-outline"
-                  size={20}
-                  color="#06162D"
-                />
+              <TouchableOpacity style={styles.contactButton} onPress={call}>
+                <Ionicons name="call-outline" size={20} color="#06162D" />
 
-                <Text
-                  style={
-                    styles.contactText
-                  }
-                >
-                  Call
-                </Text>
+                <Text style={styles.contactText}>Call</Text>
               </TouchableOpacity>
             </View>
           ) : null}
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          LEAD STAGE
-        </Text>
+        <Text style={styles.sectionTitle}>LEAD STAGE</Text>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-        >
-          {visibleStages.map(
-            (stage) => (
-              <TouchableOpacity
-                key={stage.id}
-                onPress={() =>
-                  changeStage(
-                    stage
-                  )
-                }
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {visibleStages.map((stage) => (
+            <TouchableOpacity
+              key={stage.id}
+              onPress={() => changeStage(stage)}
+              style={[styles.stageChip, lead.stage === stage.stage_key && styles.stageChipActive]}
+            >
+              <Text
                 style={[
-                  styles.stageChip,
+                  styles.stageChipText,
 
-                  lead.stage ===
-                    stage.stage_key &&
-                    styles.stageChipActive,
+                  lead.stage === stage.stage_key && styles.stageChipTextActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.stageChipText,
-
-                    lead.stage ===
-                      stage.stage_key &&
-                      styles.stageChipTextActive,
-                  ]}
-                >
-                  {stage.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
+                {stage.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          CONTACT INFORMATION
-        </Text>
+        <Text style={styles.sectionTitle}>CONTACT INFORMATION</Text>
 
         <View style={styles.card}>
-          <Info
-            label="Phone"
-            value={lead.phone}
-          />
+          <Info label="Phone" value={lead.phone} />
 
-          <Info
-            label="Email"
-            value={lead.email}
-          />
+          <Info label="Email" value={lead.email} />
 
-          <Info
-            label="Company"
-            value={lead.company}
-          />
+          <Info label="Company" value={lead.company} />
 
-          <Info
-            label="Requirement"
-            value={
-              lead.requirement
-            }
-          />
+          <Info label="Requirement" value={lead.requirement} />
 
-          <Info
-            label="Source"
-            value={lead.source}
-          />
+          <Info label="Source" value={lead.source} />
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          SCHEDULE FOLLOW-UP
-        </Text>
+        <Text style={styles.sectionTitle}>SCHEDULE FOLLOW-UP</Text>
 
         <View style={styles.card}>
-          <Text style={styles.label}>
-            Follow-up title
-          </Text>
+          <Text style={styles.label}>Follow-up title</Text>
 
           <TextInput
             value={taskTitle}
-            onChangeText={
-              setTaskTitle
-            }
+            onChangeText={setTaskTitle}
             placeholder="Call client"
             placeholderTextColor="#98A2B3"
             style={styles.input}
           />
 
-          <Text style={styles.label}>
-            Date
-          </Text>
+          <Text style={styles.label}>Date</Text>
 
           <TextInput
             value={taskDate}
-            onChangeText={
-              setTaskDate
-            }
+            onChangeText={setTaskDate}
             placeholder="YYYY-MM-DD"
             placeholderTextColor="#98A2B3"
             style={styles.input}
           />
 
-          <TouchableOpacity
-            style={
-              styles.saveButton
-            }
-            onPress={addFollowup}
-            disabled={saving}
-          >
-            <Ionicons
-              name="calendar-outline"
-              size={19}
-              color="#FFFFFF"
-            />
+          <TouchableOpacity style={styles.saveButton} onPress={addFollowup} disabled={saving}>
+            <Ionicons name="calendar-outline" size={19} color="#FFFFFF" />
 
-            <Text
-              style={styles.saveText}
-            >
-              Schedule Follow-up
-            </Text>
+            <Text style={styles.saveText}>Schedule Follow-up</Text>
           </TouchableOpacity>
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          FOLLOW-UP TASKS
-        </Text>
+        <Text style={styles.sectionTitle}>FOLLOW-UP TASKS</Text>
 
         {tasks.length === 0 ? (
           <View style={styles.card}>
-            <Text
-              style={
-                styles.noActivity
-              }
-            >
-              No follow-up tasks yet.
-            </Text>
+            <Text style={styles.noActivity}>No follow-up tasks yet.</Text>
           </View>
         ) : (
           tasks.map((task) => (
-            <View
-              key={task.id}
-              style={styles.task}
-            >
-              <TouchableOpacity
-                onPress={() =>
-                  toggleTask(task)
-                }
-                style={
-                  styles.taskCheck
-                }
-              >
+            <View key={task.id} style={styles.task}>
+              <TouchableOpacity onPress={() => toggleTask(task)} style={styles.taskCheck}>
                 <Ionicons
-                  name={
-                    task.status ===
-                    'completed'
-                      ? 'checkmark-circle'
-                      : 'ellipse-outline'
-                  }
+                  name={task.status === 'completed' ? 'checkmark-circle' : 'ellipse-outline'}
                   size={24}
-                  color={
-                    task.status ===
-                    'completed'
-                      ? '#16A34A'
-                      : '#06162D'
-                  }
+                  color={task.status === 'completed' ? '#16A34A' : '#06162D'}
                 />
               </TouchableOpacity>
 
-              <View
-                style={{ flex: 1 }}
-              >
+              <View style={{ flex: 1 }}>
                 <Text
-                  style={[
-                    styles.taskTitle,
-
-                    task.status ===
-                      'completed' &&
-                      styles.taskCompleted,
-                  ]}
+                  style={[styles.taskTitle, task.status === 'completed' && styles.taskCompleted]}
                 >
                   {task.title}
                 </Text>
 
                 {task.due_at ? (
-                  <Text
-                    style={
-                      styles.taskDate
-                    }
-                  >
-                    {new Date(
-                      task.due_at
-                    ).toLocaleDateString()}
-                  </Text>
+                  <Text style={styles.taskDate}>{new Date(task.due_at).toLocaleDateString()}</Text>
                 ) : null}
               </View>
 
-              <TouchableOpacity
-                onPress={() =>
-                  removeTask(task)
-                }
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={20}
-                  color="#DC2626"
-                />
+              <TouchableOpacity onPress={() => removeTask(task)}>
+                <Ionicons name="trash-outline" size={20} color="#DC2626" />
               </TouchableOpacity>
             </View>
           ))
         )}
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          NOTES
-        </Text>
+        <Text style={styles.sectionTitle}>NOTES</Text>
 
         <View style={styles.card}>
           <TextInput
@@ -820,129 +449,61 @@ export default function LeadDetailScreen({
             placeholder="Add lead notes..."
             placeholderTextColor="#98A2B3"
             multiline
-            style={[
-              styles.input,
-              styles.notes,
-            ]}
+            style={[styles.input, styles.notes]}
           />
 
-          <TouchableOpacity
-            style={
-              styles.saveButton
-            }
-            onPress={saveNotes}
-            disabled={saving}
-          >
-            <Text
-              style={styles.saveText}
-            >
-              Save Notes
-            </Text>
+          <TouchableOpacity style={styles.saveButton} onPress={saveNotes} disabled={saving}>
+            <Text style={styles.saveText}>Save Notes</Text>
           </TouchableOpacity>
         </View>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          ACTIVITY HISTORY
-        </Text>
+        <Text style={styles.sectionTitle}>ACTIVITY HISTORY</Text>
 
         {activities.length === 0 ? (
           <View style={styles.card}>
-            <Text
-              style={
-                styles.noActivity
-              }
-            >
-              No activity recorded yet.
-            </Text>
+            <Text style={styles.noActivity}>No activity recorded yet.</Text>
           </View>
         ) : (
-          activities.map(
-            (activity) => (
-              <View
-                key={activity.id}
-                style={
-                  styles.activity
-                }
-              >
-                <View
-                  style={
-                    styles.activityDot
-                  }
-                />
+          activities.map((activity) => (
+            <View key={activity.id} style={styles.activity}>
+              <View style={styles.activityDot} />
 
-                <View
-                  style={{ flex: 1 }}
-                >
-                  <Text
-                    style={
-                      styles.activityTitle
-                    }
-                  >
-                    {activity.title ||
-                      activity.activity_type}
-                  </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.activityTitle}>{activity.title || activity.activity_type}</Text>
 
-                  {activity.description ? (
-                    <Text
-                      style={
-                        styles.activityDescription
-                      }
-                    >
-                      {
-                        activity.description
-                      }
-                    </Text>
-                  ) : null}
+                {activity.description ? (
+                  <Text style={styles.activityDescription}>{activity.description}</Text>
+                ) : null}
 
-                  <Text
-                    style={
-                      styles.activityDate
-                    }
-                  >
-                    {new Date(
-                      activity.created_at
-                    ).toLocaleString()}
-                  </Text>
-                </View>
+                <Text style={styles.activityDate}>
+                  {new Date(activity.created_at).toLocaleString()}
+                </Text>
               </View>
-            )
-          )
+            </View>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Info({
-  label,
-  value,
-}) {
+function Info({ label, value }) {
   if (!value) return null;
 
   return (
     <View style={styles.info}>
-      <Text
-        style={styles.infoLabel}
-      >
-        {label}
-      </Text>
+      <Text style={styles.infoLabel}>{label}</Text>
 
-      <Text
-        style={styles.infoValue}
-      >
-        {value}
-      </Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
 
   loading: {
     flex: 1,
@@ -950,53 +511,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-
     backgroundColor: '#F5F7FB',
-},
+  },
 
   header: {
+    minHeight: 68,
 
-      minHeight: 68,
+    paddingHorizontal: 18,
 
-      paddingHorizontal: 18,
+    backgroundColor: '#06162D',
 
-      backgroundColor: '#06162D',
+    flexDirection: 'row',
 
-      flexDirection: 'row',
+    alignItems: 'center',
 
-      alignItems: 'center',
+    justifyContent: 'space-between',
 
-      justifyContent: 'space-between',
+    gap: 10,
 
-      gap: 10,
+    borderBottomWidth: 1,
 
-      borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
 
-      borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
 
-      shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
 
-      shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
 
-      shadowOpacity: 0.12,
+    shadowRadius: 12,
 
-      shadowRadius: 12,
-
-      elevation: 5,
-
-    },
+    elevation: 5,
+  },
 
   headerTitle: {
+    fontSize: 18,
 
-      fontSize: 18,
+    fontWeight: '900',
 
-      fontWeight: '900',
+    color: '#FFFFFF',
 
-      color: '#FFFFFF',
-
-      letterSpacing: 0.1,
-
-    },
+    letterSpacing: 0.1,
+  },
 
   container: {
     padding: 16,
@@ -1008,7 +564,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 22,
     alignItems: 'center',
-
 
     borderWidth: 1,
 
@@ -1024,11 +579,10 @@ const styles = StyleSheet.create({
 
     elevation: 2,
 
-
     borderWidth: 1,
 
     borderColor: '#F6B91A',
-},
+  },
 
   avatar: {
     width: 78,
@@ -1038,11 +592,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-
     borderWidth: 2,
 
     borderColor: '#F6B91A',
-},
+  },
 
   initial: {
     color: '#FFFFFF',
@@ -1069,26 +622,24 @@ const styles = StyleSheet.create({
   },
 
   contactButton: {
+    flexDirection: 'row',
 
-      flexDirection: 'row',
+    gap: 7,
 
-      gap: 7,
+    backgroundColor: '#FFF4D6',
 
-      backgroundColor: '#FFF4D6',
+    paddingHorizontal: 16,
 
-      paddingHorizontal: 16,
+    paddingVertical: 10,
 
-      paddingVertical: 10,
+    borderRadius: 12,
 
-      borderRadius: 12,
+    alignItems: 'center',
 
-      alignItems: 'center',
+    borderWidth: 1,
 
-      borderWidth: 1,
-
-      borderColor: '#F6B91A',
-
-    },
+    borderColor: '#F6B91A',
+  },
 
   contactText: {
     fontWeight: '700',
@@ -1109,7 +660,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -1123,7 +673,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   info: {
     marginBottom: 13,
@@ -1152,11 +702,10 @@ const styles = StyleSheet.create({
   stageChipActive: {
     backgroundColor: '#06162D',
 
-
     borderWidth: 1,
 
     borderColor: '#F6B91A',
-},
+  },
 
   stageChipText: {
     color: '#667085',
@@ -1200,11 +749,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
 
-
     borderWidth: 1,
 
     borderColor: '#F6B91A',
-},
+  },
 
   saveText: {
     color: '#FFFFFF',
@@ -1220,7 +768,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -1234,7 +781,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   taskCheck: {
     padding: 2,
@@ -1246,8 +793,7 @@ const styles = StyleSheet.create({
   },
 
   taskCompleted: {
-    textDecorationLine:
-      'line-through',
+    textDecorationLine: 'line-through',
     color: '#98A2B3',
   },
 
@@ -1270,7 +816,6 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -1284,21 +829,19 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   activityDot: {
+    width: 10,
 
-      width: 10,
+    height: 10,
 
-      height: 10,
+    borderRadius: 5,
 
-      borderRadius: 5,
+    backgroundColor: '#F6B91A',
 
-      backgroundColor: '#F6B91A',
-
-      marginTop: 5,
-
-    },
+    marginTop: 5,
+  },
 
   activityTitle: {
     color: '#06162D',

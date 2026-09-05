@@ -26,7 +26,15 @@ export function getApprovalStatusCopy(status) {
 }
 
 const styles = StyleSheet.create({
-  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  badge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   compact: { paddingHorizontal: 8, paddingVertical: 4 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   text: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 },

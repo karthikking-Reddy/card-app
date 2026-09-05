@@ -1,152 +1,102 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  Ionicons,
-} from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-import * as Haptics
-  from 'expo-haptics';
+import * as Haptics from 'expo-haptics';
 
-import {
-  colors,
-  radius,
-  shadows,
-  typography,
-} from '../../theme';
-
+import { colors, radius, shadows, typography } from '../../theme';
 
 const variants = {
   primary: {
-    background:
-      colors.navy,
+    background: colors.navy,
 
-    text:
-      colors.white,
+    text: colors.white,
 
-    icon:
-      colors.white,
+    icon: colors.white,
 
-    border:
-      colors.navy,
+    border: colors.navy,
   },
 
   gold: {
-    background:
-      colors.gold,
+    background: colors.gold,
 
-    text:
-      colors.navy,
+    text: colors.navy,
 
-    icon:
-      colors.navy,
+    icon: colors.navy,
 
-    border:
-      colors.gold,
+    border: colors.gold,
   },
 
   secondary: {
-    background:
-      colors.surface,
+    background: colors.surface,
 
-    text:
-      colors.text,
+    text: colors.text,
 
-    icon:
-      colors.text,
+    icon: colors.text,
 
-    border:
-      colors.border,
+    border: colors.border,
   },
 
   outline: {
-    background:
-      'transparent',
+    background: 'transparent',
 
-    text:
-      colors.text,
+    text: colors.text,
 
-    icon:
-      colors.text,
+    icon: colors.text,
 
-    border:
-      colors.borderStrong,
+    border: colors.borderStrong,
   },
 
   whatsapp: {
-    background:
-      colors.whatsapp,
+    background: colors.whatsapp,
 
-    text:
-      colors.white,
+    text: colors.white,
 
-    icon:
-      colors.white,
+    icon: colors.white,
 
-    border:
-      colors.whatsapp,
+    border: colors.whatsapp,
   },
 
   meta: {
-    background:
-      colors.meta,
+    background: colors.meta,
 
-    text:
-      colors.white,
+    text: colors.white,
 
-    icon:
-      colors.white,
+    icon: colors.white,
 
-    border:
-      colors.meta,
+    border: colors.meta,
   },
 
   danger: {
-    background:
-      colors.dangerSoft,
+    background: colors.dangerSoft,
 
-    text:
-      colors.danger,
+    text: colors.danger,
 
-    icon:
-      colors.danger,
+    icon: colors.danger,
 
-    border:
-      colors.dangerSoft,
+    border: colors.dangerSoft,
   },
 
   ghost: {
-    background:
-      'transparent',
+    background: 'transparent',
 
-    text:
-      colors.textSecondary,
+    text: colors.textSecondary,
 
-    icon:
-      colors.textSecondary,
+    icon: colors.textSecondary,
 
-    border:
-      'transparent',
+    border: 'transparent',
   },
 };
-
 
 export default function AppButton({
   title,
   onPress,
 
-  variant =
-    'primary',
+  variant = 'primary',
 
   icon,
 
-  iconPosition =
-    'left',
+  iconPosition = 'left',
 
   loading = false,
 
@@ -158,19 +108,12 @@ export default function AppButton({
 
   style,
 }) {
-  const palette =
-    variants[variant] ||
-    variants.primary;
-
+  const palette = variants[variant] || variants.primary;
 
   async function handlePress() {
-    if (
-      disabled ||
-      loading
-    ) {
+    if (disabled || loading) {
       return;
     }
-
 
     try {
       await Haptics.selectionAsync();
@@ -178,131 +121,65 @@ export default function AppButton({
       // Haptics are optional.
     }
 
-
     onPress?.();
   }
 
-
   return (
     <Pressable
-      disabled={
-        disabled ||
-        loading
-      }
-      onPress={
-        handlePress
-      }
-      style={({
-        pressed,
-      }) => [
+      disabled={disabled || loading}
+      onPress={handlePress}
+      style={({ pressed }) => [
         styles.base,
 
-        styles[
-          `size_${size}`
-        ],
+        styles[`size_${size}`],
 
         {
-          backgroundColor:
-            palette.background,
+          backgroundColor: palette.background,
 
-          borderColor:
-            palette.border,
+          borderColor: palette.border,
 
-          opacity:
-            disabled
-              ? 0.45
-              : pressed
-                ? 0.82
-                : 1,
+          opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
 
           transform: [
             {
-              scale:
-                pressed
-                  ? 0.985
-                  : 1,
+              scale: pressed ? 0.985 : 1,
             },
           ],
         },
 
-        fullWidth &&
-          styles.fullWidth,
+        fullWidth && styles.fullWidth,
 
-        variant ===
-          'primary' &&
-          shadows.soft,
+        variant === 'primary' && shadows.soft,
 
-        variant ===
-          'meta' &&
-          shadows.soft,
+        variant === 'meta' && shadows.soft,
 
-        variant ===
-          'whatsapp' &&
-          shadows.soft,
+        variant === 'whatsapp' && shadows.soft,
 
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={
-            palette.text
-          }
-        />
+        <ActivityIndicator size="small" color={palette.text} />
       ) : (
-        <View
-          style={
-            styles.content
-          }
-        >
-          {icon &&
-          iconPosition ===
-            'left' ? (
-            <Ionicons
-              name={icon}
-              size={
-                size ===
-                'small'
-                  ? 17
-                  : 20
-              }
-              color={
-                palette.icon
-              }
-            />
+        <View style={styles.content}>
+          {icon && iconPosition === 'left' ? (
+            <Ionicons name={icon} size={size === 'small' ? 17 : 20} color={palette.icon} />
           ) : null}
-
 
           <Text
             style={[
               typography.button,
 
               {
-                color:
-                  palette.text,
+                color: palette.text,
               },
             ]}
           >
             {title}
           </Text>
 
-
-          {icon &&
-          iconPosition ===
-            'right' ? (
-            <Ionicons
-              name={icon}
-              size={
-                size ===
-                'small'
-                  ? 17
-                  : 20
-              }
-              color={
-                palette.icon
-              }
-            />
+          {icon && iconPosition === 'right' ? (
+            <Ionicons name={icon} size={size === 'small' ? 17 : 20} color={palette.icon} />
           ) : null}
         </View>
       )}
@@ -310,53 +187,44 @@ export default function AppButton({
   );
 }
 
+const styles = StyleSheet.create({
+  base: {
+    borderWidth: 1,
 
-const styles =
-  StyleSheet.create({
-    base: {
-      borderWidth: 1,
+    borderRadius: radius.md,
 
-      borderRadius:
-        radius.md,
+    alignItems: 'center',
 
-      alignItems:
-        'center',
+    justifyContent: 'center',
+  },
 
-      justifyContent:
-        'center',
-    },
+  fullWidth: {
+    width: '100%',
+  },
 
-    fullWidth: {
-      width: '100%',
-    },
+  size_small: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+  },
 
-    size_small: {
-      minHeight: 40,
-      paddingHorizontal: 14,
-    },
+  size_medium: {
+    minHeight: 50,
+    paddingHorizontal: 18,
+  },
 
-    size_medium: {
-      minHeight: 50,
-      paddingHorizontal: 18,
-    },
+  size_large: {
+    minHeight: 56,
+    paddingHorizontal: 22,
+    borderRadius: radius.lg,
+  },
 
-    size_large: {
-      minHeight: 56,
-      paddingHorizontal: 22,
-      borderRadius:
-        radius.lg,
-    },
+  content: {
+    flexDirection: 'row',
 
-    content: {
-      flexDirection:
-        'row',
+    alignItems: 'center',
 
-      alignItems:
-        'center',
+    justifyContent: 'center',
 
-      justifyContent:
-        'center',
-
-      gap: 8,
-    },
-  });
+    gap: 8,
+  },
+});

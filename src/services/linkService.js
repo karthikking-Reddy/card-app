@@ -19,19 +19,16 @@ export async function ensureDefaultLinks(card) {
     return [];
   }
 
-  const { data: existing, error: existingError } =
-    await supabase
-      .from('card_links')
-      .select('link_type')
-      .eq('card_id', card.id);
+  const { data: existing, error: existingError } = await supabase
+    .from('card_links')
+    .select('link_type')
+    .eq('card_id', card.id);
 
   if (existingError) {
     throw existingError;
   }
 
-  const existingTypes = new Set(
-    (existing || []).map((item) => item.link_type)
-  );
+  const existingTypes = new Set((existing || []).map((item) => item.link_type));
 
   const defaults = [
     {
@@ -126,14 +123,10 @@ export async function ensureDefaultLinks(card) {
     },
   ];
 
-  const missing = defaults.filter(
-    (item) => !existingTypes.has(item.link_type)
-  );
+  const missing = defaults.filter((item) => !existingTypes.has(item.link_type));
 
   if (missing.length > 0) {
-    const { error } = await supabase
-      .from('card_links')
-      .insert(missing);
+    const { error } = await supabase.from('card_links').insert(missing);
 
     if (error) {
       throw error;
@@ -144,13 +137,12 @@ export async function ensureDefaultLinks(card) {
 }
 
 export async function updateCardLink(cardId, linkType, values) {
-  const { data: existing, error: findError } =
-    await supabase
-      .from('card_links')
-      .select('id')
-      .eq('card_id', cardId)
-      .eq('link_type', linkType)
-      .maybeSingle();
+  const { data: existing, error: findError } = await supabase
+    .from('card_links')
+    .select('id')
+    .eq('card_id', cardId)
+    .eq('link_type', linkType)
+    .maybeSingle();
 
   if (findError) {
     throw findError;

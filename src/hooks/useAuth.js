@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import {
-  getCurrentSession,
-  onAuthStateChange,
-} from "../services/authService";
+import { useEffect, useState } from 'react';
+import { getCurrentSession, onAuthStateChange } from '../services/authService';
 
 export function useAuth() {
   const [session, setSession] = useState(null);
@@ -21,7 +18,7 @@ export function useAuth() {
           setUser(currentSession?.user ?? null);
         }
       } catch (error) {
-        console.error("useAuth load error:", error);
+        console.error('useAuth load error:', error);
 
         if (mounted) {
           setSession(null);
@@ -36,15 +33,13 @@ export function useAuth() {
 
     loadSession();
 
-    const subscription = onAuthStateChange(
-      (_event, currentSession) => {
-        if (mounted) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          setLoading(false);
-        }
+    const subscription = onAuthStateChange((_event, currentSession) => {
+      if (mounted) {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setLoading(false);
       }
-    );
+    });
 
     return () => {
       mounted = false;

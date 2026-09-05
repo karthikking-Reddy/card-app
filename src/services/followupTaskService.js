@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabase';
 export async function getFollowupTasks(userId) {
   const { data, error } = await supabase
     .from('followup_tasks')
-    .select(`
+    .select(
+      `
       *,
       connections (
         id,
@@ -13,7 +14,8 @@ export async function getFollowupTasks(userId) {
         company,
         stage
       )
-    `)
+    `
+    )
     .eq('user_id', userId)
     .order('due_at', {
       ascending: true,
@@ -27,10 +29,7 @@ export async function getFollowupTasks(userId) {
   return data || [];
 }
 
-export async function getConnectionFollowups(
-  userId,
-  connectionId
-) {
+export async function getConnectionFollowups(userId, connectionId) {
   const { data, error } = await supabase
     .from('followup_tasks')
     .select('*')
@@ -48,23 +47,16 @@ export async function getConnectionFollowups(
   return data || [];
 }
 
-export async function createFollowupTask(
-  userId,
-  connectionId,
-  values
-) {
+export async function createFollowupTask(userId, connectionId, values) {
   const { data, error } = await supabase
     .from('followup_tasks')
     .insert({
       user_id: userId,
       connection_id: connectionId,
       title: values.title,
-      description:
-        values.description || null,
-      due_at:
-        values.due_at || null,
-      priority:
-        values.priority || 'normal',
+      description: values.description || null,
+      due_at: values.due_at || null,
+      priority: values.priority || 'normal',
       status: 'pending',
     })
     .select()
@@ -77,16 +69,12 @@ export async function createFollowupTask(
   return data;
 }
 
-export async function updateFollowupTask(
-  taskId,
-  values
-) {
+export async function updateFollowupTask(taskId, values) {
   const { data, error } = await supabase
     .from('followup_tasks')
     .update({
       ...values,
-      updated_at:
-        new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq('id', taskId)
     .select()
@@ -99,38 +87,22 @@ export async function updateFollowupTask(
   return data;
 }
 
-export async function completeFollowupTask(
-  taskId
-) {
-  return updateFollowupTask(
-    taskId,
-    {
-      status: 'completed',
-      completed_at:
-        new Date().toISOString(),
-    }
-  );
+export async function completeFollowupTask(taskId) {
+  return updateFollowupTask(taskId, {
+    status: 'completed',
+    completed_at: new Date().toISOString(),
+  });
 }
 
-export async function reopenFollowupTask(
-  taskId
-) {
-  return updateFollowupTask(
-    taskId,
-    {
-      status: 'pending',
-      completed_at: null,
-    }
-  );
+export async function reopenFollowupTask(taskId) {
+  return updateFollowupTask(taskId, {
+    status: 'pending',
+    completed_at: null,
+  });
 }
 
-export async function deleteFollowupTask(
-  taskId
-) {
-  const { error } = await supabase
-    .from('followup_tasks')
-    .delete()
-    .eq('id', taskId);
+export async function deleteFollowupTask(taskId) {
+  const { error } = await supabase.from('followup_tasks').delete().eq('id', taskId);
 
   if (error) {
     throw error;

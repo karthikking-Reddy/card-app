@@ -40,7 +40,6 @@ export async function getConnections(cardId) {
   return data || [];
 }
 
-
 export async function getAllConnections() {
   const { data, error } = await supabase
     .from('connections')
@@ -80,10 +79,7 @@ export async function createConnection(cardId, values) {
   return data;
 }
 
-export async function updateConnection(
-  connectionId,
-  values
-) {
+export async function updateConnection(connectionId, values) {
   const { data, error } = await supabase
     .from('connections')
     .update({
@@ -123,9 +119,7 @@ export async function addLeadActivity(
   return data;
 }
 
-export async function getLeadActivities(
-  connectionId
-) {
+export async function getLeadActivities(connectionId) {
   const { data, error } = await supabase
     .from('lead_activities')
     .select('*')
@@ -154,16 +148,10 @@ export function calculateConnectionStats(connections) {
   };
 
   for (const connection of connections) {
-    if (
-      Object.prototype.hasOwnProperty.call(
-        stats,
-        connection.stage
-      )
-    ) {
+    if (Object.prototype.hasOwnProperty.call(stats, connection.stage)) {
       stats[connection.stage] += 1;
     }
   }
 
   return stats;
 }
-

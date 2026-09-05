@@ -1,20 +1,8 @@
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import {
-  Ionicons,
-} from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-import {
-  colors,
-  radius,
-  typography,
-} from '../../theme';
-
+import { colors, radius, typography } from '../../theme';
 
 export default function AppHeader({
   title,
@@ -29,132 +17,69 @@ export default function AppHeader({
   onRightPress,
 }) {
   return (
-    <View
-      style={
-        styles.header
-      }
-    >
+    <View style={styles.header}>
       {showBack ? (
-        <TouchableOpacity
-          style={
-            styles.iconButton
-          }
-          onPress={() =>
-            navigation?.goBack()
-          }
-        >
-          <Ionicons
-            name="arrow-back"
-            size={22}
-            color={
-              colors.text
-            }
-          />
+        <TouchableOpacity style={styles.iconButton} onPress={() => navigation?.goBack()}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
       ) : null}
 
+      <View style={styles.titleContainer}>
+        <Text style={typography.h1}>{title}</Text>
 
-      <View
-        style={
-          styles.titleContainer
-        }
-      >
-        <Text
-          style={
-            typography.h1
-          }
-        >
-          {title}
-        </Text>
-
-        {subtitle ? (
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            {subtitle}
-          </Text>
-        ) : null}
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
 
-
       {rightIcon ? (
-        <TouchableOpacity
-          style={
-            styles.iconButton
-          }
-          onPress={
-            onRightPress
-          }
-        >
-          <Ionicons
-            name={
-              rightIcon
-            }
-            size={21}
-            color={
-              colors.text
-            }
-          />
+        <TouchableOpacity style={styles.iconButton} onPress={onRightPress}>
+          <Ionicons name={rightIcon} size={21} color={colors.text} />
         </TouchableOpacity>
-      ) : (
-        showBack ? (
-          <View
-            style={{
-              width: 44,
-            }}
-          />
-        ) : null
-      )}
+      ) : showBack ? (
+        <View
+          style={{
+            width: 44,
+          }}
+        />
+      ) : null}
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  header: {
+    minHeight: 66,
 
-const styles =
-  StyleSheet.create({
-    header: {
-      minHeight: 66,
+    flexDirection: 'row',
 
-      flexDirection:
-        'row',
+    alignItems: 'center',
 
-      alignItems:
-        'center',
+    gap: 12,
+  },
 
-      gap: 12,
-    },
+  titleContainer: {
+    flex: 1,
+  },
 
-    titleContainer: {
-      flex: 1,
-    },
+  subtitle: {
+    ...typography.small,
 
-    subtitle: {
-      ...typography.small,
+    marginTop: 2,
+  },
 
-      marginTop: 2,
-    },
+  iconButton: {
+    width: 44,
+    height: 44,
 
-    iconButton: {
-      width: 44,
-      height: 44,
+    backgroundColor: colors.surface,
 
-      backgroundColor:
-        colors.surface,
+    borderWidth: 1,
 
-      borderWidth: 1,
+    borderColor: colors.border,
 
-      borderColor:
-        colors.border,
+    borderRadius: radius.md,
 
-      borderRadius:
-        radius.md,
+    alignItems: 'center',
 
-      alignItems:
-        'center',
-
-      justifyContent:
-        'center',
-    },
-  });
+    justifyContent: 'center',
+  },
+});

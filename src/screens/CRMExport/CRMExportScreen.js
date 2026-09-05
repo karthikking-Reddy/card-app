@@ -1,128 +1,56 @@
-import {
-  useState,
-} from 'react';
+import { useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  Ionicons,
-} from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-import {
-  exportConnectionsCsv,
-} from '../../services/crmExportService';
+import { exportConnectionsCsv } from '../../services/crmExportService';
 
-
-export default function CRMExportScreen({
-  navigation,
-}) {
-  const [exporting, setExporting] =
-    useState(false);
+export default function CRMExportScreen({ navigation }) {
+  const [exporting, setExporting] = useState(false);
 
   async function exportLeads() {
     setExporting(true);
 
     try {
-      const result =
-        await exportConnectionsCsv();
+      const result = await exportConnectionsCsv();
 
-      Alert.alert(
-        'Export ready',
-        `${result.count} leads exported successfully.`
-      );
+      Alert.alert('Export ready', `${result.count} leads exported successfully.`);
     } catch (error) {
-      Alert.alert(
-        'Export failed',
-        error.message
-      );
+      Alert.alert('Export failed', error.message);
     } finally {
       setExporting(false);
     }
   }
 
   return (
-    <SafeAreaView
-      style={styles.safe}
-    >
-      <View
-        style={styles.header}
-      >
-        <TouchableOpacity
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#FFFFFF"
-          />
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text
-          style={
-            styles.headerTitle
-          }
-        >
-          CRM Export
-        </Text>
+        <Text style={styles.headerTitle}>CRM Export</Text>
 
-        <View
-          style={{ width: 25 }}
-        />
+        <View style={{ width: 25 }} />
       </View>
 
-      <View
-        style={styles.container}
-      >
-        <View
-          style={styles.hero}
-        >
-          <View
-            style={
-              styles.heroIcon
-            }
-          >
-            <Ionicons
-              name="download-outline"
-              size={30}
-              color="#06162D"
-            />
+      <View style={styles.container}>
+        <View style={styles.hero}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="download-outline" size={30} color="#06162D" />
           </View>
 
-          <Text
-            style={
-              styles.heroTitle
-            }
-          >
-            Export Connections
-          </Text>
+          <Text style={styles.heroTitle}>Export Connections</Text>
 
-          <Text
-            style={
-              styles.heroText
-            }
-          >
-            Download your complete
-            YNS CRM lead database as
-            a CSV file.
+          <Text style={styles.heroText}>
+            Download your complete YNS CRM lead database as a CSV file.
           </Text>
         </View>
 
-        <View
-          style={styles.card}
-        >
+        <View style={styles.card}>
           <Feature
             icon="people-outline"
             title="All Leads"
@@ -148,46 +76,20 @@ export default function CRMExportScreen({
           />
         </View>
 
-        <TouchableOpacity
-          style={
-            styles.exportButton
-          }
-          onPress={
-            exportLeads
-          }
-          disabled={
-            exporting
-          }
-        >
+        <TouchableOpacity style={styles.exportButton} onPress={exportLeads} disabled={exporting}>
           {exporting ? (
-            <ActivityIndicator
-              color="#FFFFFF"
-            />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
             <>
-              <Ionicons
-                name="download-outline"
-                size={20}
-                color="#FFFFFF"
-              />
+              <Ionicons name="download-outline" size={20} color="#FFFFFF" />
 
-              <Text
-                style={
-                  styles.exportText
-                }
-              >
-                Export CRM as CSV
-              </Text>
+              <Text style={styles.exportText}>Export CRM as CSV</Text>
             </>
           )}
         </TouchableOpacity>
 
-        <Text
-          style={styles.help}
-        >
-          You can open the exported
-          CSV file in Excel, Google
-          Sheets or other spreadsheet
+        <Text style={styles.help}>
+          You can open the exported CSV file in Excel, Google Sheets or other spreadsheet
           applications.
         </Text>
       </View>
@@ -195,267 +97,216 @@ export default function CRMExportScreen({
   );
 }
 
-
-function Feature({
-  icon,
-  title,
-  text,
-}) {
+function Feature({ icon, title, text }) {
   return (
-    <View
-      style={styles.feature}
-    >
-      <View
-        style={
-          styles.featureIcon
-        }
-      >
-        <Ionicons
-          name={icon}
-          size={20}
-          color="#06162D"
-        />
+    <View style={styles.feature}>
+      <View style={styles.featureIcon}>
+        <Ionicons name={icon} size={20} color="#06162D" />
       </View>
 
-      <View
-        style={{ flex: 1 }}
-      >
-        <Text
-          style={
-            styles.featureTitle
-          }
-        >
-          {title}
-        </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.featureTitle}>{title}</Text>
 
-        <Text
-          style={
-            styles.featureText
-          }
-        >
-          {text}
-        </Text>
+        <Text style={styles.featureText}>{text}</Text>
       </View>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
 
-const styles =
-  StyleSheet.create({
-    safe: {
-        flex: 1,
-        backgroundColor: '#F5F7FB',
-      },
+  header: {
+    minHeight: 68,
 
-    header: {
+    paddingHorizontal: 18,
 
-        minHeight: 68,
+    backgroundColor: '#06162D',
 
-        paddingHorizontal: 18,
+    flexDirection: 'row',
 
-        backgroundColor: '#06162D',
+    alignItems: 'center',
 
-        flexDirection: 'row',
+    justifyContent: 'space-between',
 
-        alignItems: 'center',
+    gap: 10,
 
-        justifyContent: 'space-between',
+    borderBottomWidth: 1,
 
-        gap: 10,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
 
-        borderBottomWidth: 1,
+    shadowColor: '#06162D',
 
-        borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowOffset: { width: 0, height: 5 },
 
-        shadowColor: '#06162D',
+    shadowOpacity: 0.12,
 
-        shadowOffset: { width: 0, height: 5 },
+    shadowRadius: 12,
 
-        shadowOpacity: 0.12,
+    elevation: 5,
+  },
 
-        shadowRadius: 12,
+  headerTitle: {
+    fontSize: 18,
 
-        elevation: 5,
+    fontWeight: '900',
 
-      },
+    color: '#FFFFFF',
 
-    headerTitle: {
+    letterSpacing: 0.1,
+  },
 
-        fontSize: 18,
+  container: {
+    padding: 18,
+  },
 
-        fontWeight: '900',
+  hero: {
+    backgroundColor: '#06162D',
 
-        color: '#FFFFFF',
+    borderRadius: 24,
 
-        letterSpacing: 0.1,
+    padding: 26,
 
-      },
+    alignItems: 'center',
 
-    container: {
-      padding: 18,
-    },
+    borderWidth: 1,
 
-    hero: {
+    borderColor: '#F6B91A',
 
-        backgroundColor: '#06162D',
+    shadowColor: '#06162D',
 
-        borderRadius: 24,
+    shadowOffset: { width: 0, height: 7 },
 
-        padding: 26,
+    shadowOpacity: 0.16,
 
-        alignItems: 'center',
+    shadowRadius: 14,
 
-        borderWidth: 1,
+    elevation: 4,
+  },
 
-        borderColor: '#F6B91A',
+  heroIcon: {
+    width: 64,
 
-        shadowColor: '#06162D',
+    height: 64,
 
-        shadowOffset: { width: 0, height: 7 },
+    borderRadius: 20,
 
-        shadowOpacity: 0.16,
+    backgroundColor: 'rgba(246,185,26,0.12)',
 
-        shadowRadius: 14,
+    alignItems: 'center',
 
-        elevation: 4,
+    justifyContent: 'center',
 
-      },
+    borderWidth: 1,
 
-    heroIcon: {
+    borderColor: '#F6B91A',
+  },
 
-        width: 64,
+  heroTitle: {
+    color: '#FFFFFF',
 
-        height: 64,
+    fontSize: 22,
 
-        borderRadius: 20,
+    fontWeight: '900',
 
-        backgroundColor: 'rgba(246,185,26,0.12)',
-
-        alignItems: 'center',
-
-        justifyContent: 'center',
-
-        borderWidth: 1,
-
-        borderColor: '#F6B91A',
-
-      },
-
-    heroTitle: {
-
-        color: '#FFFFFF',
-
-        fontSize: 22,
-
-        fontWeight: '900',
-
-        marginTop: 15,
-
-      },
-
-    heroText: {
-
-        color: '#D0D5DD',
-
-        fontSize: 11,
-
-        lineHeight: 17,
-
-        textAlign: 'center',
-
-        marginTop: 6,
-
-        maxWidth: 270,
-
-      },
-
-    card: {
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 20,
-      padding: 15,
-      marginTop: 14,
-
-
-      borderWidth: 1,
-
-      borderColor: '#E6EAF0',
-
-      shadowColor: '#06162D',
-
-      shadowOffset: { width: 0, height: 4 },
-
-      shadowOpacity: 0.045,
-
-      shadowRadius: 10,
-
-      elevation: 2,
-},
-
-    feature: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 11,
-      paddingVertical: 11,
-      borderBottomWidth: 1,
-      borderBottomColor:
-        '#F5F7FB',
-    },
-
-    featureIcon: {
-      width: 42,
-      height: 42,
-      borderRadius: 13,
-      backgroundColor:
-        '#F5F7FB',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-    },
-
-    featureTitle: {
-      color: '#06162D',
-      fontWeight: '800',
-      fontSize: 12,
-    },
-
-    featureText: {
-      color: '#667085',
-      fontSize: 9,
-      lineHeight: 14,
-      marginTop: 3,
-    },
-
-    exportButton: {
-      marginTop: 15,
-      backgroundColor:
-        '#06162D',
-      borderRadius: 15,
-      paddingVertical: 15,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-      gap: 8,
-
-
-      borderWidth: 1,
-
-      borderColor: '#F6B91A',
-},
-
-    exportText: {
-      color: '#FFFFFF',
-      fontWeight: '900',
-    },
-
-    help: {
-      color: '#98A2B3',
-      textAlign: 'center',
-      fontSize: 9,
-      lineHeight: 14,
-      marginTop: 10,
-      paddingHorizontal: 20,
-    },
-  });
+    marginTop: 15,
+  },
+
+  heroText: {
+    color: '#D0D5DD',
+
+    fontSize: 11,
+
+    lineHeight: 17,
+
+    textAlign: 'center',
+
+    marginTop: 6,
+
+    maxWidth: 270,
+  },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 15,
+    marginTop: 14,
+
+    borderWidth: 1,
+
+    borderColor: '#E6EAF0',
+
+    shadowColor: '#06162D',
+
+    shadowOffset: { width: 0, height: 4 },
+
+    shadowOpacity: 0.045,
+
+    shadowRadius: 10,
+
+    elevation: 2,
+  },
+
+  feature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F7FB',
+  },
+
+  featureIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: '#F5F7FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  featureTitle: {
+    color: '#06162D',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+
+  featureText: {
+    color: '#667085',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 3,
+  },
+
+  exportButton: {
+    marginTop: 15,
+    backgroundColor: '#06162D',
+    borderRadius: 15,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+
+    borderWidth: 1,
+
+    borderColor: '#F6B91A',
+  },
+
+  exportText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+
+  help: {
+    color: '#98A2B3',
+    textAlign: 'center',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+});

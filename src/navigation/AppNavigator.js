@@ -1,17 +1,11 @@
-import {
-  NavigationContainer,
-} from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 
 import RootNavigator from './RootNavigator';
 
-export default function AppNavigator({
-  session,
-}) {
+export default function AppNavigator({ session }) {
   return (
     <NavigationContainer>
-      <RootNavigator
-        session={session}
-      />
+      <RootNavigator session={session} />
     </NavigationContainer>
   );
 }

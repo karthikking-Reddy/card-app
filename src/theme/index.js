@@ -56,10 +56,8 @@ export const colors = {
   black: '#000000',
   white: '#FFFFFF',
 
-  overlay:
-    'rgba(11,18,32,0.52)',
+  overlay: 'rgba(11,18,32,0.52)',
 };
-
 
 export const spacing = {
   2: 2,
@@ -79,7 +77,6 @@ export const spacing = {
   48: 48,
 };
 
-
 export const radius = {
   xs: 6,
   sm: 10,
@@ -89,7 +86,6 @@ export const radius = {
   xxl: 28,
   round: 999,
 };
-
 
 export const typography = {
   display: {
@@ -163,11 +159,9 @@ export const typography = {
   },
 };
 
-
 export const shadows = {
   soft: {
-    shadowColor:
-      '#101828',
+    shadowColor: '#101828',
 
     shadowOffset: {
       width: 0,
@@ -181,21 +175,19 @@ export const shadows = {
   },
 
   medium: {
-    shadowColor:
-      '#101828',
+    shadowColor: '#101828',
 
     shadowOffset: {
       width: 0,
       height: 7,
     },
 
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 18,
 
     elevation: 4,
   },
 };
-
 
 export const theme = {
   colors,
@@ -204,6 +196,5 @@ export const theme = {
   typography,
   shadows,
 };
-
 
 export default theme;

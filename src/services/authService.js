@@ -1,10 +1,10 @@
-import { supabase } from "../../lib/supabase";
+import { supabase } from '../../lib/supabase';
 
 export async function getCurrentSession() {
   const { data, error } = await supabase.auth.getSession();
 
   if (error) {
-    console.error("getCurrentSession error:", error);
+    console.error('getCurrentSession error:', error);
     return null;
   }
 

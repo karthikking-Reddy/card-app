@@ -1,7 +1,4 @@
-import {
-  useCallback,
-  useState,
-} from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -15,88 +12,59 @@ import {
   View,
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import {
-  useFocusEffect,
-} from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
-import {
-  getCurrentSession,
-} from '../../services/authService';
+import { getCurrentSession } from '../../services/authService';
 
-import {
-  createCard,
-  deleteCard,
-  getCards,
-  setPrimaryCard,
-} from '../../services/cardService';
+import { createCard, deleteCard, getCards, setPrimaryCard } from '../../services/cardService';
 
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 
-export default function MyCardsScreen({
-  navigation,
-}) {
-  const [user, setUser] =
-    useState(null);
+export default function MyCardsScreen({ navigation }) {
+  const [user, setUser] = useState(null);
 
-  const [cards, setCards] =
-    useState([]);
+  const [cards, setCards] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [creating, setCreating] =
-    useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const [modalVisible, setModalVisible] =
-    useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
-  const [name, setName] =
-    useState('');
+  const [name, setName] = useState('');
 
-  const [designation, setDesignation] =
-    useState('');
+  const [designation, setDesignation] = useState('');
 
-  const [company, setCompany] =
-    useState('');
+  const [company, setCompany] = useState('');
 
   const [approvalCard, setApprovalCard] = useState(null);
 
-  const load =
-    useCallback(async () => {
-      setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
 
-      try {
-        const session =
-          await getCurrentSession();
+    try {
+      const session = await getCurrentSession();
 
-        if (!session?.user) {
-          return;
-        }
-
-        setUser(session.user);
-
-        const data =
-          await getCards(
-            session.user.id
-          );
-
-        setCards(data);
-      } catch (error) {
-        Alert.alert(
-          'Unable to load cards',
-          error.message
-        );
-      } finally {
-        setLoading(false);
+      if (!session?.user) {
+        return;
       }
-    }, []);
+
+      setUser(session.user);
+
+      const data = await getCards(session.user.id);
+
+      setCards(data);
+    } catch (error) {
+      Alert.alert('Unable to load cards', error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,50 +72,31 @@ export default function MyCardsScreen({
     }, [load])
   );
 
-  async function makePrimary(
-    cardId
-  ) {
+  async function makePrimary(cardId) {
     try {
-      await setPrimaryCard(
-        user.id,
-        cardId
-      );
+      await setPrimaryCard(user.id, cardId);
 
       await load();
     } catch (error) {
-      Alert.alert(
-        'Unable to switch card',
-        error.message
-      );
+      Alert.alert('Unable to switch card', error.message);
     }
   }
 
   async function editCard(card) {
     try {
       if (!card.is_primary) {
-        await setPrimaryCard(
-          user.id,
-          card.id
-        );
+        await setPrimaryCard(user.id, card.id);
       }
 
-      navigation.navigate(
-        'CardEditor'
-      );
+      navigation.navigate('CardEditor');
     } catch (error) {
-      Alert.alert(
-        'Unable to open card',
-        error.message
-      );
+      Alert.alert('Unable to open card', error.message);
     }
   }
 
   async function addCard() {
     if (!name.trim()) {
-      Alert.alert(
-        'Required',
-        'Please enter a card name.'
-      );
+      Alert.alert('Required', 'Please enter a card name.');
 
       return;
     }
@@ -155,24 +104,15 @@ export default function MyCardsScreen({
     setCreating(true);
 
     try {
-      const newCard =
-        await createCard(
-          user.id,
-          {
-            name: name.trim(),
+      const newCard = await createCard(user.id, {
+        name: name.trim(),
 
-            designation:
-              designation.trim(),
+        designation: designation.trim(),
 
-            company:
-              company.trim(),
-          }
-        );
+        company: company.trim(),
+      });
 
-      await setPrimaryCard(
-        user.id,
-        newCard.id
-      );
+      await setPrimaryCard(user.id, newCard.id);
 
       setName('');
       setDesignation('');
@@ -182,58 +122,40 @@ export default function MyCardsScreen({
 
       await load();
 
-      navigation.navigate(
-        'CardEditor'
-      );
+      navigation.navigate('CardEditor');
     } catch (error) {
-      Alert.alert(
-        'Unable to create card',
-        error.message
-      );
+      Alert.alert('Unable to create card', error.message);
     } finally {
       setCreating(false);
     }
   }
 
   function confirmDelete(card) {
-    Alert.alert(
-      'Delete Card',
-      `Delete "${card.name}"?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCard(
-                user.id,
-                card.id
-              );
+    Alert.alert('Delete Card', `Delete "${card.name}"?`, [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCard(user.id, card.id);
 
-              await load();
-            } catch (error) {
-              Alert.alert(
-                'Unable to delete card',
-                error.message
-              );
-            }
-          },
+            await load();
+          } catch (error) {
+            Alert.alert('Unable to delete card', error.message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }
 
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator
-          size="large"
-          color="#06162D"
-        />
+        <ActivityIndicator size="large" color="#06162D" />
       </View>
     );
   }
@@ -241,133 +163,60 @@ export default function MyCardsScreen({
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#FFFFFF"
-          />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          My Cards
-        </Text>
+        <Text style={styles.headerTitle}>My Cards</Text>
 
-        <TouchableOpacity
-          onPress={() =>
-            setModalVisible(true)
-          }
-        >
-          <Ionicons
-            name="add-circle-outline"
-            size={27}
-            color="#F6B91A"
-          />
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Ionicons name="add-circle-outline" size={27} color="#F6B91A" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
-      >
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.help}>
           Create multiple digital cards and choose which one is your primary card.
         </Text>
 
         {cards.map((card) => (
-          <View
-            key={card.id}
-            style={[
-              styles.card,
-              card.is_primary &&
-                styles.primaryCard,
-            ]}
-          >
+          <View key={card.id} style={[styles.card, card.is_primary && styles.primaryCard]}>
             <View style={styles.cardTop}>
               <View style={styles.avatar}>
-                <Text style={styles.initial}>
-                  {card.name
-                    ?.charAt(0)
-                    ?.toUpperCase() ||
-                    'Y'}
-                </Text>
+                <Text style={styles.initial}>{card.name?.charAt(0)?.toUpperCase() || 'Y'}</Text>
               </View>
 
               <View style={styles.cardInfo}>
-                <Text style={styles.name}>
-                  {card.name}
-                </Text>
+                <Text style={styles.name}>{card.name}</Text>
 
-                <Text
-                  style={styles.designation}
-                >
-                  {card.designation ||
-                    'Digital Card'}
-                </Text>
+                <Text style={styles.designation}>{card.designation || 'Digital Card'}</Text>
 
-                <Text
-                  style={styles.company}
-                >
-                  {card.company || ''}
-                </Text>
+                <Text style={styles.company}>{card.company || ''}</Text>
               </View>
 
               {card.is_primary ? (
-                <View
-                  style={styles.primaryBadge}
-                >
-                  <Text
-                    style={
-                      styles.primaryBadgeText
-                    }
-                  >
-                    PRIMARY
-                  </Text>
+                <View style={styles.primaryBadge}>
+                  <Text style={styles.primaryBadgeText}>PRIMARY</Text>
                 </View>
               ) : null}
             </View>
 
-            <Text style={styles.slug}>
-              /card/{card.card_slug}
-            </Text>
+            <Text style={styles.slug}>/card/{card.card_slug}</Text>
 
             <View style={styles.statusRow}>
               <ApprovalStatusBadge status={card.approval_status} compact />
 
-              <Status
-                active={card.is_active}
-                text={
-                  card.is_active
-                    ? 'Active'
-                    : 'Inactive'
-                }
-              />
+              <Status active={card.is_active} text={card.is_active ? 'Active' : 'Inactive'} />
 
-              <Status
-                active={card.is_public}
-                text={
-                  card.is_public
-                    ? 'Public'
-                    : 'Private'
-                }
-              />
+              <Status active={card.is_public} text={card.is_public ? 'Public' : 'Private'} />
 
-              <Status
-                active
-                text={
-                  card.theme ||
-                  'standard'
-                }
-              />
+              <Status active text={card.theme || 'standard'} />
             </View>
 
             {card.approval_status === 'pending' ? (
-              <Text style={styles.approvalMessage}>Your card is waiting for administrator approval.</Text>
+              <Text style={styles.approvalMessage}>
+                Your card is waiting for administrator approval.
+              </Text>
             ) : null}
 
             {card.approval_status === 'rejected' && card.rejection_reason ? (
@@ -378,90 +227,45 @@ export default function MyCardsScreen({
             ) : null}
 
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() =>
-                  editCard(card)
-                }
-              >
-                <Ionicons
-                  name="create-outline"
-                  size={18}
-                  color="#06162D"
-                />
+              <TouchableOpacity style={styles.actionButton} onPress={() => editCard(card)}>
+                <Ionicons name="create-outline" size={18} color="#06162D" />
 
-                <Text
-                  style={
-                    styles.actionText
-                  }
-                >
-                  Edit
-                </Text>
+                <Text style={styles.actionText}>Edit</Text>
               </TouchableOpacity>
 
               {card.approval_status === 'draft' || card.approval_status === 'rejected' ? (
-                <TouchableOpacity style={styles.approvalButton} onPress={() => setApprovalCard(card)}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color="#06162D" />
-                  <Text style={styles.approvalButtonText}>{card.approval_status === 'rejected' ? 'Request Again' : 'Request Approval'}</Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {!card.is_primary ? (
                 <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() =>
-                    makePrimary(card.id)
-                  }
+                  style={styles.approvalButton}
+                  onPress={() => setApprovalCard(card)}
                 >
-                  <Ionicons
-                    name="star-outline"
-                    size={18}
-                    color="#06162D"
-                  />
-
-                  <Text
-                    style={
-                      styles.actionText
-                    }
-                  >
-                    Set Primary
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#06162D" />
+                  <Text style={styles.approvalButtonText}>
+                    {card.approval_status === 'rejected' ? 'Request Again' : 'Request Approval'}
                   </Text>
                 </TouchableOpacity>
               ) : null}
 
+              {!card.is_primary ? (
+                <TouchableOpacity style={styles.actionButton} onPress={() => makePrimary(card.id)}>
+                  <Ionicons name="star-outline" size={18} color="#06162D" />
+
+                  <Text style={styles.actionText}>Set Primary</Text>
+                </TouchableOpacity>
+              ) : null}
+
               {cards.length > 1 ? (
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() =>
-                    confirmDelete(card)
-                  }
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={18}
-                    color="#DC2626"
-                  />
+                <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(card)}>
+                  <Ionicons name="trash-outline" size={18} color="#DC2626" />
                 </TouchableOpacity>
               ) : null}
             </View>
           </View>
         ))}
 
-        <TouchableOpacity
-          style={styles.newCard}
-          onPress={() =>
-            setModalVisible(true)
-          }
-        >
-          <Ionicons
-            name="add"
-            size={25}
-            color="#06162D"
-          />
+        <TouchableOpacity style={styles.newCard} onPress={() => setModalVisible(true)}>
+          <Ionicons name="add" size={25} color="#06162D" />
 
-          <Text style={styles.newCardText}>
-            Add New Digital Card
-          </Text>
+          <Text style={styles.newCardText}>Add New Digital Card</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -469,31 +273,15 @@ export default function MyCardsScreen({
         visible={modalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() =>
-          setModalVisible(false)
-        }
+        onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.overlay}>
           <View style={styles.modal}>
-            <View
-              style={styles.modalHeader}
-            >
-              <Text
-                style={styles.modalTitle}
-              >
-                Create Card
-              </Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Card</Text>
 
-              <TouchableOpacity
-                onPress={() =>
-                  setModalVisible(false)
-                }
-              >
-                <Ionicons
-                  name="close"
-                  size={26}
-                  color="#06162D"
-                />
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={26} color="#06162D" />
               </TouchableOpacity>
             </View>
 
@@ -521,23 +309,11 @@ export default function MyCardsScreen({
               placeholderTextColor="#98A2B3"
             />
 
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={addCard}
-              disabled={creating}
-            >
+            <TouchableOpacity style={styles.createButton} onPress={addCard} disabled={creating}>
               {creating ? (
-                <ActivityIndicator
-                  color="#FFFFFF"
-                />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text
-                  style={
-                    styles.createButtonText
-                  }
-                >
-                  Create Card
-                </Text>
+                <Text style={styles.createButtonText}>Create Card</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -559,32 +335,21 @@ export default function MyCardsScreen({
   );
 }
 
-function Status({
-  active,
-  text,
-}) {
+function Status({ active, text }) {
   return (
     <View style={styles.status}>
-      <View
-        style={[
-          styles.statusDot,
-          !active &&
-            styles.statusDotInactive,
-        ]}
-      />
+      <View style={[styles.statusDot, !active && styles.statusDotInactive]} />
 
-      <Text style={styles.statusText}>
-        {text}
-      </Text>
+      <Text style={styles.statusText}>{text}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
 
   loading: {
     flex: 1,
@@ -592,53 +357,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F7FB',
 
-
     backgroundColor: '#F5F7FB',
-},
+  },
 
   header: {
+    minHeight: 68,
 
-      minHeight: 68,
+    paddingHorizontal: 18,
 
-      paddingHorizontal: 18,
+    backgroundColor: '#06162D',
 
-      backgroundColor: '#06162D',
+    flexDirection: 'row',
 
-      flexDirection: 'row',
+    alignItems: 'center',
 
-      alignItems: 'center',
+    justifyContent: 'space-between',
 
-      justifyContent: 'space-between',
+    gap: 10,
 
-      gap: 10,
+    borderBottomWidth: 1,
 
-      borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
 
-      borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
 
-      shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
 
-      shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
 
-      shadowOpacity: 0.12,
+    shadowRadius: 12,
 
-      shadowRadius: 12,
-
-      elevation: 5,
-
-    },
+    elevation: 5,
+  },
 
   headerTitle: {
+    fontSize: 18,
 
-      fontSize: 18,
+    fontWeight: '900',
 
-      fontWeight: '900',
+    color: '#FFFFFF',
 
-      color: '#FFFFFF',
-
-      letterSpacing: 0.1,
-
-    },
+    letterSpacing: 0.1,
+  },
 
   container: {
     padding: 16,
@@ -659,7 +419,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFFFFF',
 
-
     borderWidth: 1,
 
     borderColor: '#E6EAF0',
@@ -673,16 +432,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   primaryCard: {
     borderColor: '#F6B91A',
 
-
     backgroundColor: '#FFFCF3',
 
     borderWidth: 1.5,
-},
+  },
 
   cardTop: {
     flexDirection: 'row',
@@ -781,11 +539,25 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  approvalMessage: { color: '#B7791F', fontSize: 10, lineHeight: 16, marginTop: 10, fontWeight: '700' },
+  approvalMessage: {
+    color: '#B7791F',
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 10,
+    fontWeight: '700',
+  },
   rejectionBox: { backgroundColor: '#FEF2F2', borderRadius: 11, padding: 10, marginTop: 10 },
   rejectionLabel: { color: '#991B1B', fontSize: 9, fontWeight: '900' },
   rejectionText: { color: '#7F1D1D', fontSize: 10, lineHeight: 15, marginTop: 3 },
-  approvalButton: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: '#FFF4D6', paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
+  approvalButton: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    backgroundColor: '#FFF4D6',
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
   approvalButtonText: { color: '#06162D', fontSize: 9, fontWeight: '900' },
 
   actions: {
@@ -824,28 +596,26 @@ const styles = StyleSheet.create({
   },
 
   newCard: {
+    borderWidth: 1.5,
 
-      borderWidth: 1.5,
+    borderStyle: 'dashed',
 
-      borderStyle: 'dashed',
+    borderColor: '#F6B91A',
 
-      borderColor: '#F6B91A',
+    backgroundColor: '#FFFCF3',
 
-      backgroundColor: '#FFFCF3',
+    borderRadius: 20,
 
-      borderRadius: 20,
+    padding: 22,
 
-      padding: 22,
+    flexDirection: 'row',
 
-      flexDirection: 'row',
+    gap: 8,
 
-      gap: 8,
+    justifyContent: 'center',
 
-      justifyContent: 'center',
-
-      alignItems: 'center',
-
-    },
+    alignItems: 'center',
+  },
 
   newCardText: {
     color: '#06162D',
@@ -854,8 +624,7 @@ const styles = StyleSheet.create({
 
   overlay: {
     flex: 1,
-    backgroundColor:
-      'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'flex-end',
   },
 
@@ -865,7 +634,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 27,
     padding: 20,
     paddingBottom: 35,
-
 
     borderWidth: 1,
 
@@ -880,7 +648,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 2,
-},
+  },
 
   modalHeader: {
     flexDirection: 'row',

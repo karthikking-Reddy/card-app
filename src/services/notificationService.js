@@ -1,8 +1,6 @@
 import { supabase } from '../../lib/supabase';
 
-export async function getNotifications(
-  userId
-) {
+export async function getNotifications(userId) {
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
@@ -18,9 +16,7 @@ export async function getNotifications(
   return data || [];
 }
 
-export async function markNotificationRead(
-  notificationId
-) {
+export async function markNotificationRead(notificationId) {
   const { data, error } = await supabase
     .from('notifications')
     .update({
@@ -37,9 +33,7 @@ export async function markNotificationRead(
   return data;
 }
 
-export async function markAllNotificationsRead(
-  userId
-) {
+export async function markAllNotificationsRead(userId) {
   const { error } = await supabase
     .from('notifications')
     .update({

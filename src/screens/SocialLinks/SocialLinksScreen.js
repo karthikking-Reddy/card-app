@@ -15,10 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getCurrentSession } from '../../services/authService';
 import { getCard } from '../../services/cardService';
-import {
-  ensureDefaultLinks,
-  updateCardLink,
-} from '../../services/linkService';
+import { ensureDefaultLinks, updateCardLink } from '../../services/linkService';
 
 const TYPES = [
   ['whatsapp', 'WhatsApp', 'logo-whatsapp'],
@@ -149,9 +146,7 @@ export default function SocialLinksScreen({ navigation }) {
 
                 <Switch
                   value={Boolean(item.is_active)}
-                  onValueChange={(value) =>
-                    change(type, 'is_active', value)
-                  }
+                  onValueChange={(value) => change(type, 'is_active', value)}
                 />
               </View>
 
@@ -159,9 +154,7 @@ export default function SocialLinksScreen({ navigation }) {
                 value={item.value || ''}
                 onChangeText={(value) => change(type, 'value', value)}
                 placeholder={
-                  type === 'whatsapp' || type === 'phone'
-                    ? '+91 9876543210'
-                    : `Enter ${label} link`
+                  type === 'whatsapp' || type === 'phone' ? '+91 9876543210' : `Enter ${label} link`
                 }
                 autoCapitalize="none"
                 style={styles.input}
@@ -171,11 +164,7 @@ export default function SocialLinksScreen({ navigation }) {
           );
         })}
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={save}
-          disabled={saving}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
           {saving ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
@@ -189,42 +178,42 @@ export default function SocialLinksScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: {
-      flex: 1,
-      backgroundColor: '#F5F7FB',
-    },
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
 
     backgroundColor: '#F5F7FB',
-},
+  },
   header: {
-      minHeight: 68,
-      paddingHorizontal: 18,
-      backgroundColor: '#06162D',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(246,185,26,0.22)',
-      shadowColor: '#06162D',
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-      elevation: 5,
-    },
+    minHeight: 68,
+    paddingHorizontal: 18,
+    backgroundColor: '#06162D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(246,185,26,0.22)',
+    shadowColor: '#06162D',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   headerTitle: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: '#FFFFFF',
-      letterSpacing: 0.1,
-    },
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
+  },
   topSave: {
-      color: '#F6B91A',
-      fontWeight: '900',
-    },
+    color: '#F6B91A',
+    fontWeight: '900',
+  },
   container: {
     padding: 16,
     paddingBottom: 70,
@@ -247,7 +236,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 10,
     elevation: 2,
-},
+  },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -259,15 +248,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   icon: {
-      width: 42,
-      height: 42,
-      borderRadius: 13,
-      backgroundColor: '#FFF4D6',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: '#F6B91A',
-    },
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: '#FFF4D6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+  },
   label: {
     fontWeight: '800',
     color: '#06162D',
@@ -291,7 +280,7 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
     borderColor: '#F6B91A',
-},
+  },
   saveText: {
     color: '#FFFFFF',
     fontWeight: '800',

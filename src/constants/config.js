@@ -1,7 +1,6 @@
 export const PROFILE_BUCKET = 'profile-images';
 
-export const CARD_WEB_URL =
-  'https://card.ynscrm.online/card';
+export const CARD_WEB_URL = 'https://card.ynscrm.online/card';
 
 export const DEFAULT_CARD = {
   name: 'Karthik',

@@ -11,10 +11,7 @@ export function normalizeWebsite(value) {
     return '';
   }
 
-  if (
-    value.startsWith('http://') ||
-    value.startsWith('https://')
-  ) {
+  if (value.startsWith('http://') || value.startsWith('https://')) {
     return value;
   }
 
@@ -30,9 +27,7 @@ export function createVCard(card) {
     `TITLE:${escapeVCard(card.designation || '')}`,
     `TEL;TYPE=CELL:${escapeVCard(card.phone || '')}`,
     `EMAIL:${escapeVCard(card.email || '')}`,
-    `URL:${escapeVCard(
-      normalizeWebsite(card.website || '')
-    )}`,
+    `URL:${escapeVCard(normalizeWebsite(card.website || ''))}`,
     'END:VCARD',
   ].join('\r\n');
 }
