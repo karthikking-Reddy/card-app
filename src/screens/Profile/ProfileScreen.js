@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -44,8 +44,7 @@ export default function ProfileScreen({ navigation }) {
     [profile, setProfile] = useState(null),
     [card, setCard] = useState(null),
     [cards, setCards] = useState([]),
-    [leads, setLeads] = useState([]),
-    [events, setEvents] = useState([]),
+    [stats, setStats] = useState({ views: 0, clicks: 0, wa: 0, leads: 0 }),
     [unread, setUnread] = useState(0),
     [approvalVisible, setApprovalVisible] = useState(false);
   const load = useCallback(async (refresh = false) => {
@@ -72,16 +71,32 @@ export default function ProfileScreen({ navigation }) {
       setCards(cs);
       setCard(cs.find((x) => x.is_primary) || cs[0] || null);
       const ids = cs.map((x) => x.id);
-      const [lr, er] = await Promise.all([
-        supabase.from('connections').select('*').eq('owner_user_id', u.id),
-        ids.length
-          ? supabase.from('card_events').select('*').in('card_id', ids)
-          : Promise.resolve({ data: [] }),
+      const countEvents = (configure) => {
+        if (!ids.length) return Promise.resolve({ count: 0 });
+        return configure(
+          supabase
+            .from('card_events')
+            .select('id', { count: 'exact', head: true })
+            .in('card_id', ids)
+        );
+      };
+      const [leads, views, clicks, whatsapp] = await Promise.all([
+        supabase
+          .from('connections')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner_user_id', u.id),
+        countEvents((query) => query.eq('event_type', 'card_view')),
+        countEvents((query) => query.like('event_type', '%_click')),
+        countEvents((query) => query.ilike('event_type', '%whatsapp%')),
       ]);
-      if (lr.error) throw lr.error;
-      if (er.error) throw er.error;
-      setLeads(lr.data || []);
-      setEvents(er.data || []);
+      const statsError = leads.error || views.error || clicks.error || whatsapp.error;
+      if (statsError) throw statsError;
+      setStats({
+        views: views.count || 0,
+        clicks: clicks.count || 0,
+        wa: whatsapp.count || 0,
+        leads: leads.count || 0,
+      });
       try {
         const { count } = await supabase
           .from('notifications')
@@ -106,17 +121,6 @@ export default function ProfileScreen({ navigation }) {
   );
   const url = card?.card_slug ? `${PUBLIC}/${card.card_slug}` : null;
   const approvedUrl = card?.approval_status === 'approved' ? url : null;
-  const stats = useMemo(
-    () => ({
-      views: events.filter((x) => x.event_type === 'card_view').length,
-      clicks: events.filter(
-        (x) => String(x.event_type || '').endsWith('_click') || x.event_type === 'block_click'
-      ).length,
-      wa: events.filter((x) => String(x.event_type || '').includes('whatsapp')).length,
-      leads: leads.length,
-    }),
-    [events, leads]
-  );
   function openRoot(name, params) {
     const p = navigation.getParent?.();
     p ? p.navigate(name, params) : navigation.navigate(name, params);

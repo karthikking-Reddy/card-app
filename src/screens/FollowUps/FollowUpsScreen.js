@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -21,7 +21,8 @@ import { getCurrentSession } from '../../services/authService';
 import {
   completeFollowupTask,
   deleteFollowupTask,
-  getFollowupTasks,
+  getFollowupSummary,
+  getFollowupTasksPage,
   reopenFollowupTask,
 } from '../../services/followupTaskService';
 
@@ -31,26 +32,43 @@ export default function FollowUpsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   const [filter, setFilter] = useState('pending');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [summary, setSummary] = useState({ pending: 0, overdue: 0, total: 0 });
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(
+    async (nextPage = 0) => {
+      nextPage > 0 ? setLoadingMore(true) : setLoading(true);
 
-    try {
-      const session = await getCurrentSession();
+      try {
+        const session = await getCurrentSession();
 
-      if (!session?.user) {
-        return;
+        if (!session?.user) {
+          return;
+        }
+
+        const [result, totals] = await Promise.all([
+          getFollowupTasksPage({ userId: session.user.id, page: nextPage, status: filter }),
+          getFollowupSummary(session.user.id),
+        ]);
+        setTasks((current) =>
+          nextPage === 0
+            ? result.data
+            : [...new Map([...current, ...result.data].map((item) => [item.id, item])).values()]
+        );
+        setPage(nextPage);
+        setHasMore(result.hasMore);
+        setSummary(totals);
+      } catch (error) {
+        Alert.alert('Unable to load follow-ups', error.message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-
-      const data = await getFollowupTasks(session.user.id);
-
-      setTasks(data);
-    } catch (error) {
-      Alert.alert('Unable to load follow-ups', error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [filter]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -58,19 +76,7 @@ export default function FollowUpsScreen({ navigation }) {
     }, [load])
   );
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') {
-      return tasks;
-    }
-
-    return tasks.filter((task) => task.status === filter);
-  }, [tasks, filter]);
-
-  const pending = tasks.filter((task) => task.status === 'pending').length;
-
-  const overdue = tasks.filter(
-    (task) => task.status === 'pending' && task.due_at && new Date(task.due_at) < new Date()
-  ).length;
+  const filtered = tasks;
 
   async function toggle(task) {
     try {
@@ -131,11 +137,11 @@ export default function FollowUpsScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.summaryRow}>
-          <Summary value={pending} label="Pending" />
+          <Summary value={summary.pending} label="Pending" />
 
-          <Summary value={overdue} label="Overdue" />
+          <Summary value={summary.overdue} label="Overdue" />
 
-          <Summary value={tasks.length} label="Total" />
+          <Summary value={summary.total} label="Total" />
         </View>
 
         <View style={styles.filters}>
@@ -217,6 +223,19 @@ export default function FollowUpsScreen({ navigation }) {
             );
           })
         )}
+        {hasMore ? (
+          <TouchableOpacity
+            style={styles.loadMore}
+            disabled={loadingMore}
+            onPress={() => load(page + 1)}
+          >
+            {loadingMore ? (
+              <ActivityIndicator color="#06162D" />
+            ) : (
+              <Text style={styles.loadMoreText}>Load More</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -470,4 +489,6 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontWeight: '800',
   },
+  loadMore: { minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  loadMoreText: { color: '#06162D', fontSize: 11, fontWeight: '900' },
 });

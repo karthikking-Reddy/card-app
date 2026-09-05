@@ -27,7 +27,7 @@ export async function getAdvancedInsightsData(userId) {
       ascending: false,
     }),
 
-    getAllConnections(),
+    getAllConnections(userId),
 
     supabase.from('card_blocks').select('id, card_id, title, block_type').in('card_id', cardIds),
 

@@ -19,7 +19,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getCurrentSession } from '../../services/authService';
 
 import {
-  getNotifications,
+  getNotificationsPage,
+  getUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../services/notificationService';
@@ -30,9 +31,13 @@ export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
 
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [unread, setUnread] = useState(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (nextPage = 0) => {
+    nextPage > 0 ? setLoadingMore(true) : setLoading(true);
 
     try {
       const session = await getCurrentSession();
@@ -43,13 +48,23 @@ export default function NotificationsScreen({ navigation }) {
 
       setUser(session.user);
 
-      const data = await getNotifications(session.user.id);
-
-      setNotifications(data);
+      const [result, unreadCount] = await Promise.all([
+        getNotificationsPage({ userId: session.user.id, page: nextPage }),
+        getUnreadNotificationCount(session.user.id),
+      ]);
+      setNotifications((current) =>
+        nextPage === 0
+          ? result.data
+          : [...new Map([...current, ...result.data].map((item) => [item.id, item])).values()]
+      );
+      setPage(nextPage);
+      setHasMore(result.hasMore);
+      setUnread(unreadCount);
     } catch (error) {
       Alert.alert('Unable to load notifications', error.message);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
 
@@ -63,6 +78,10 @@ export default function NotificationsScreen({ navigation }) {
     try {
       if (!notification.is_read) {
         await markNotificationRead(notification.id);
+        setUnread((value) => Math.max(0, value - 1));
+        setNotifications((items) =>
+          items.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item))
+        );
       }
 
       if (notification.notification_type === 'new_lead' && notification.reference_id) {
@@ -72,8 +91,6 @@ export default function NotificationsScreen({ navigation }) {
 
         return;
       }
-
-      await load();
     } catch (error) {
       Alert.alert('Error', error.message);
     }
@@ -82,14 +99,12 @@ export default function NotificationsScreen({ navigation }) {
   async function markAll() {
     try {
       await markAllNotificationsRead(user.id);
-
-      await load();
+      setUnread(0);
+      setNotifications((items) => items.map((item) => ({ ...item, is_read: true })));
     } catch (error) {
       Alert.alert('Error', error.message);
     }
   }
-
-  const unread = notifications.filter((item) => !item.is_read).length;
 
   if (loading) {
     return (
@@ -162,6 +177,19 @@ export default function NotificationsScreen({ navigation }) {
             </TouchableOpacity>
           ))
         )}
+        {hasMore ? (
+          <TouchableOpacity
+            style={styles.loadMore}
+            disabled={loadingMore}
+            onPress={() => load(page + 1)}
+          >
+            {loadingMore ? (
+              <ActivityIndicator color="#06162D" />
+            ) : (
+              <Text style={styles.loadMoreText}>Load More</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -352,4 +380,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 5,
   },
+  loadMore: { minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  loadMoreText: { color: '#06162D', fontSize: 11, fontWeight: '900' },
 });

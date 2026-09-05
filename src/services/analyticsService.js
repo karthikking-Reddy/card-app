@@ -31,10 +31,25 @@ export async function getCardEvents(cardId) {
   return data || [];
 }
 
-export async function getAllCardEvents() {
+export async function getAllCardEvents(userId) {
+  let ownerId = userId;
+  if (!ownerId) {
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    ownerId = data.user?.id;
+  }
+  if (!ownerId) throw new Error('A signed-in user is required.');
+  const { data: cards, error: cardsError } = await supabase
+    .from('digital_cards')
+    .select('id')
+    .eq('user_id', ownerId);
+  if (cardsError) throw cardsError;
+  const cardIds = (cards || []).map((card) => card.id);
+  if (!cardIds.length) return [];
   const { data, error } = await supabase
     .from('card_events')
     .select('*')
+    .in('card_id', cardIds)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -122,7 +137,7 @@ export async function getCardAnalytics(cardId) {
   return calculateAnalytics(events);
 }
 
-export async function getAccountAnalytics() {
-  const events = await getAllCardEvents();
+export async function getAccountAnalytics(userId) {
+  const events = await getAllCardEvents(userId);
   return calculateAnalytics(events);
 }

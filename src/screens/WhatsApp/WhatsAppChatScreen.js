@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
-  getWhatsAppMessages,
+  getWhatsAppMessagesPage,
   markConversationRead,
   updateConversationStatus,
 } from '../../services/whatsappService';
@@ -44,6 +44,9 @@ export default function WhatsAppChatScreen({ navigation, route }) {
   const [crmLeads, setCrmLeads] = useState([]);
 
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [crmLoading, setCrmLoading] = useState(false);
 
@@ -51,36 +54,48 @@ export default function WhatsAppChatScreen({ navigation, route }) {
 
   const [search, setSearch] = useState('');
 
-  const load = useCallback(async () => {
-    if (!conversation?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const messageData = await getWhatsAppMessages(conversation.id);
-
-      setMessages(messageData);
-
-      if (conversation.connection_id) {
-        const lead = await getLinkedCrmLead(conversation.connection_id);
-
-        setLinkedLead(lead);
-      } else {
-        setLinkedLead(null);
+  const load = useCallback(
+    async (nextPage = 0) => {
+      if (!conversation?.id) {
+        setLoading(false);
+        return;
       }
 
-      if (conversation.unread_count > 0) {
-        await markConversationRead(conversation.id);
+      nextPage > 0 ? setLoadingMore(true) : setLoading(true);
+
+      try {
+        const result = await getWhatsAppMessagesPage({
+          conversationId: conversation.id,
+          page: nextPage,
+        });
+        setMessages((current) =>
+          nextPage === 0
+            ? result.data
+            : [...new Map([...result.data, ...current].map((item) => [item.id, item])).values()]
+        );
+        setPage(nextPage);
+        setHasMore(result.hasMore);
+
+        if (conversation.connection_id) {
+          const lead = await getLinkedCrmLead(conversation.connection_id);
+
+          setLinkedLead(lead);
+        } else {
+          setLinkedLead(null);
+        }
+
+        if (conversation.unread_count > 0) {
+          await markConversationRead(conversation.id);
+        }
+      } catch (error) {
+        Alert.alert('Unable to load chat', error.message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    } catch (error) {
-      Alert.alert('Unable to load chat', error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [conversation?.id, conversation?.connection_id]);
+    },
+    [conversation?.id, conversation?.connection_id]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -328,6 +343,20 @@ export default function WhatsAppChatScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
         </View>
+
+        {hasMore ? (
+          <TouchableOpacity
+            style={styles.loadMore}
+            disabled={loadingMore}
+            onPress={() => load(page + 1)}
+          >
+            {loadingMore ? (
+              <ActivityIndicator color="#06162D" />
+            ) : (
+              <Text style={styles.loadMoreText}>Load Earlier Messages</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
 
         {messages.length === 0 ? (
           <View style={styles.empty}>
@@ -597,6 +626,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     flexGrow: 1,
   },
+  loadMore: { minHeight: 42, alignItems: 'center', justifyContent: 'center' },
+  loadMoreText: { color: '#06162D', fontSize: 10, fontWeight: '900' },
 
   crmCard: {
     backgroundColor: '#FFFFFF',

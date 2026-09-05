@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
+import { getConnectionSummary, getConnectionsPage } from '../../services/connectionService';
 
 const C = {
   navy: '#06162D',
@@ -39,6 +40,7 @@ const C = {
 };
 
 export default function ConnectionsScreen({ navigation }) {
+  const requestIdRef = useRef(0);
   const [loading, setLoading] = useState(true),
     [refreshing, setRefreshing] = useState(false),
     [user, setUser] = useState(null),
@@ -46,78 +48,86 @@ export default function ConnectionsScreen({ navigation }) {
     [stages, setStages] = useState([]),
     [cards, setCards] = useState([]),
     [search, setSearch] = useState(''),
+    [debouncedSearch, setDebouncedSearch] = useState(''),
     [filter, setFilter] = useState('all'),
+    [page, setPage] = useState(0),
+    [hasMore, setHasMore] = useState(false),
+    [loadingMore, setLoadingMore] = useState(false),
+    [summary, setSummary] = useState({ total: 0, open: 0, won: 0, lost: 0 }),
     [modal, setModal] = useState(false),
     [saving, setSaving] = useState(false),
     [form, setForm] = useState({ name: '', phone: '', email: '', company: '', requirement: '' });
-  const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const u = session?.user;
-      if (!u) return;
-      setUser(u);
-      const [lr, sr, cr] = await Promise.all([
-        supabase
-          .from('connections')
-          .select('*')
-          .eq('owner_user_id', u.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('lead_stages')
-          .select('*')
-          .eq('user_id', u.id)
-          .order('sort_order', { ascending: true }),
-        supabase
-          .from('digital_cards')
-          .select('id,name,is_primary')
-          .eq('user_id', u.id)
-          .order('is_primary', { ascending: false }),
-      ]);
-      if (lr.error) throw lr.error;
-      if (sr.error) throw sr.error;
-      if (cr.error) throw cr.error;
-      setLeads(lr.data || []);
-      setStages(sr.data || []);
-      setCards(cr.data || []);
-    } catch (e) {
-      Alert.alert('Unable to load leads', e?.message || 'Please try again.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const load = useCallback(
+    async (refresh = false, nextPage = 0) => {
+      const requestId = ++requestIdRef.current;
+      if (nextPage > 0) setLoadingMore(true);
+      else refresh ? setRefreshing(true) : setLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const u = session?.user;
+        if (!u) return;
+        setUser(u);
+        const [sr, cr] = await Promise.all([
+          supabase
+            .from('lead_stages')
+            .select('*')
+            .eq('user_id', u.id)
+            .order('sort_order', { ascending: true }),
+          supabase
+            .from('digital_cards')
+            .select('id,name,is_primary')
+            .eq('user_id', u.id)
+            .order('is_primary', { ascending: false }),
+        ]);
+        if (sr.error) throw sr.error;
+        if (cr.error) throw cr.error;
+        const stageRows = sr.data || [];
+        const wonStages = stageRows.filter((x) => x.is_won).map((x) => x.stage_key);
+        const lostStages = stageRows.filter((x) => x.is_lost).map((x) => x.stage_key);
+        const [pageResult, totals] = await Promise.all([
+          getConnectionsPage({
+            userId: u.id,
+            page: nextPage,
+            search: debouncedSearch,
+            stage: filter,
+          }),
+          getConnectionSummary(u.id, wonStages, lostStages),
+        ]);
+        if (requestId !== requestIdRef.current) return;
+        setLeads((current) =>
+          nextPage === 0
+            ? pageResult.data
+            : [...new Map([...current, ...pageResult.data].map((item) => [item.id, item])).values()]
+        );
+        setPage(nextPage);
+        setHasMore(pageResult.hasMore);
+        setSummary(totals);
+        setStages(stageRows);
+        setCards(cr.data || []);
+      } catch (e) {
+        Alert.alert('Unable to load leads', e?.message || 'Please try again.');
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [debouncedSearch, filter]
+  );
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load])
   );
-  const wonKeys = useMemo(
-    () => new Set(stages.filter((x) => x.is_won).map((x) => x.stage_key)),
-    [stages]
-  );
-  const lostKeys = useMemo(
-    () => new Set(stages.filter((x) => x.is_lost).map((x) => x.stage_key)),
-    [stages]
-  );
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return leads.filter((l) => {
-      const mq =
-        !q ||
-        [l.name, l.phone, l.email, l.company, l.requirement].some((v) =>
-          String(v || '')
-            .toLowerCase()
-            .includes(q)
-        );
-      return mq && (filter === 'all' || l.stage === filter);
-    });
-  }, [leads, search, filter]);
-  const open = leads.filter((l) => !wonKeys.has(l.stage) && !lostKeys.has(l.stage)).length,
-    won = leads.filter((l) => wonKeys.has(l.stage)).length,
-    lost = leads.filter((l) => lostKeys.has(l.stage)).length;
+  const filtered = leads;
   async function addLead() {
     if (!form.name.trim()) return Alert.alert('Name required', 'Enter the lead name.');
     const card = cards.find((x) => x.is_primary) || cards[0];
@@ -200,10 +210,15 @@ export default function ConnectionsScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={s.summaryRow}
             >
-              <Summary icon="people-outline" label="Total Leads" value={leads.length} tone="blue" />
-              <Summary icon="briefcase-outline" label="Open" value={open} tone="green" />
-              <Summary icon="trophy-outline" label="Won" value={won} tone="purple" />
-              <Summary icon="person-remove-outline" label="Lost" value={lost} tone="red" />
+              <Summary
+                icon="people-outline"
+                label="Total Leads"
+                value={summary.total}
+                tone="blue"
+              />
+              <Summary icon="briefcase-outline" label="Open" value={summary.open} tone="green" />
+              <Summary icon="trophy-outline" label="Won" value={summary.won} tone="purple" />
+              <Summary icon="person-remove-outline" label="Lost" value={summary.lost} tone="red" />
             </ScrollView>
             <ScrollView
               horizontal
@@ -248,6 +263,19 @@ export default function ConnectionsScreen({ navigation }) {
                 />
               ))
             )}
+            {hasMore ? (
+              <TouchableOpacity
+                style={s.loadMore}
+                disabled={loadingMore}
+                onPress={() => load(false, page + 1)}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator color={C.navy} />
+                ) : (
+                  <Text style={s.loadMoreText}>Load More</Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={s.addLead} onPress={() => setModal(true)}>
               <Ionicons name="add" size={23} color="#FFF" />
               <Text style={s.addLeadText}>Add New Lead</Text>
@@ -526,6 +554,8 @@ const s = StyleSheet.create({
     marginTop: 14,
   },
   addLeadText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
+  loadMore: { minHeight: 46, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  loadMoreText: { color: C.navy, fontSize: 11, fontWeight: '900' },
   empty: { backgroundColor: '#FFF', borderRadius: 20, padding: 32, alignItems: 'center' },
   emptyTitle: { color: C.text, fontSize: 15, fontWeight: '900', marginTop: 9 },
   emptyText: { color: C.text2, fontSize: 9, marginTop: 4 },

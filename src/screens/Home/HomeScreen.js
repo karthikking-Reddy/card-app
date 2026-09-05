@@ -78,6 +78,8 @@ export default function HomeScreen({ navigation }) {
 
   const [connections, setConnections] = useState([]);
 
+  const [totalLeads, setTotalLeads] = useState(0);
+
   const [notificationCount, setNotificationCount] = useState(0);
 
   const [qrVisible, setQrVisible] = useState(false);
@@ -135,18 +137,29 @@ export default function HomeScreen({ navigation }) {
       let leadData = [];
 
       if (cardIds.length > 0) {
-        const [eventsResult, leadsResult] = await Promise.all([
-          supabase.from('card_events').select('*').in('card_id', cardIds).order('created_at', {
-            ascending: false,
-          }),
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const [eventsResult, leadsResult, leadCountResult] = await Promise.all([
+          supabase
+            .from('card_events')
+            .select('id,event_type,created_at')
+            .in('card_id', cardIds)
+            .gte('created_at', monthStart.toISOString())
+            .order('created_at', { ascending: false }),
 
           supabase
             .from('connections')
-            .select('*')
+            .select('id,created_at')
             .eq('owner_user_id', currentUser.id)
+            .gte('created_at', monthStart.toISOString())
             .order('created_at', {
               ascending: false,
             }),
+          supabase
+            .from('connections')
+            .select('id', { count: 'exact', head: true })
+            .eq('owner_user_id', currentUser.id),
         ]);
 
         if (eventsResult.error) {
@@ -156,10 +169,12 @@ export default function HomeScreen({ navigation }) {
         if (leadsResult.error) {
           throw leadsResult.error;
         }
+        if (leadCountResult.error) throw leadCountResult.error;
 
         eventData = eventsResult.data || [];
 
         leadData = leadsResult.data || [];
+        setTotalLeads(leadCountResult.count || 0);
       }
 
       setEvents(eventData);
@@ -613,7 +628,7 @@ export default function HomeScreen({ navigation }) {
               <View>
                 <Text style={styles.accountSummaryLabel}>TOTAL LEADS</Text>
 
-                <Text style={styles.accountSummaryValue}>{connections.length}</Text>
+                <Text style={styles.accountSummaryValue}>{totalLeads}</Text>
               </View>
 
               <TouchableOpacity

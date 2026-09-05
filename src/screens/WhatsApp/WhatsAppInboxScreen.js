@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -18,9 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
 
-import { getWhatsAppConversations } from '../../services/whatsappService';
+import { getCurrentSession } from '../../services/authService';
+import {
+  getWhatsAppConversationsPage,
+  getWhatsAppInboxSummary,
+} from '../../services/whatsappService';
 
 export default function WhatsAppInboxScreen({ navigation }) {
+  const requestIdRef = useRef(0);
   const [conversations, setConversations] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -30,25 +35,61 @@ export default function WhatsAppInboxScreen({ navigation }) {
   const [search, setSearch] = useState('');
 
   const [filter, setFilter] = useState('all');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [summary, setSummary] = useState({ total: 0, open: 0, unread: 0 });
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-    try {
-      const data = await getWhatsAppConversations();
+  const load = useCallback(
+    async (refresh = false, nextPage = 0) => {
+      const requestId = ++requestIdRef.current;
+      if (nextPage > 0) {
+        setLoadingMore(true);
+      } else if (refresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-      setConversations(data);
-    } catch (error) {
-      Alert.alert('Unable to load WhatsApp inbox', 'Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+      try {
+        const session = await getCurrentSession();
+        if (!session?.user) return;
+        const [result, totals] = await Promise.all([
+          getWhatsAppConversationsPage({
+            userId: session.user.id,
+            page: nextPage,
+            status: filter,
+            search: debouncedSearch,
+          }),
+          getWhatsAppInboxSummary(session.user.id),
+        ]);
+        if (requestId !== requestIdRef.current) return;
+        setConversations((current) =>
+          nextPage === 0
+            ? result.data
+            : [...new Map([...current, ...result.data].map((item) => [item.id, item])).values()]
+        );
+        setPage(nextPage);
+        setHasMore(result.hasMore);
+        setSummary(totals);
+      } catch (error) {
+        Alert.alert('Unable to load WhatsApp inbox', 'Please check your connection and try again.');
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [debouncedSearch, filter]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -56,38 +97,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
     }, [load])
   );
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-
-    return conversations.filter((item) => {
-      if (filter === 'unread' && !item.unread_count) {
-        return false;
-      }
-
-      if (filter === 'open' && item.status !== 'open') {
-        return false;
-      }
-
-      if (filter === 'closed' && item.status !== 'closed') {
-        return false;
-      }
-
-      if (!term) {
-        return true;
-      }
-
-      return (
-        String(item.contact_name || '')
-          .toLowerCase()
-          .includes(term) ||
-        String(item.phone || '')
-          .toLowerCase()
-          .includes(term)
-      );
-    });
-  }, [conversations, search, filter]);
-
-  const unread = conversations.reduce((sum, item) => sum + Number(item.unread_count || 0), 0);
+  const filtered = conversations;
 
   if (loading) {
     return (
@@ -120,14 +130,11 @@ export default function WhatsAppInboxScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
       >
         <View style={styles.summaryRow}>
-          <Summary value={conversations.length} label="Chats" />
+          <Summary value={summary.total} label="Chats" />
 
-          <Summary
-            value={conversations.filter((item) => item.status === 'open').length}
-            label="Open"
-          />
+          <Summary value={summary.open} label="Open" />
 
-          <Summary value={unread} label="Unread" />
+          <Summary value={summary.unread} label="Unread" />
         </View>
 
         <View style={styles.searchBox}>
@@ -227,6 +234,19 @@ export default function WhatsAppInboxScreen({ navigation }) {
             </TouchableOpacity>
           ))
         )}
+        {hasMore ? (
+          <TouchableOpacity
+            style={styles.loadMore}
+            disabled={loadingMore}
+            onPress={() => load(false, page + 1)}
+          >
+            {loadingMore ? (
+              <ActivityIndicator color="#06162D" />
+            ) : (
+              <Text style={styles.loadMoreText}>Load More</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -597,4 +617,6 @@ const styles = StyleSheet.create({
     marginTop: 7,
     maxWidth: 270,
   },
+  loadMore: { minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  loadMoreText: { color: '#06162D', fontSize: 11, fontWeight: '900' },
 });
