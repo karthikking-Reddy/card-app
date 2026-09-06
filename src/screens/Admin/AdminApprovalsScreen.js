@@ -34,6 +34,8 @@ export default function AdminApprovalsScreen({ navigation }) {
     [summary, setSummary] = useState({ approved: 0, rejected: 0 });
   const load = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
+    setDenied(true);
+    setItems([]);
     try {
       const profile = await getCurrentProfile();
       if (!isAdminUser(profile)) {

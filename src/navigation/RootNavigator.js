@@ -1,3 +1,10 @@
+import {
+  SuperAdminDashboard,
+  AdminManagementScreen,
+  UserManagementScreen,
+  AdminDetailScreen,
+  UserDetailScreen,
+} from '../screens/Admin/ManagementScreens';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import AuthScreen from '../screens/AuthScreen';
@@ -57,6 +64,11 @@ export default function RootNavigator({ session }) {
           ========================== */}
 
           <Stack.Screen name="MainTabs" component={TabNavigator} />
+          <Stack.Screen name="SuperAdminDashboard" component={SuperAdminDashboard} />
+          <Stack.Screen name="AdminManagement" component={AdminManagementScreen} />
+          <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+          <Stack.Screen name="AdminDetail" component={AdminDetailScreen} />
+          <Stack.Screen name="UserDetail" component={UserDetailScreen} />
 
           {/* =========================
               DIGITAL CARD

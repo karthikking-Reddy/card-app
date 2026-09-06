@@ -339,6 +339,22 @@ export default function ProfileScreen({ navigation }) {
             </MenuGroup>
             {isAdminUser(profile) ? (
               <MenuGroup title="ADMINISTRATION">
+                {profile?.role === 'super_admin' && (
+                  <Menu
+                    icon="grid-outline"
+                    color={C.gold}
+                    title="Super Admin Dashboard"
+                    sub="Manage administrators and user assignments"
+                    onPress={() => openRoot('SuperAdminDashboard')}
+                  />
+                )}
+                <Menu
+                  icon="people-outline"
+                  color={C.gold}
+                  title={profile?.role === 'super_admin' ? 'User Management' : 'Assigned Users'}
+                  sub="View accounts and card approval information"
+                  onPress={() => openRoot('UserManagement')}
+                />
                 <Menu
                   icon="shield-checkmark-outline"
                   color={C.gold}

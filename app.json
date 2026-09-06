@@ -1,41 +1,34 @@
-﻿{
+{
   "expo": {
     "name": "YNS Card",
     "slug": "card-app",
+    "scheme": "online.ynscrm.card",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "package": "online.ynscrm.card",
       "versionCode": 1,
-
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-
       "edgeToEdgeEnabled": true
     },
-
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
-    "plugins": ["expo-font"],
-
+    "plugins": ["expo-font", "expo-web-browser"],
     "extra": {
       "eas": {
         "projectId": "6c471a8e-143f-4dbc-8a48-e88dba0a8d89"

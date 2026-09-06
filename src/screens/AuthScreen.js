@@ -21,6 +21,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 
 import { supabase } from '../../lib/supabase';
+import AppButton from '../components/ui/AppButton';
+import { signInWithGoogle } from '../services/googleAuthService';
 
 const COLORS = {
   navy: '#071A33',
@@ -199,20 +201,16 @@ export default function AuthScreen() {
     setShowConfirmPassword(false);
   }
 
-  function socialLogin(provider) {
-    if (provider === 'google') {
-      Alert.alert(
-        'Google Sign In',
-        'Google authentication is not configured yet. We can connect it after the main UI redesign is completed.'
-      );
-
-      return;
+  async function socialLogin() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      Alert.alert('Unable to sign in', error.message);
+    } finally {
+      setLoading(false);
     }
-
-    Alert.alert(
-      'Meta Sign In',
-      'Meta authentication will be enabled after your Meta Developer account verification is completed.'
-    );
   }
 
   return (
@@ -410,27 +408,13 @@ export default function AuthScreen() {
                     <View style={styles.orLine} />
                   </View>
 
-                  <View style={styles.socialRow}>
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      style={styles.socialButton}
-                      onPress={() => socialLogin('google')}
-                    >
-                      <Text style={styles.googleG}>G</Text>
-
-                      <Text style={styles.socialButtonText}>Google</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      style={styles.socialButton}
-                      onPress={() => socialLogin('meta')}
-                    >
-                      <Ionicons name="logo-facebook" size={23} color={COLORS.blue} />
-
-                      <Text style={styles.socialButtonText}>Meta</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <AppButton
+                    title="Continue with Google"
+                    icon="logo-google"
+                    variant="secondary"
+                    loading={loading}
+                    onPress={socialLogin}
+                  />
 
                   <TouchableOpacity onPress={changeMode} style={styles.createAccountRow}>
                     <Text style={styles.createAccountMuted}>

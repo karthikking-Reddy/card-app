@@ -1,56 +1,49 @@
 import { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+import * as Linking from 'expo-linking';
 import { getCurrentSession, onAuthStateChange } from '../services/authService';
+import { getCurrentProfile } from '../services/profileService';
+import { completeGoogleSignIn } from '../services/googleAuthService';
 
 export function useAuth() {
   const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let mounted = true;
-
-    async function loadSession() {
-      try {
-        const currentSession = await getCurrentSession();
-
-        if (mounted) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-        }
-      } catch (error) {
-        console.error('useAuth load error:', error);
-
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadSession();
-
-    const subscription = onAuthStateChange((_event, currentSession) => {
-      if (mounted) {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setLoading(false);
-      }
+    let revision = 0;
+    const apply = (value) => {
+      if (!mounted) return;
+      setSession(value);
+      setLoading(false);
+    };
+    const subscription = onAuthStateChange((_event, value) => {
+      revision += 1;
+      apply(value);
     });
-
+    const initialRevision = revision;
+    getCurrentSession().then((value) => {
+      if (revision === initialRevision) apply(value);
+    });
+    // Warm callbacks belong to openAuthSessionAsync. Only recover a cold-start URL here.
+    Linking.getInitialURL()
+      .then(completeGoogleSignIn)
+      .catch(() => {
+        if (mounted) Alert.alert('Google sign-in', 'Please start Google sign-in again.');
+      });
     return () => {
       mounted = false;
-      subscription?.unsubscribe?.();
+      subscription.unsubscribe();
     };
   }, []);
-
-  return {
-    session,
-    user,
-    loading,
-    isAuthenticated: !!session,
-  };
+  useEffect(() => {
+    let active = true;
+    if (session?.user?.id)
+      getCurrentProfile().catch((error) => {
+        if (active) Alert.alert('Account profile unavailable', error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [session?.user?.id]);
+  return { session, user: session?.user ?? null, loading, isAuthenticated: !!session };
 }

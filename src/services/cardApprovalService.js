@@ -1,4 +1,9 @@
 import { supabase } from '../../lib/supabase';
+import { getCurrentProfile, isAdminUser } from './profileService';
+
+async function requireAdmin() {
+  if (!isAdminUser(await getCurrentProfile())) throw new Error('Administrator access required.');
+}
 
 function approvalError(message) {
   return new Error(message);
@@ -25,12 +30,14 @@ export async function requestCardApproval(cardId) {
 }
 
 export async function getPendingCardApprovals() {
+  await requireAdmin();
   const { data, error } = await supabase.rpc('get_pending_card_approvals');
   if (error) throw approvalError('Unable to load pending card approvals.');
   return data || [];
 }
 
 export async function approveCard(cardId) {
+  await requireAdmin();
   const { data, error } = await supabase.rpc('approve_card', {
     p_card_id: cardId,
   });
@@ -40,6 +47,7 @@ export async function approveCard(cardId) {
 }
 
 export async function rejectCard(cardId, reason) {
+  await requireAdmin();
   const cleanReason = String(reason || '').trim();
   if (!cleanReason) throw approvalError('A rejection reason is required.');
 

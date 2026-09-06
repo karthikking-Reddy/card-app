@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Image,
@@ -16,30 +17,41 @@ import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
 
 export default function AdminCardPreviewScreen({ navigation, route }) {
   const cardId = route.params?.cardId;
-  const [card, setCard] = useState(route.params?.card || null);
+  const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
 
-  useEffect(() => {
-    load();
-  }, [cardId]);
-  async function load() {
-    try {
-      const profile = await getCurrentProfile();
-      if (!isAdminUser(profile)) {
-        setDenied(true);
-        return;
-      }
-      const { data, error } = await supabase
-        .from('digital_cards')
-        .select('*')
-        .eq('id', cardId)
-        .single();
-      if (!error && data) setCard(data);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      setDenied(true);
+      setCard(null);
+      (async () => {
+        try {
+          const profile = await getCurrentProfile();
+          if (!isAdminUser(profile)) return;
+          const { data, error } = await supabase
+            .from('digital_cards')
+            .select('*')
+            .eq('id', cardId)
+            .single();
+          if (error || !data) return;
+          if (active) {
+            setCard(data);
+            setDenied(false);
+          }
+        } catch {
+          /* Fail closed if authorization or fetch fails. */
+        } finally {
+          if (active) setLoading(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [cardId])
+  );
 
   if (loading)
     return (
