@@ -44,6 +44,8 @@ import WhatsAppTemplatesScreen from '../screens/WhatsApp/WhatsAppTemplatesScreen
 import AdminApprovalsScreen from '../screens/Admin/AdminApprovalsScreen';
 
 import AdminCardPreviewScreen from '../screens/Admin/AdminCardPreviewScreen';
+import CardPreviewScreen from '../screens/Cards/CardPreviewScreen';
+import QRCentreScreen from '../screens/Cards/QRCentreScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -88,6 +90,8 @@ export default function RootNavigator({ session, authExiting }) {
           <Stack.Screen name="MyCards" component={MyCardsScreen} />
 
           <Stack.Screen name="CardSettings" component={CardSettingsScreen} />
+          <Stack.Screen name="CardPreview" component={CardPreviewScreen} />
+          <Stack.Screen name="QRCentre" component={QRCentreScreen} />
 
           <Stack.Screen name="SocialLinks" component={SocialLinksScreen} />
 

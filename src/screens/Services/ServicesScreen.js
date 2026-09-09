@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { getCurrentSession } from '../../services/authService';
-import { getCard } from '../../services/cardService';
+import { getCard, getCardById } from '../../services/cardService';
 import {
   createService,
   deleteService,
@@ -21,7 +21,7 @@ import {
   updateService,
 } from '../../services/serviceService';
 
-export default function ServicesScreen({ navigation }) {
+export default function ServicesScreen({ navigation, route }) {
   const [card, setCard] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +37,9 @@ export default function ServicesScreen({ navigation }) {
   async function load() {
     try {
       const session = await getCurrentSession();
-      const currentCard = await getCard(session.user.id);
+      const currentCard = route.params?.cardId
+        ? await getCardById(session.user.id, route.params.cardId)
+        : await getCard(session.user.id);
 
       setCard(currentCard);
 

@@ -29,6 +29,7 @@ import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge, { getApprovalStatusCopy } from '../../components/ApprovalStatusBadge';
 import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { colors } from '../../theme';
+import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
 const COLORS = {
   navy: colors.navy,
@@ -61,8 +62,6 @@ const COLORS = {
   orange: '#EA7B00',
   orangeSoft: '#FFF7ED',
 };
-
-const PUBLIC_CARD_BASE = 'https://card.ynscrm.online/card';
 
 export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -228,7 +227,8 @@ export default function HomeScreen({ navigation }) {
     }, [loadDashboard])
   );
 
-  const publicUrl = card?.card_slug ? `${PUBLIC_CARD_BASE}/${card.card_slug}` : null;
+  const publicAvailability = getCardPublicAvailability(card);
+  const publicUrl = publicAvailability.available ? getPublicCardUrl(card) : null;
 
   const approvalCopy = getApprovalStatusCopy(card?.approval_status);
 
@@ -280,15 +280,22 @@ export default function HomeScreen({ navigation }) {
   }
 
   async function shareCard() {
-    if (!publicUrl) {
+    if (!card?.card_slug) {
       Alert.alert('Card unavailable', 'Create a digital card first.');
 
       return;
     }
 
-    if (card?.approval_status !== 'approved') {
+    if (publicAvailability.code === 'approval') {
       setQrVisible(false);
       setApprovalVisible(true);
+      return;
+    }
+    if (!publicAvailability.available) {
+      Alert.alert('Public sharing unavailable', publicAvailability.message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Card Settings', onPress: () => openRoot('CardSettings', { cardId: card.id }) },
+      ]);
       return;
     }
 
@@ -306,14 +313,21 @@ export default function HomeScreen({ navigation }) {
   }
 
   function showQr() {
-    if (!publicUrl) {
+    if (!card?.card_slug) {
       Alert.alert('Card unavailable', 'Create a digital card first.');
 
       return;
     }
 
-    if (card?.approval_status !== 'approved') {
+    if (publicAvailability.code === 'approval') {
       setApprovalVisible(true);
+      return;
+    }
+    if (!publicAvailability.available) {
+      Alert.alert('QR unavailable', publicAvailability.message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Card Settings', onPress: () => openRoot('CardSettings', { cardId: card.id }) },
+      ]);
       return;
     }
 

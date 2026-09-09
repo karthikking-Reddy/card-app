@@ -21,6 +21,7 @@ import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
 import { getCurrentProfile, isAdminUser } from '../../services/profileService';
 import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { colors, fontFamilies } from '../../theme';
+import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
 const C = {
   navy: colors.navy,
@@ -37,7 +38,6 @@ const C = {
   red: colors.danger,
   redSoft: colors.dangerSoft,
 };
-const PUBLIC = 'https://card.ynscrm.online/card';
 export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
@@ -123,11 +123,25 @@ export default function ProfileScreen({ navigation }) {
       load();
     }, [load])
   );
-  const url = card?.card_slug ? `${PUBLIC}/${card.card_slug}` : null;
-  const approvedUrl = card?.approval_status === 'approved' ? url : null;
+  const publicAvailability = getCardPublicAvailability(card);
+  const approvedUrl = publicAvailability.available ? getPublicCardUrl(card) : null;
   function openRoot(name, params) {
     const p = navigation.getParent?.();
     p ? p.navigate(name, params) : navigation.navigate(name, params);
+  }
+  function openPublicCard() {
+    if (approvedUrl) {
+      Linking.openURL(approvedUrl);
+      return;
+    }
+    if (publicAvailability.code === 'approval') {
+      setApprovalVisible(true);
+      return;
+    }
+    Alert.alert('Public card unavailable', publicAvailability.message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Card Settings', onPress: () => openRoot('CardSettings', { cardId: card?.id }) },
+    ]);
   }
   function logout() {
     Alert.alert('Sign Out', 'Sign out from YNS Card?', [
@@ -225,12 +239,7 @@ export default function ProfileScreen({ navigation }) {
                   <QRCode value={approvedUrl} size={96} backgroundColor="#FFF" color={C.text} />
                 </View>
               )}
-              <TouchableOpacity
-                style={s.viewBtn}
-                onPress={() =>
-                  approvedUrl ? Linking.openURL(approvedUrl) : setApprovalVisible(true)
-                }
-              >
+              <TouchableOpacity style={s.viewBtn} onPress={openPublicCard}>
                 <Ionicons name="eye-outline" size={17} color="#FFF" />
                 <Text style={s.viewText}>View My Card</Text>
               </TouchableOpacity>

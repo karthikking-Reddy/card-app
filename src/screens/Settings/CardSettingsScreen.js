@@ -18,9 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getCurrentSession } from '../../services/authService';
 
-import { getCard, updateCard } from '../../services/cardService';
-
-import { CARD_WEB_URL } from '../../constants/config';
+import { getCard, getCardById, updateCard } from '../../services/cardService';
+import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
@@ -44,12 +43,11 @@ const THEMES = [
 ];
 
 const CARD_TYPES = [
+  ['personal', 'Personal'],
   ['business', 'Business'],
-  ['student', 'Student'],
-  ['employee', 'Employee'],
 ];
 
-export default function CardSettingsScreen({ navigation }) {
+export default function CardSettingsScreen({ navigation, route }) {
   const [user, setUser] = useState(null);
 
   const [card, setCard] = useState(null);
@@ -70,7 +68,7 @@ export default function CardSettingsScreen({ navigation }) {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [route.params?.cardId]);
 
   async function load() {
     try {
@@ -80,7 +78,9 @@ export default function CardSettingsScreen({ navigation }) {
 
       setUser(session.user);
 
-      const currentCard = await getCard(session.user.id);
+      const currentCard = route.params?.cardId
+        ? await getCardById(session.user.id, route.params.cardId)
+        : await getCard(session.user.id);
 
       setCard(currentCard);
 
@@ -120,14 +120,16 @@ export default function CardSettingsScreen({ navigation }) {
   }
 
   function openPublicCard() {
-    if (!card?.card_slug) return;
-
-    if (card.approval_status !== 'approved') {
+    const availability = getCardPublicAvailability(card);
+    if (availability.code === 'approval') {
       setApprovalVisible(true);
       return;
     }
-
-    Linking.openURL(`${CARD_WEB_URL}/${card.card_slug}`);
+    if (!availability.available) {
+      Alert.alert('Public card unavailable', availability.message);
+      return;
+    }
+    Linking.openURL(getPublicCardUrl(card));
   }
 
   if (loading) {
@@ -228,10 +230,17 @@ export default function CardSettingsScreen({ navigation }) {
           </TouchableOpacity>
         ))}
 
+        <TouchableOpacity
+          style={styles.previewButton}
+          onPress={() => navigation.navigate('CardPreview', { cardId: card.id })}
+        >
+          <Ionicons name="eye-outline" size={20} color="#06162D" />
+          <Text style={styles.previewText}>Preview Card</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.previewButton} onPress={openPublicCard}>
           <Ionicons name="open-outline" size={20} color="#06162D" />
-
-          <Text style={styles.previewText}>Preview Public Card</Text>
+          <Text style={styles.previewText}>Open Live Public Card</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
@@ -250,7 +259,7 @@ export default function CardSettingsScreen({ navigation }) {
         onUpdated={load}
         onEdit={() => {
           setApprovalVisible(false);
-          navigation.navigate('CardEditor');
+          navigation.navigate('CardEditor', { cardId: card.id });
         }}
       />
     </SafeAreaView>

@@ -33,7 +33,7 @@ import {
   updateCardBlock,
 } from '../../services/cardBlockService';
 
-export default function BlockBuilderScreen({ navigation }) {
+export default function BlockBuilderScreen({ navigation, route }) {
   const [cards, setCards] = useState([]);
 
   const [selectedCard, setSelectedCard] = useState(null);
@@ -81,11 +81,13 @@ export default function BlockBuilderScreen({ navigation }) {
         return;
       }
 
+      const requestedCard = cardData.find((item) => item.id === route.params?.cardId);
       const currentSelected = selectedCard
         ? cardData.find((item) => item.id === selectedCard.id)
         : null;
 
-      const cardToUse = currentSelected || cardData.find((item) => item.is_primary) || cardData[0];
+      const cardToUse =
+        requestedCard || currentSelected || cardData.find((item) => item.is_primary) || cardData[0];
 
       setSelectedCard(cardToUse);
 
@@ -97,7 +99,7 @@ export default function BlockBuilderScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedCard?.id]);
+  }, [route.params?.cardId, selectedCard?.id]);
 
   useFocusEffect(
     useCallback(() => {

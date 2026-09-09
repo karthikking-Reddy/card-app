@@ -3,8 +3,10 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +26,8 @@ import { createCard, deleteCard, getCards, setPrimaryCard } from '../../services
 
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
 export default function MyCardsScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -31,6 +35,8 @@ export default function MyCardsScreen({ navigation }) {
   const [cards, setCards] = useState([]);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [workingCardId, setWorkingCardId] = useState(null);
 
   const [creating, setCreating] = useState(false);
 
@@ -41,11 +47,13 @@ export default function MyCardsScreen({ navigation }) {
   const [designation, setDesignation] = useState('');
 
   const [company, setCompany] = useState('');
+  const [cardType, setCardType] = useState('business');
 
   const [approvalCard, setApprovalCard] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError('');
 
     try {
       const session = await getCurrentSession();
@@ -59,8 +67,8 @@ export default function MyCardsScreen({ navigation }) {
       const data = await getCards(session.user.id);
 
       setCards(data);
-    } catch (error) {
-      Alert.alert('Unable to load cards', error.message);
+    } catch {
+      setError('We could not load your digital cards. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -82,15 +90,39 @@ export default function MyCardsScreen({ navigation }) {
     }
   }
 
-  async function editCard(card) {
-    try {
-      if (!card.is_primary) {
-        await setPrimaryCard(user.id, card.id);
-      }
+  function editCard(card) {
+    navigation.navigate('CardEditor', { cardId: card.id });
+  }
 
-      navigation.navigate('CardEditor');
-    } catch (error) {
-      Alert.alert('Unable to open card', error.message);
+  async function shareCard(card) {
+    if (workingCardId) return;
+    const availability = getCardPublicAvailability(card);
+    if (availability.code === 'approval') {
+      setApprovalCard(card);
+      return;
+    }
+    if (!availability.available) {
+      Alert.alert('Public sharing unavailable', availability.message, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Card Settings',
+          onPress: () => navigation.navigate('CardSettings', { cardId: card.id }),
+        },
+      ]);
+      return;
+    }
+    setWorkingCardId(card.id);
+    try {
+      const url = getPublicCardUrl(card);
+      await Share.share({
+        title: `${card.name || 'Digital Card'} — YNS Card`,
+        message: `View my digital card: ${url}`,
+        url,
+      });
+    } catch {
+      Alert.alert('Unable to share', 'Please try again.');
+    } finally {
+      setWorkingCardId(null);
     }
   }
 
@@ -110,6 +142,7 @@ export default function MyCardsScreen({ navigation }) {
         designation: designation.trim(),
 
         company: company.trim(),
+        card_type: cardType,
       });
 
       await setPrimaryCard(user.id, newCard.id);
@@ -117,12 +150,13 @@ export default function MyCardsScreen({ navigation }) {
       setName('');
       setDesignation('');
       setCompany('');
+      setCardType('business');
 
       setModalVisible(false);
 
       await load();
 
-      navigation.navigate('CardEditor');
+      navigation.navigate('CardEditor', { cardId: newCard.id });
     } catch (error) {
       Alert.alert('Unable to create card', error.message);
     } finally {
@@ -152,13 +186,17 @@ export default function MyCardsScreen({ navigation }) {
     ]);
   }
 
-  if (loading) {
+  if (loading) return <LoadingState message="Loading your digital cards…" />;
+  if (error)
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#06162D" />
-      </View>
+      <ErrorState
+        title="Cards unavailable"
+        message={error}
+        actionLabel="Try Again"
+        onAction={load}
+        fullScreen
+      />
     );
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -179,12 +217,23 @@ export default function MyCardsScreen({ navigation }) {
           Create multiple digital cards and choose which one is your primary card.
         </Text>
 
+        {!cards.length ? (
+          <EmptyState
+            title="No digital cards"
+            message="Create a personal or business card to begin."
+          />
+        ) : null}
+
         {cards.map((card) => (
           <View key={card.id} style={[styles.card, card.is_primary && styles.primaryCard]}>
             <View style={styles.cardTop}>
-              <View style={styles.avatar}>
-                <Text style={styles.initial}>{card.name?.charAt(0)?.toUpperCase() || 'Y'}</Text>
-              </View>
+              {card.profile_image_url ? (
+                <Image source={{ uri: card.profile_image_url }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.initial}>{card.name?.charAt(0)?.toUpperCase() || 'Y'}</Text>
+                </View>
+              )}
 
               <View style={styles.cardInfo}>
                 <Text style={styles.name}>{card.name}</Text>
@@ -211,6 +260,7 @@ export default function MyCardsScreen({ navigation }) {
               <Status active={card.is_public} text={card.is_public ? 'Public' : 'Private'} />
 
               <Status active text={card.theme || 'standard'} />
+              <Status active text={card.card_type === 'personal' ? 'Personal' : 'Business'} />
             </View>
 
             {card.approval_status === 'pending' ? (
@@ -227,10 +277,47 @@ export default function MyCardsScreen({ navigation }) {
             ) : null}
 
             <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('CardPreview', { cardId: card.id })}
+              >
+                <Ionicons name="eye-outline" size={18} color="#06162D" />
+                <Text style={styles.actionText}>Preview</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.actionButton} onPress={() => editCard(card)}>
                 <Ionicons name="create-outline" size={18} color="#06162D" />
 
                 <Text style={styles.actionText}>Edit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('QRCentre', { cardId: card.id })}
+              >
+                <Ionicons name="qr-code-outline" size={18} color="#06162D" />
+                <Text style={styles.actionText}>QR</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => shareCard(card)}
+                disabled={workingCardId === card.id}
+              >
+                {workingCardId === card.id ? (
+                  <ActivityIndicator size="small" color="#06162D" />
+                ) : (
+                  <Ionicons name="share-social-outline" size={18} color="#06162D" />
+                )}
+                <Text style={styles.actionText}>Share</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('CardSettings', { cardId: card.id })}
+              >
+                <Ionicons name="settings-outline" size={18} color="#06162D" />
+                <Text style={styles.actionText}>Settings</Text>
               </TouchableOpacity>
 
               {card.approval_status === 'draft' || card.approval_status === 'rejected' ? (
@@ -292,6 +379,29 @@ export default function MyCardsScreen({ navigation }) {
               placeholder="Card / person name *"
               placeholderTextColor="#98A2B3"
             />
+
+            <Text style={styles.typeLabel}>CARD TYPE</Text>
+            <View style={styles.typeRow}>
+              {[
+                ['personal', 'Personal'],
+                ['business', 'Business'],
+              ].map(([value, label]) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[styles.typeOption, cardType === value && styles.typeOptionSelected]}
+                  onPress={() => setCardType(value)}
+                >
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      cardType === value && styles.typeOptionTextSelected,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <TextInput
               style={styles.input}
@@ -455,6 +565,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#F6B91A' },
 
   initial: {
     color: '#FFFFFF',
@@ -566,6 +677,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 13,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
 
@@ -685,4 +797,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
   },
+  typeLabel: { color: '#667085', fontSize: 10, fontWeight: '800', marginBottom: 8 },
+  typeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  typeOption: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    alignItems: 'center',
+  },
+  typeOptionSelected: { backgroundColor: '#FFF4D6', borderColor: '#F6B91A' },
+  typeOptionText: { color: '#667085', fontSize: 11, fontWeight: '700' },
+  typeOptionTextSelected: { color: '#06162D' },
 });

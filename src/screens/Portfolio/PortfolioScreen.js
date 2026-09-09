@@ -13,14 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { getCurrentSession } from '../../services/authService';
-import { getCard } from '../../services/cardService';
+import { getCard, getCardById } from '../../services/cardService';
 import {
   createPortfolioItem,
   deletePortfolioItem,
   getPortfolioItems,
 } from '../../services/portfolioService';
 
-export default function PortfolioScreen({ navigation }) {
+export default function PortfolioScreen({ navigation, route }) {
   const [card, setCard] = useState(null);
   const [items, setItems] = useState([]);
   const [type, setType] = useState('student');
@@ -37,7 +37,9 @@ export default function PortfolioScreen({ navigation }) {
   async function load() {
     try {
       const session = await getCurrentSession();
-      const currentCard = await getCard(session.user.id);
+      const currentCard = route.params?.cardId
+        ? await getCardById(session.user.id, route.params.cardId)
+        : await getCard(session.user.id);
 
       setCard(currentCard);
 

@@ -15,10 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { getCurrentSession } from '../../services/authService';
-import { getCard, updateCard } from '../../services/cardService';
+import { getCard, getCardById, updateCard } from '../../services/cardService';
 import { uploadProfileImage, removeProfileImages } from '../../services/storageService';
 
-export default function CardScreen({ navigation }) {
+export default function CardScreen({ navigation, route }) {
   const [user, setUser] = useState(null);
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function CardScreen({ navigation }) {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [route.params?.cardId]);
 
   async function load() {
     try {
@@ -50,7 +50,9 @@ export default function CardScreen({ navigation }) {
 
       setUser(session.user);
 
-      const currentCard = await getCard(session.user.id);
+      const currentCard = route.params?.cardId
+        ? await getCardById(session.user.id, route.params.cardId)
+        : await getCard(session.user.id);
       setCard(currentCard);
 
       setForm({
@@ -227,7 +229,17 @@ export default function CardScreen({ navigation }) {
           ) : null}
         </View>
 
-        <Section title="BASIC INFORMATION">
+        <TouchableOpacity
+          style={styles.previewButton}
+          onPress={() =>
+            navigation.navigate('CardPreview', { cardId: card.id, draftCard: { ...card, ...form } })
+          }
+        >
+          <Ionicons name="eye-outline" size={20} color="#06162D" />
+          <Text style={styles.previewButtonText}>Preview Unsaved Changes</Text>
+        </TouchableOpacity>
+
+        <Section title="IDENTITY">
           <Field label="Name" value={form.name} onChangeText={(value) => change('name', value)} />
 
           <Field
@@ -257,7 +269,7 @@ export default function CardScreen({ navigation }) {
           />
         </Section>
 
-        <Section title="CONTACT INFORMATION">
+        <Section title="CONTACT">
           <Field
             label="Phone"
             value={form.phone}
@@ -305,6 +317,40 @@ export default function CardScreen({ navigation }) {
           />
         </Section>
 
+        <Section title="CARD CONTENT">
+          <ManagementLink
+            icon="share-social-outline"
+            label="Social Links"
+            onPress={() => navigation.navigate('SocialLinks', { cardId: card.id })}
+          />
+          <ManagementLink
+            icon="briefcase-outline"
+            label="Services"
+            onPress={() => navigation.navigate('Services', { cardId: card.id })}
+          />
+          <ManagementLink
+            icon="images-outline"
+            label="Portfolio"
+            onPress={() => navigation.navigate('Portfolio', { cardId: card.id })}
+          />
+          <ManagementLink
+            icon="albums-outline"
+            label="Custom Sections"
+            onPress={() => navigation.navigate('BlockBuilder', { cardId: card.id })}
+          />
+          <ManagementLink
+            icon="color-palette-outline"
+            label="Appearance & Visibility"
+            onPress={() => navigation.navigate('CardSettings', { cardId: card.id })}
+          />
+          <ManagementLink
+            icon="qr-code-outline"
+            label="QR Centre"
+            onPress={() => navigation.navigate('QRCentre', { cardId: card.id })}
+            last
+          />
+        </Section>
+
         <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
           {saving ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -341,6 +387,21 @@ function Field({ label, multiline, ...props }) {
         placeholderTextColor="#98A2B3"
       />
     </View>
+  );
+}
+
+function ManagementLink({ icon, label, onPress, last }) {
+  return (
+    <TouchableOpacity
+      style={[styles.managementLink, last && styles.managementLinkLast]}
+      onPress={onPress}
+    >
+      <View style={styles.managementIcon}>
+        <Ionicons name={icon} size={19} color="#06162D" />
+      </View>
+      <Text style={styles.managementText}>{label}</Text>
+      <Ionicons name="chevron-forward" size={18} color="#98A2B3" />
+    </TouchableOpacity>
   );
 }
 
@@ -401,6 +462,37 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+  previewButton: {
+    minHeight: 50,
+    borderRadius: 14,
+    backgroundColor: '#FFF4D6',
+    borderWidth: 1,
+    borderColor: '#F6B91A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  previewButtonText: { color: '#06162D', fontWeight: '800' },
+  managementLink: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F5',
+  },
+  managementLinkLast: { borderBottomWidth: 0 },
+  managementIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#FFF4D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementText: { flex: 1, color: '#06162D', fontWeight: '700' },
   photo: {
     width: 105,
     height: 105,

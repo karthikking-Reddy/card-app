@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { getCurrentSession } from '../../services/authService';
-import { getCard } from '../../services/cardService';
+import { getCard, getCardById } from '../../services/cardService';
 import { ensureDefaultLinks, updateCardLink } from '../../services/linkService';
 
 const TYPES = [
@@ -30,7 +30,7 @@ const TYPES = [
   ['location', 'Location', 'location-outline'],
 ];
 
-export default function SocialLinksScreen({ navigation }) {
+export default function SocialLinksScreen({ navigation, route }) {
   const [card, setCard] = useState(null);
   const [items, setItems] = useState({});
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,9 @@ export default function SocialLinksScreen({ navigation }) {
   async function load() {
     try {
       const session = await getCurrentSession();
-      const currentCard = await getCard(session.user.id);
+      const currentCard = route.params?.cardId
+        ? await getCardById(session.user.id, route.params.cardId)
+        : await getCard(session.user.id);
 
       setCard(currentCard);
 

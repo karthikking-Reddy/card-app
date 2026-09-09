@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 
-const API_BASE_URL = 'https://yns-card-web.vercel.app';
+const API_BASE_URL = 'https://card.ynscrm.online';
 
 async function getAuthHeaders() {
   const { data, error } = await supabase.auth.getSession();
