@@ -4,7 +4,6 @@ export async function getCurrentSession() {
   const { data, error } = await supabase.auth.getSession();
 
   if (error) {
-    console.error('getCurrentSession error:', error);
     return null;
   }
 

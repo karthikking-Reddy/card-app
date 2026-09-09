@@ -6,7 +6,7 @@ import { colors } from '../../theme';
 const YNS_LOGO = require('../../../assets/brand/yns-card-logo.jpeg');
 
 export default function AuthBrandHeader({ progress }) {
-  const version = Constants.expoConfig?.version || '0.1.0';
+  const version = Constants.expoConfig?.version || 'Unavailable';
   const insets = useSafeAreaInsets();
 
   return (

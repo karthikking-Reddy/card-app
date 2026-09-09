@@ -15,6 +15,16 @@ import { getCards } from '../../services/cardService';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
+function safeFilePart(value) {
+  return (
+    String(value || 'card')
+      .normalize('NFKD')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'card'
+  );
+}
+
 export default function QRCentreScreen({ navigation, route }) {
   const [cards, setCards] = useState([]);
   const [selectedCard, setSelectedCard] = useState(null);
@@ -130,7 +140,7 @@ export default function QRCentreScreen({ navigation, route }) {
       const base64 = await new Promise((resolve, reject) => {
         qrRef.current.toDataURL((value) => (value ? resolve(value) : reject(new Error('QR'))));
       });
-      const uri = `${FileSystem.cacheDirectory}yns-card-${selectedCard.card_slug}.png`;
+      const uri = `${FileSystem.cacheDirectory}yns-card-${safeFilePart(selectedCard.card_slug)}.png`;
       await FileSystem.writeAsStringAsync(uri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });
@@ -165,7 +175,7 @@ export default function QRCentreScreen({ navigation, route }) {
         selectedCard.location ? `ADR;TYPE=WORK:;;${escapeVCard(selectedCard.location)};;;;` : null,
         'END:VCARD',
       ].filter(Boolean);
-      const uri = `${FileSystem.cacheDirectory}yns-card-${selectedCard.card_slug || selectedCard.id}.vcf`;
+      const uri = `${FileSystem.cacheDirectory}yns-card-${safeFilePart(selectedCard.card_slug || selectedCard.id)}.vcf`;
       await FileSystem.writeAsStringAsync(uri, `${lines.join('\r\n')}\r\n`);
       if (!(await Sharing.isAvailableAsync())) {
         Alert.alert('Sharing unavailable', 'Contact export is unavailable on this device.');

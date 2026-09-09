@@ -213,12 +213,9 @@ export default function HomeScreen({ navigation }) {
       } catch {
         setNotificationCount(0);
       }
-    } catch (error) {
-      console.log('Home dashboard error:', error);
-
+    } catch {
       setLoadError('We could not load your dashboard. Check your connection and try again.');
-
-      Alert.alert('Unable to load dashboard', error?.message || 'Please try again.');
+      Alert.alert('Unable to load dashboard', 'Check your connection and try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);

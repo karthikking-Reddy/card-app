@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAuth } from './src/hooks/useAuth';
 import IntroScreen from './src/screens/Intro/IntroScreen';
+import GlobalErrorBoundary from './src/components/GlobalErrorBoundary';
 
-export default function App() {
+function AppContent() {
   const { session, loading } = useAuth();
   const [launchComplete, setLaunchComplete] = useState(false);
   const [destinationReady, setDestinationReady] = useState(false);
@@ -86,6 +87,14 @@ export default function App() {
         <AppNavigator session={presentedSession} authExiting={authExiting} />
       </Animated.View>
     </View>
+  );
+}
+
+export default function App() {
+  return (
+    <GlobalErrorBoundary>
+      <AppContent />
+    </GlobalErrorBoundary>
   );
 }
 

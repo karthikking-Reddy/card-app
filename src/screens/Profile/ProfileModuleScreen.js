@@ -237,6 +237,16 @@ function InformationModule({ navigation, module }) {
             <Text style={styles.warningText}>{module.warning}</Text>
           </View>
         ) : null}
+        {module === INFO_MODULES.privacy ? (
+          <TouchableOpacity
+            style={styles.dangerButton}
+            onPress={() => navigation.replace('ProfileModule', { module: 'delete_account' })}
+            accessibilityRole="button"
+            accessibilityLabel="Open account deletion information"
+          >
+            <Text style={styles.dangerButtonText}>Delete Account</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -119,16 +119,6 @@ export default function CardScreen({ navigation, route }) {
 
   async function pickProfilePhoto() {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permission.granted) {
-        Alert.alert(
-          'Permission required',
-          'Please allow photo access to upload your profile picture.'
-        );
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -149,8 +139,8 @@ export default function CardScreen({ navigation, route }) {
       });
 
       setCard(updated);
-    } catch (error) {
-      Alert.alert('Upload failed', error.message);
+    } catch {
+      Alert.alert('Upload failed', 'The profile image could not be uploaded. Please try again.');
     } finally {
       setSaving(false);
     }
