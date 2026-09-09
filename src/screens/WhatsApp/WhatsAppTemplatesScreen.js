@@ -24,6 +24,7 @@ import {
   deleteWhatsAppTemplate,
   getWhatsAppTemplates,
   toggleWhatsAppTemplate,
+  updateWhatsAppTemplate,
 } from '../../services/whatsappTemplateService';
 
 export default function WhatsAppTemplatesScreen({ navigation }) {
@@ -40,6 +41,7 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
   const [body, setBody] = useState('');
 
   const [category, setCategory] = useState('utility');
+  const [editingTemplate, setEditingTemplate] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,7 +71,7 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
 
       setTemplates(data);
 
-      Alert.alert('Templates ready', 'Default YNS WhatsApp templates have been created.');
+      Alert.alert('Quick Messages ready', 'Default YNS Quick Messages have been created.');
     } catch (error) {
       Alert.alert('Unable to create templates', error.message);
     } finally {
@@ -87,16 +89,19 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
     setSaving(true);
 
     try {
-      await createWhatsAppTemplate({
-        name,
-        body,
-        category,
-        language: 'en',
-      });
+      if (editingTemplate) {
+        await updateWhatsAppTemplate(editingTemplate.id, {
+          name: name.trim(),
+          body: body.trim(),
+        });
+      } else {
+        await createWhatsAppTemplate({ name, body, category, language: 'en' });
+      }
 
       setName('');
       setBody('');
       setCategory('utility');
+      setEditingTemplate(null);
 
       setModalVisible(false);
 
@@ -106,6 +111,21 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function editTemplate(template) {
+    setEditingTemplate(template);
+    setName(template.name || '');
+    setBody(template.body || '');
+    setCategory(template.category || 'utility');
+    setModalVisible(true);
+  }
+
+  function closeEditor() {
+    setModalVisible(false);
+    setEditingTemplate(null);
+    setName('');
+    setBody('');
   }
 
   function confirmDelete(template) {
@@ -162,9 +182,9 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
             flex: 1,
           }}
         >
-          <Text style={styles.title}>WhatsApp Templates</Text>
+          <Text style={styles.title}>Quick Messages</Text>
 
-          <Text style={styles.subtitle}>Reusable business messages</Text>
+          <Text style={styles.subtitle}>Personal reusable WhatsApp messages</Text>
         </View>
 
         <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
@@ -178,11 +198,11 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
             <Ionicons name="document-text-outline" size={30} color="#16A34A" />
           </View>
 
-          <Text style={styles.heroTitle}>Message Templates</Text>
+          <Text style={styles.heroTitle}>Basic WhatsApp Quick Messages</Text>
 
           <Text style={styles.heroText}>
-            Prepare reusable WhatsApp messages now. Approved Meta templates will be synchronized
-            here after WhatsApp Business is connected.
+            These personal messages open through standard WhatsApp links. Opening WhatsApp does not
+            confirm that a message was sent or delivered.
           </Text>
         </View>
 
@@ -190,9 +210,9 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
           <View style={styles.empty}>
             <Ionicons name="chatbubbles-outline" size={38} color="#98A2B3" />
 
-            <Text style={styles.emptyTitle}>No templates yet</Text>
+            <Text style={styles.emptyTitle}>No Quick Messages yet</Text>
 
-            <Text style={styles.emptyText}>Start with ready-made YNS business templates.</Text>
+            <Text style={styles.emptyText}>Create one or start with safe YNS examples.</Text>
 
             <TouchableOpacity style={styles.defaultButton} onPress={addDefaults} disabled={saving}>
               {saving ? (
@@ -201,7 +221,7 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
                 <>
                   <Ionicons name="sparkles-outline" size={19} color="#FFFFFF" />
 
-                  <Text style={styles.defaultText}>Create YNS Templates</Text>
+                  <Text style={styles.defaultText}>Create YNS Quick Messages</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -209,20 +229,17 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
         ) : (
           <>
             <View style={styles.summary}>
-              <SummaryItem value={templates.length} label="Templates" />
+              <SummaryItem value={templates.length} label="Quick Messages" />
 
               <SummaryItem
                 value={templates.filter((item) => item.is_active).length}
                 label="Active"
               />
 
-              <SummaryItem
-                value={templates.filter((item) => item.status === 'approved').length}
-                label="Approved"
-              />
+              <SummaryItem value="Basic" label="WhatsApp mode" />
             </View>
 
-            <Text style={styles.sectionLabel}>YOUR TEMPLATES</Text>
+            <Text style={styles.sectionLabel}>YOUR QUICK MESSAGES</Text>
 
             {templates.map((template) => (
               <View key={template.id} style={styles.templateCard}>
@@ -240,8 +257,6 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
 
                     <View style={styles.badgeRow}>
                       <Badge text={template.category} />
-
-                      <Badge text={template.status} />
                     </View>
                   </View>
                 </View>
@@ -251,6 +266,30 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
                 </View>
 
                 <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.action} onPress={() => editTemplate(template)}>
+                    <Ionicons name="create-outline" size={18} color="#06162D" />
+                    <Text style={styles.actionText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.action}
+                    onPress={() =>
+                      Alert.alert(
+                        'Use Quick Message',
+                        'Open a lead and tap WhatsApp to use this message with safe contact and card details.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Open Leads',
+                            onPress: () =>
+                              navigation.navigate('MainTabs', { screen: 'Connections' }),
+                          },
+                        ]
+                      )
+                    }
+                  >
+                    <Ionicons name="send-outline" size={18} color="#06162D" />
+                    <Text style={styles.actionText}>Use</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity style={styles.action} onPress={() => toggle(template)}>
                     <Ionicons
                       name={template.is_active ? 'pause-outline' : 'play-outline'}
@@ -284,23 +323,20 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={closeEditor}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New Template</Text>
+              <Text style={styles.modalTitle}>
+                {editingTemplate ? 'Edit Quick Message' : 'New Quick Message'}
+              </Text>
 
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={closeEditor}>
                 <Ionicons name="close" size={26} color="#06162D" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>TEMPLATE NAME</Text>
+            <Text style={styles.label}>QUICK MESSAGE NAME</Text>
 
             <TextInput
               value={name}
@@ -309,23 +345,28 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
               style={styles.input}
             />
 
-            <Text style={styles.label}>CATEGORY</Text>
+            {!editingTemplate ? <Text style={styles.label}>CATEGORY</Text> : null}
 
-            <View style={styles.categoryRow}>
-              {['utility', 'marketing', 'authentication'].map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  onPress={() => setCategory(item)}
-                  style={[styles.categoryButton, category === item && styles.categoryButtonActive]}
-                >
-                  <Text
-                    style={[styles.categoryText, category === item && styles.categoryTextActive]}
+            {!editingTemplate ? (
+              <View style={styles.categoryRow}>
+                {['utility', 'marketing', 'authentication'].map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    onPress={() => setCategory(item)}
+                    style={[
+                      styles.categoryButton,
+                      category === item && styles.categoryButtonActive,
+                    ]}
                   >
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <Text
+                      style={[styles.categoryText, category === item && styles.categoryTextActive]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
 
             <Text style={styles.label}>MESSAGE</Text>
 
@@ -346,7 +387,7 @@ export default function WhatsAppTemplatesScreen({ navigation }) {
               {saving ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.saveText}>Save Template</Text>
+                <Text style={styles.saveText}>Save Quick Message</Text>
               )}
             </TouchableOpacity>
           </View>

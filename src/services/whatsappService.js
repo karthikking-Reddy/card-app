@@ -3,6 +3,13 @@ import { supabase } from '../../lib/supabase';
 export const WHATSAPP_CONVERSATION_PAGE_SIZE = 25;
 export const WHATSAPP_MESSAGE_PAGE_SIZE = 50;
 
+async function getCurrentUserId() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!data?.user?.id) throw new Error('Please sign in again.');
+  return data.user.id;
+}
+
 export async function getWhatsAppConversationsPage({
   userId,
   page = 0,
@@ -61,6 +68,15 @@ export async function getWhatsAppMessagesPage({
   pageSize = WHATSAPP_MESSAGE_PAGE_SIZE,
 } = {}) {
   if (!conversationId) return { data: [], page, pageSize, hasMore: false };
+  const userId = await getCurrentUserId();
+  const { data: ownedConversation, error: ownershipError } = await supabase
+    .from('whatsapp_conversations')
+    .select('id')
+    .eq('id', conversationId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (ownershipError) throw ownershipError;
+  if (!ownedConversation) throw new Error('Conversation unavailable.');
   const from = page * pageSize;
   const { data, error } = await supabase
     .from('whatsapp_messages')
@@ -155,12 +171,14 @@ export async function getWhatsAppMessages(conversationId) {
 }
 
 export async function markConversationRead(conversationId) {
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('whatsapp_conversations')
     .update({
       unread_count: 0,
     })
     .eq('id', conversationId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -172,12 +190,14 @@ export async function markConversationRead(conversationId) {
 }
 
 export async function updateConversationStatus(conversationId, status) {
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('whatsapp_conversations')
     .update({
       status,
     })
     .eq('id', conversationId)
+    .eq('user_id', userId)
     .select()
     .single();
 

@@ -39,6 +39,12 @@ import {
   getConnectionFollowups,
   reopenFollowupTask,
 } from '../../services/followupTaskService';
+import {
+  applyQuickMessage,
+  buildBasicWhatsAppUrl,
+  buildLeadWhatsAppMessage,
+  getBasicWhatsAppOptions,
+} from '../../services/basicWhatsAppService';
 
 export default function LeadDetailScreen({ navigation, route }) {
   const connectionId = route.params?.connectionId;
@@ -333,10 +339,39 @@ export default function LeadDetailScreen({ navigation, route }) {
     }
   }
 
-  function whatsapp() {
+  async function openWhatsAppMessage(message) {
     if (!lead?.phone) return;
-    const number = cleanPhone(lead.phone).replace('+', '');
-    openContactAction('whatsapp', `https://wa.me/${number}`, 'WhatsApp opened');
+    await openContactAction(
+      'whatsapp',
+      buildBasicWhatsAppUrl({ phone: lead.phone, message }),
+      'WhatsApp opened'
+    );
+  }
+
+  async function whatsapp() {
+    if (!lead?.phone || workingAction) return;
+    setWorkingAction('whatsapp_options');
+    try {
+      const options = await getBasicWhatsAppOptions(user.id, lead.card_id);
+      const buttons = options.quickMessages.map((item) => ({
+        text: item.name,
+        onPress: () => openWhatsAppMessage(applyQuickMessage(item.body, lead, options.cardSlug)),
+      }));
+      buttons.push({
+        text: 'Share card message',
+        onPress: () => openWhatsAppMessage(buildLeadWhatsAppMessage(lead, options.cardSlug)),
+      });
+      buttons.push({ text: 'Cancel', style: 'cancel' });
+      Alert.alert(
+        'Open Basic WhatsApp',
+        'Choose a Quick Message. This opens WhatsApp; it does not confirm the message was sent.',
+        buttons
+      );
+    } catch {
+      Alert.alert('Unable to prepare WhatsApp', 'Please check your connection and try again.');
+    } finally {
+      setWorkingAction('');
+    }
   }
 
   function call() {

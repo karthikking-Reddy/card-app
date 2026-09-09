@@ -67,10 +67,12 @@ export async function createWhatsAppTemplate(values) {
 }
 
 export async function updateWhatsAppTemplate(id, values) {
+  const user = await getUser();
   const { data, error } = await supabase
     .from('whatsapp_templates')
     .update(values)
     .eq('id', id)
+    .eq('user_id', user.id)
     .select()
     .single();
 
@@ -88,7 +90,12 @@ export async function toggleWhatsAppTemplate(template) {
 }
 
 export async function deleteWhatsAppTemplate(id) {
-  const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id);
+  const user = await getUser();
+  const { error } = await supabase
+    .from('whatsapp_templates')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
 
   if (error) {
     throw error;

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   RefreshControl,
   ScrollView,
@@ -13,11 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  bootstrapIntegrations,
-  findIntegration,
-  getIntegrationStatus,
-} from '../../services/integrationService';
+import { findIntegration, getIntegrationStatus } from '../../services/integrationService';
+import ConnectionStatusBadge, {
+  normalizeConnectionState,
+} from '../../components/business/ConnectionStatusBadge';
 import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { colors, fontFamilies } from '../../theme';
 
@@ -37,15 +35,13 @@ export default function MetaScreen({ navigation }) {
   const [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [refreshing, setRefreshing] = useState(false),
-    [preparing, setPreparing] = useState(false),
     [connections, setConnections] = useState([]);
   const load = useCallback(async (refresh = false) => {
     setLoadError('');
     refresh ? setRefreshing(true) : setLoading(true);
     try {
       setConnections(await getIntegrationStatus());
-    } catch (e) {
-      console.log('Integration status:', e);
+    } catch {
       setLoadError('We could not load your business tools. Check your connection and try again.');
     } finally {
       setLoading(false);
@@ -59,23 +55,15 @@ export default function MetaScreen({ navigation }) {
   );
   const meta = findIntegration(connections, 'meta'),
     wa = findIntegration(connections, 'whatsapp');
-  async function prepare() {
-    setPreparing(true);
-    try {
-      setConnections(await bootstrapIntegrations());
-      Alert.alert(
-        'Setup prepared',
-        'The secure integration foundation is prepared. Provider authorization is still required.'
-      );
-    } catch (e) {
-      Alert.alert('Setup failed', e.message);
-    } finally {
-      setPreparing(false);
-    }
-  }
   function openRoot(name) {
     const p = navigation.getParent?.();
     p ? p.navigate(name) : navigation.navigate(name);
+  }
+  function openModule(module) {
+    const p = navigation.getParent?.();
+    p
+      ? p.navigate('BusinessModule', { module })
+      : navigation.navigate('BusinessModule', { module });
   }
   if (loading) return <LoadingState message="Loading business tools…" />;
   if (loadError && connections.length === 0)
@@ -129,38 +117,18 @@ export default function MetaScreen({ navigation }) {
             title="Meta Business Account"
             integration={meta}
             action={meta?.status === 'connected' ? 'Manage Meta Business' : 'Connect Meta Business'}
-            onPress={() =>
-              meta?.status === 'connected'
-                ? Alert.alert(
-                    'Meta Business',
-                    'Management tools will be enabled after Meta app approval.'
-                  )
-                : Alert.alert(
-                    'Meta Connection',
-                    'Your secure foundation is ready. Complete Meta Developer verification to authorize a real business account.'
-                  )
-            }
+            onPress={() => openModule('meta_leads')}
           />
           <Integration
             icon="logo-whatsapp"
             color={C.whatsapp}
             title="WhatsApp Business"
             integration={wa}
-            action="Open WhatsApp Inbox"
-            onPress={() => openRoot('WhatsAppInbox')}
+            action={wa?.status === 'connected' ? 'Open WhatsApp Inbox' : 'Review setup'}
+            onPress={() =>
+              wa?.status === 'connected' ? openRoot('WhatsAppInbox') : openModule('whatsapp_setup')
+            }
           />
-          {(!meta || !wa) && (
-            <TouchableOpacity style={s.init} onPress={prepare} disabled={preparing}>
-              {preparing ? (
-                <ActivityIndicator color={C.navy} />
-              ) : (
-                <>
-                  <Ionicons name="shield-checkmark-outline" size={20} color={C.navy} />
-                  <Text style={s.initText}>Initialize Secure Integrations</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
           <View style={s.overview}>
             <View style={s.sectionRow}>
               <Text style={s.sectionTitle}>Integration Overview</Text>
@@ -170,13 +138,13 @@ export default function MetaScreen({ navigation }) {
               <Metric
                 icon="megaphone-outline"
                 label="Lead Ads"
-                value={meta?.status === 'connected' ? 'Active' : 'Setup required'}
+                value={meta?.status === 'connected' ? 'Connected' : 'Setup required'}
                 color={C.meta}
               />
               <Metric
                 icon="chatbubbles-outline"
                 label="WhatsApp"
-                value={wa?.status === 'connected' ? 'Active' : 'Setup required'}
+                value={wa?.status === 'connected' ? 'Connected' : 'Setup required'}
                 color={C.whatsapp}
               />
               <Metric
@@ -202,14 +170,18 @@ export default function MetaScreen({ navigation }) {
               icon="logo-whatsapp"
               color={C.whatsapp}
               title="WhatsApp Inbox"
-              sub="Customer conversations"
+              sub={
+                wa?.status === 'connected'
+                  ? 'Stored customer conversations'
+                  : 'Cloud API setup required'
+              }
               onPress={() => openRoot('WhatsAppInbox')}
             />
             <Tool
               icon="document-text-outline"
               color={C.gold}
-              title="WhatsApp Templates"
-              sub="Reusable business messages"
+              title="Quick Messages"
+              sub="Personal reusable messages"
               onPress={() => openRoot('WhatsAppTemplates')}
             />
             <Tool
@@ -217,21 +189,35 @@ export default function MetaScreen({ navigation }) {
               color={C.meta}
               title="Meta Lead Ads"
               sub={meta?.status === 'connected' ? 'Connected' : 'Waiting for Meta verification'}
-              onPress={() =>
-                Alert.alert('Meta Lead Ads', 'This activates after Meta authorization.')
-              }
+              onPress={() => openModule('meta_leads')}
             />
             <Tool
               icon="pulse-outline"
               color={C.green}
-              title="Webhook Status"
-              sub="Secure server foundation ready"
-              onPress={() =>
-                Alert.alert(
-                  'Webhook Status',
-                  'Webhook tables and secure Vercel API foundation are ready.'
-                )
-              }
+              title="Webhooks"
+              sub="Secure dispatcher setup required"
+              onPress={() => openModule('webhooks')}
+            />
+            <Tool
+              icon="git-branch-outline"
+              color={C.gold}
+              title="Automations"
+              sub="Execution backend not configured"
+              onPress={() => openModule('automations')}
+            />
+            <Tool
+              icon="notifications-outline"
+              color={C.orange}
+              title="Notifications"
+              sub="In-app activity and preferences"
+              onPress={() => openRoot('Notifications')}
+            />
+            <Tool
+              icon="calendar-outline"
+              color={C.purple}
+              title="Appointments"
+              sub="Booking setup foundation"
+              onPress={() => openModule('appointments')}
             />
           </View>
           <View style={s.premium}>
@@ -239,18 +225,18 @@ export default function MetaScreen({ navigation }) {
               <Ionicons name="diamond-outline" size={25} color={C.gold} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.premiumTitle}>YNS Premium Business Tools</Text>
+              <Text style={s.premiumTitle}>Integration Health</Text>
               <Text style={s.premiumSub}>
-                Advanced automation, AI replies, campaign attribution and business analytics.
+                Green appears only when the server verifies an active provider connection.
               </Text>
             </View>
-            <TouchableOpacity
-              style={s.premiumBtn}
-              onPress={() => Alert.alert('YNS Premium', 'Premium features will be enabled later.')}
-            >
-              <Text style={s.premiumBtnText}>Explore</Text>
-              <Ionicons name="chevron-forward" size={16} color={C.navy} />
-            </TouchableOpacity>
+            <ConnectionStatusBadge
+              status={
+                meta?.status === 'connected' || wa?.status === 'connected'
+                  ? 'connected'
+                  : 'not_connected'
+              }
+            />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -258,8 +244,9 @@ export default function MetaScreen({ navigation }) {
   );
 }
 function Integration({ icon, color, title, integration, action, onPress }) {
-  const connected = integration?.status === 'connected';
-  const status = integration?.status || 'not initialized';
+  const state = normalizeConnectionState(integration?.status, {
+    verified: integration?.status === 'connected',
+  });
   return (
     <View style={s.integration}>
       <View style={s.integrationTop}>
@@ -269,29 +256,10 @@ function Integration({ icon, color, title, integration, action, onPress }) {
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <Text style={s.integrationTitle}>{title}</Text>
-            <View
-              style={[
-                s.status,
-                { backgroundColor: connected ? C.greenSoft : 'rgba(255,255,255,.08)' },
-              ]}
-            >
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: connected ? '#21DF86' : '#8B98AA',
-                }}
-              />
-              <Text
-                style={{ color: connected ? '#21DF86' : '#AEB8C7', fontSize: 8, fontWeight: '800' }}
-              >
-                {status.replace(/_/g, ' ')}
-              </Text>
-            </View>
+            <ConnectionStatusBadge status={state} />
           </View>
           <Text style={s.integrationSub}>
-            {integration?.display_name || 'YNS secure integration'}
+            {integration?.display_name || 'Provider account not connected'}
           </Text>
         </View>
       </View>

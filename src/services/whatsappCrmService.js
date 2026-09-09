@@ -25,10 +25,12 @@ export async function getLinkedCrmLead(connectionId) {
     return null;
   }
 
+  const user = await getCurrentUser();
   const { data, error } = await supabase
     .from('connections')
     .select('*')
     .eq('id', connectionId)
+    .eq('owner_user_id', user.id)
     .maybeSingle();
 
   if (error) {
@@ -39,12 +41,14 @@ export async function getLinkedCrmLead(connectionId) {
 }
 
 export async function linkConversationToLead(conversationId, connectionId) {
+  const user = await getCurrentUser();
   const { data, error } = await supabase
     .from('whatsapp_conversations')
     .update({
       connection_id: connectionId,
     })
     .eq('id', conversationId)
+    .eq('user_id', user.id)
     .select()
     .single();
 
@@ -56,12 +60,14 @@ export async function linkConversationToLead(conversationId, connectionId) {
 }
 
 export async function unlinkConversationFromLead(conversationId) {
+  const user = await getCurrentUser();
   const { data, error } = await supabase
     .from('whatsapp_conversations')
     .update({
       connection_id: null,
     })
     .eq('id', conversationId)
+    .eq('user_id', user.id)
     .select()
     .single();
 

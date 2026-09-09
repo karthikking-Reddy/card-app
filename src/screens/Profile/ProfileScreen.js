@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import {
   Alert,
   Image,
-  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,150 +12,86 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import QRCode from 'react-native-qrcode-svg';
 import { useFocusEffect } from '@react-navigation/native';
-import { supabase } from '../../../lib/supabase';
-import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
-import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
-import { getCurrentProfile, isAdminUser } from '../../services/profileService';
-import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
-import { colors, fontFamilies } from '../../theme';
-import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
-const C = {
-  navy: colors.navy,
-  gold: colors.gold,
-  bg: colors.background,
-  text: colors.text,
-  text2: colors.textSecondary,
-  muted: colors.textMuted,
-  border: colors.border,
-  blue: colors.blue,
-  green: colors.success,
-  purple: '#7C3AED',
-  orange: '#EA7B00',
-  red: colors.danger,
-  redSoft: colors.dangerSoft,
-};
+import { supabase } from '../../../lib/supabase';
+import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { getAccountSummary, getCurrentProfile, isAdminUser } from '../../services/profileService';
+import { colors, fontFamilies, radius, shadows, spacing, typography } from '../../theme';
+
+const ROLE_LABELS = { super_admin: 'Super Admin', admin: 'Admin', user: 'User' };
+
 export default function ProfileScreen({ navigation }) {
-  const [loading, setLoading] = useState(true),
-    [loadError, setLoadError] = useState(''),
-    [refreshing, setRefreshing] = useState(false),
-    [user, setUser] = useState(null),
-    [profile, setProfile] = useState(null),
-    [card, setCard] = useState(null),
-    [cards, setCards] = useState([]),
-    [stats, setStats] = useState({ views: 0, clicks: 0, wa: 0, leads: 0 }),
-    [unread, setUnread] = useState(0),
-    [approvalVisible, setApprovalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [signingOut, setSigningOut] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [summary, setSummary] = useState({ cards: 0, leads: 0 });
+
   const load = useCallback(async (refresh = false) => {
-    setLoadError('');
     refresh ? setRefreshing(true) : setLoading(true);
+    setLoadError('');
     try {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const u = session?.user;
-      if (!u) return;
-      setUser(u);
-      try {
-        setProfile(await getCurrentProfile());
-      } catch {
-        setProfile(null);
-      }
-      const cr = await supabase
-        .from('digital_cards')
-        .select('*')
-        .eq('user_id', u.id)
-        .order('is_primary', { ascending: false });
-      if (cr.error) throw cr.error;
-      const cs = cr.data || [];
-      setCards(cs);
-      setCard(cs.find((x) => x.is_primary) || cs[0] || null);
-      const ids = cs.map((x) => x.id);
-      const countEvents = (configure) => {
-        if (!ids.length) return Promise.resolve({ count: 0 });
-        return configure(
-          supabase
-            .from('card_events')
-            .select('id', { count: 'exact', head: true })
-            .in('card_id', ids)
-        );
-      };
-      const [leads, views, clicks, whatsapp] = await Promise.all([
-        supabase
-          .from('connections')
-          .select('id', { count: 'exact', head: true })
-          .eq('owner_user_id', u.id),
-        countEvents((query) => query.eq('event_type', 'card_view')),
-        countEvents((query) => query.like('event_type', '%_click')),
-        countEvents((query) => query.ilike('event_type', '%whatsapp%')),
+        data: { user: authUser },
+        error,
+      } = await supabase.auth.getUser();
+      if (error || !authUser) throw new Error('Session unavailable');
+      const [accountProfile, accountSummary] = await Promise.all([
+        getCurrentProfile(),
+        getAccountSummary(authUser.id),
       ]);
-      const statsError = leads.error || views.error || clicks.error || whatsapp.error;
-      if (statsError) throw statsError;
-      setStats({
-        views: views.count || 0,
-        clicks: clicks.count || 0,
-        wa: whatsapp.count || 0,
-        leads: leads.count || 0,
-      });
-      try {
-        const { count } = await supabase
-          .from('notifications')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', u.id)
-          .eq('is_read', false);
-        setUnread(count || 0);
-      } catch {
-        setUnread(0);
-      }
+      setUser(authUser);
+      setProfile(accountProfile);
+      setSummary(accountSummary);
     } catch {
-      setLoadError('We could not load your profile. Check your connection and try again.');
-      Alert.alert('Unable to load profile', 'Please try again.');
+      setLoadError('We could not load your account profile. Check your connection and try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
+
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load])
   );
-  const publicAvailability = getCardPublicAvailability(card);
-  const approvedUrl = publicAvailability.available ? getPublicCardUrl(card) : null;
+
   function openRoot(name, params) {
-    const p = navigation.getParent?.();
-    p ? p.navigate(name, params) : navigation.navigate(name, params);
+    const parent = navigation.getParent?.();
+    parent ? parent.navigate(name, params) : navigation.navigate(name, params);
   }
-  function openPublicCard() {
-    if (approvedUrl) {
-      Linking.openURL(approvedUrl);
-      return;
-    }
-    if (publicAvailability.code === 'approval') {
-      setApprovalVisible(true);
-      return;
-    }
-    Alert.alert('Public card unavailable', publicAvailability.message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Card Settings', onPress: () => openRoot('CardSettings', { cardId: card?.id }) },
-    ]);
+
+  function openModule(module) {
+    openRoot('ProfileModule', { module });
   }
-  function logout() {
-    Alert.alert('Sign Out', 'Sign out from YNS Card?', [
+
+  function confirmSignOut() {
+    if (signingOut) return;
+    Alert.alert('Sign Out', 'Sign out of YNS Card on this device?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await supabase.auth.signOut();
+          setSigningOut(true);
+          try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+          } catch {
+            Alert.alert('Unable to sign out', 'Please check your connection and try again.');
+            setSigningOut(false);
+          }
         },
       },
     ]);
   }
-  if (loading) return <LoadingState message="Loading your profile…" />;
-  if (loadError && !profile && !card)
+
+  if (loading) return <LoadingState message="Loading your account…" />;
+  if (loadError && !profile)
     return (
       <ErrorState
         title="Profile unavailable"
@@ -166,469 +101,390 @@ export default function ProfileScreen({ navigation }) {
         fullScreen
       />
     );
+
+  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
+  const displayName =
+    profile?.full_name || user?.user_metadata?.full_name || user?.email || 'YNS User';
+  const providers = new Set(
+    [
+      user?.app_metadata?.provider,
+      ...(user?.app_metadata?.providers || []),
+      ...(user?.identities || []).map((identity) => identity.provider),
+    ].filter(Boolean)
+  );
+
   return (
-    <View style={s.root}>
-      <LinearGradient colors={['#06162D', '#081D39', '#0B2447']} style={s.headerBg} />
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[colors.navyDeep, colors.navy, '#0B2A50']}
+        style={styles.headerBackground}
+      />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 105 }}
+          contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => load(true)}
-              tintColor={C.gold}
+              tintColor={colors.gold}
             />
           }
         >
-          <View style={s.header}>
+          <View style={styles.header}>
             <View>
-              <Text style={s.title}>Profile</Text>
-              <Text style={s.subtitle}>Manage your account & settings</Text>
+              <Text style={styles.title}>Profile</Text>
+              <Text style={styles.subtitle}>Account and workspace control centre</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity style={s.topIcon} onPress={() => openRoot('Notifications')}>
-                <Ionicons name="notifications-outline" size={22} color="#FFF" />
-                {unread > 0 && (
-                  <View style={s.badge}>
-                    <Text style={s.badgeText}>{unread > 99 ? '99+' : unread}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity style={s.topIcon} onPress={() => openRoot('CardSettings')}>
-                <Ionicons name="settings-outline" size={22} color="#FFF" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => openRoot('Notifications')}
+              accessibilityLabel="Open notifications"
+            >
+              <Ionicons name="notifications-outline" size={23} color={colors.white} />
+            </TouchableOpacity>
           </View>
-          <View style={s.profileCard}>
-            <View style={s.profileTop}>
-              <View style={s.avatarWrap}>
-                {card?.profile_image_url ? (
-                  <Image source={{ uri: card.profile_image_url }} style={s.avatar} />
-                ) : (
-                  <View style={s.avatarFallback}>
-                    <Text style={s.initial}>
-                      {String(card?.name || user?.email || '?')
-                        .charAt(0)
-                        .toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-                <TouchableOpacity style={s.camera} onPress={() => openRoot('Card')}>
-                  <Ionicons name="camera" size={17} color={C.navy} />
-                </TouchableOpacity>
+
+          <View style={styles.overview}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.initial}>{displayName.charAt(0).toUpperCase()}</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}
-                >
-                  <Text style={s.name}>{card?.name || user?.email || 'YNS User'}</Text>
-                  <Ionicons name="checkmark-circle" size={18} color={C.gold} />
-                </View>
-                <Text style={s.role}>{card?.designation || 'Digital Business Professional'}</Text>
-                <Text style={s.company}>{card?.company || 'YUVARAJ NETWORKS & SOLUTIONS'}</Text>
-                {card?.phone && <Info icon="call" text={card.phone} />}
-                <Info icon="mail" text={card?.email || user?.email} />
-                {card?.location && <Info icon="location" text={card.location} />}
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{displayName}</Text>
+              <Text style={styles.email}>
+                {profile?.email || user?.email || 'Email unavailable'}
+              </Text>
+              <View style={styles.badges}>
+                <Badge label={ROLE_LABELS[profile?.role] || 'User'} tone="gold" />
+                <Badge
+                  label={user?.email_confirmed_at ? 'Email verified' : 'Email not verified'}
+                  tone={user?.email_confirmed_at ? 'success' : 'neutral'}
+                />
+                {providers.has('google') ? <Badge label="Google connected" tone="success" /> : null}
               </View>
             </View>
-            <View style={s.qrArea}>
-              <ApprovalStatusBadge status={card?.approval_status} compact />
-              {approvedUrl && (
-                <View style={s.qrBox}>
-                  <QRCode value={approvedUrl} size={96} backgroundColor="#FFF" color={C.text} />
-                </View>
-              )}
-              <TouchableOpacity style={s.viewBtn} onPress={openPublicCard}>
-                <Ionicons name="eye-outline" size={17} color="#FFF" />
-                <Text style={s.viewText}>View My Card</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={s.stats}>
-              <PStat icon="eye-outline" label="Profile Views" value={stats.views} color={C.blue} />
-              <PStat
-                icon="navigate-outline"
-                label="Card Clicks"
-                value={stats.clicks}
-                color={C.purple}
-              />
-              <PStat
-                icon="logo-whatsapp"
-                label="WhatsApp Clicks"
-                value={stats.wa}
-                color={C.green}
-              />
-              <PStat
-                icon="person-add-outline"
-                label="New Leads"
-                value={stats.leads}
-                color={C.orange}
-              />
-            </View>
           </View>
-          <View style={s.body}>
-            <MenuGroup title="CARD MANAGEMENT">
+
+          <View style={styles.summaryRow}>
+            <Summary icon="card-outline" value={summary.cards} label="Digital cards" />
+            <Summary icon="people-outline" value={summary.leads} label="Leads" />
+          </View>
+
+          <View style={styles.body}>
+            <MenuGroup title="ACCOUNT">
               <Menu
-                icon="card-outline"
-                color={C.blue}
-                title="My Digital Cards"
-                sub={`${cards.length} card${cards.length === 1 ? '' : 's'} • manage and customize`}
-                onPress={() => openRoot('MyCards')}
+                icon="person-outline"
+                title="Personal Information"
+                subtitle="Account name and verified identity details"
+                onPress={() => openModule('personal')}
               />
               <Menu
-                icon="create-outline"
-                color={C.purple}
-                title="Edit Primary Card"
-                sub="Profile, company, contact details and photo"
-                onPress={() => openRoot('Card')}
+                icon="shield-checkmark-outline"
+                title="Login & Security"
+                subtitle="Password, providers, MFA and sessions"
+                onPress={() => openModule('security')}
               />
               <Menu
-                icon="color-palette-outline"
-                color={C.purple}
-                title="Themes & Appearance"
-                sub="Themes, public/private and active status"
-                onPress={() => openRoot('CardSettings')}
-              />
-              <Menu
-                icon="link-outline"
-                color={C.blue}
-                title="Links & Social Media"
-                sub="WhatsApp, Instagram, YouTube and more"
-                onPress={() => openRoot('SocialLinks')}
-              />
-              <Menu
-                icon="grid-outline"
-                color={C.orange}
-                title="Card Block Builder"
-                sub="Custom links, media, documents and actions"
-                onPress={() => openRoot('BlockBuilder')}
-              />
-              <Menu
-                icon="briefcase-outline"
-                color={C.green}
-                title="Services"
-                sub="Manage services shown on your card"
-                onPress={() => openRoot('Services')}
-              />
-              <Menu
-                icon="people-outline"
-                color={C.blue}
-                title="Portfolio"
-                sub="Students and employees portfolio"
-                onPress={() => openRoot('Portfolio')}
-              />
-            </MenuGroup>
-            <MenuGroup title="CRM & BUSINESS TOOLS">
-              <Menu
-                icon="git-branch-outline"
-                color={C.purple}
-                title="CRM Stages"
-                sub="Customize your lead pipeline stages"
-                onPress={() => openRoot('LeadStages')}
-              />
-              <Menu
-                icon="download-outline"
-                color={C.blue}
-                title="Export CRM"
-                sub="Export all leads to CSV"
-                onPress={() => openRoot('CRMExport')}
-              />
-              <Menu
-                icon="logo-whatsapp"
-                color={C.green}
-                title="WhatsApp Inbox"
-                sub="Customer WhatsApp conversations"
-                onPress={() => openRoot('WhatsAppInbox')}
-              />
-              <Menu
-                icon="document-text-outline"
-                color={C.orange}
-                title="WhatsApp Templates"
-                sub="Reusable WhatsApp business messages"
-                onPress={() => openRoot('WhatsAppTemplates')}
+                icon="language-outline"
+                title="Language & Region"
+                subtitle="Preference persistence setup required"
+                onPress={() => openModule('preferences')}
               />
               <Menu
                 icon="notifications-outline"
-                color={C.orange}
                 title="Notifications"
-                sub="New leads and card activity"
+                subtitle="In-app activity and delivery availability"
                 onPress={() => openRoot('Notifications')}
               />
+              <Menu
+                icon="link-outline"
+                title="Connected Accounts"
+                subtitle="Google identity and provider connection status"
+                onPress={() => openModule('security')}
+              />
             </MenuGroup>
+
+            <MenuGroup title="WORKSPACE">
+              <Menu
+                icon="card-outline"
+                title="Digital Cards"
+                subtitle={`${summary.cards} card${summary.cards === 1 ? '' : 's'} — manage in My Cards`}
+                onPress={() => openRoot('MyCards')}
+              />
+              <Menu
+                icon="people-circle-outline"
+                title="Team & Roles"
+                subtitle="Current platform hierarchy and future workspace model"
+                onPress={() => openModule('team')}
+              />
+              <Menu
+                icon="color-palette-outline"
+                title="Brand Settings"
+                subtitle="Manage branding per digital card"
+                onPress={() => openRoot('MyCards')}
+              />
+              <Menu
+                icon="git-branch-outline"
+                title="CRM Stages"
+                subtitle="Manage the lead pipeline"
+                onPress={() => openRoot('LeadStages')}
+              />
+            </MenuGroup>
+
+            <MenuGroup title="PLAN & USAGE">
+              <Menu
+                icon="diamond-outline"
+                title="Plans"
+                subtitle="Free, Pro and Business product information"
+                onPress={() => openModule('plans')}
+              />
+              <Menu
+                icon="analytics-outline"
+                title="Usage"
+                subtitle={`${summary.cards} cards • ${summary.leads} leads • no invented limits`}
+                onPress={() => openModule('plans')}
+              />
+            </MenuGroup>
+
+            <MenuGroup title="PRIVACY & SUPPORT">
+              <Menu
+                icon="lock-closed-outline"
+                title="Privacy & Data"
+                subtitle="Exports, analytics controls and retention"
+                onPress={() => openModule('privacy')}
+              />
+              <Menu
+                icon="help-circle-outline"
+                title="Help & Support"
+                subtitle="Getting started, guides and support status"
+                onPress={() => openModule('support')}
+              />
+              <Menu
+                icon="document-text-outline"
+                title="Legal"
+                subtitle="Privacy, terms, consent and licences"
+                onPress={() => openModule('legal')}
+              />
+              <Menu
+                icon="information-circle-outline"
+                title="App Information"
+                subtitle="Version and company information"
+                onPress={() => openModule('app_info')}
+              />
+              <Menu
+                icon="trash-outline"
+                title="Delete Account"
+                subtitle="Secure deletion backend required"
+                danger
+                onPress={() => openModule('delete_account')}
+              />
+            </MenuGroup>
+
             {isAdminUser(profile) ? (
               <MenuGroup title="ADMINISTRATION">
-                {profile?.role === 'super_admin' && (
-                  <Menu
-                    icon="grid-outline"
-                    color={C.gold}
-                    title="Super Admin Dashboard"
-                    sub="Manage administrators and user assignments"
-                    onPress={() => openRoot('SuperAdminDashboard')}
-                  />
-                )}
+                {profile.role === 'super_admin' ? (
+                  <>
+                    <Menu
+                      icon="grid-outline"
+                      title="Super Admin Dashboard"
+                      subtitle="Global management summary"
+                      onPress={() => openRoot('SuperAdminDashboard')}
+                    />
+                    <Menu
+                      icon="shield-outline"
+                      title="Admin Management"
+                      subtitle="Administrators, assignments and roles"
+                      onPress={() => openRoot('AdminManagement')}
+                    />
+                  </>
+                ) : null}
                 <Menu
                   icon="people-outline"
-                  color={C.gold}
-                  title={profile?.role === 'super_admin' ? 'User Management' : 'Assigned Users'}
-                  sub="View accounts and card approval information"
+                  title={profile.role === 'super_admin' ? 'User Management' : 'Assigned Users'}
+                  subtitle="Secure RPC-scoped account management"
                   onPress={() => openRoot('UserManagement')}
                 />
                 <Menu
-                  icon="shield-checkmark-outline"
-                  color={C.gold}
+                  icon="checkmark-done-outline"
                   title="Card Approvals"
-                  sub="Review cards waiting for approval"
+                  subtitle="Review pending cards within authorized scope"
                   onPress={() => openRoot('AdminApprovals')}
                 />
               </MenuGroup>
             ) : null}
-            <TouchableOpacity style={s.logout} onPress={logout}>
-              <View style={[s.menuIcon, { backgroundColor: C.redSoft }]}>
-                <Ionicons name="log-out-outline" size={22} color={C.red} />
-              </View>
+
+            <TouchableOpacity style={styles.signOut} onPress={confirmSignOut} disabled={signingOut}>
+              <Ionicons name="log-out-outline" size={22} color={colors.danger} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.red, fontSize: 12, fontWeight: '900' }}>Sign Out</Text>
-                <Text style={s.menuSub}>Sign out from your account</Text>
+                <Text style={styles.signOutTitle}>{signingOut ? 'Signing Out…' : 'Sign Out'}</Text>
+                <Text style={styles.menuSubtitle}>Sign out on this device</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={C.text2} />
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <ApprovalRequiredModal
-          visible={approvalVisible}
-          card={card}
-          onClose={() => setApprovalVisible(false)}
-          onUpdated={() => load(true)}
-          onEdit={() => {
-            setApprovalVisible(false);
-            openRoot('Card');
-          }}
-        />
       </SafeAreaView>
     </View>
   );
 }
-function Info({ icon, text }) {
-  if (!text) return null;
+
+function Badge({ label, tone }) {
+  const config =
+    tone === 'success'
+      ? [colors.successSoft, colors.success]
+      : tone === 'gold'
+        ? [colors.goldSoft, colors.goldDark]
+        : [colors.surfaceSoft, colors.textSecondary];
   return (
-    <View style={s.info}>
-      <Ionicons name={icon} size={15} color={C.gold} />
-      <Text numberOfLines={1} style={s.infoText}>
-        {text}
-      </Text>
+    <View style={[styles.badge, { backgroundColor: config[0] }]}>
+      <Text style={[styles.badgeText, { color: config[1] }]}>{label}</Text>
     </View>
   );
 }
-function PStat({ icon, label, value, color }) {
+
+function Summary({ icon, value, label }) {
   return (
-    <View style={s.pstat}>
-      <View style={[s.pstatIcon, { backgroundColor: color + '22' }]}>
-        <Ionicons name={icon} size={19} color={color} />
-      </View>
-      <Text style={s.pstatValue}>{Number(value || 0).toLocaleString()}</Text>
-      <Text style={s.pstatLabel}>{label}</Text>
+    <View style={styles.summary}>
+      <Ionicons name={icon} size={22} color={colors.goldDark} />
+      <Text style={styles.summaryValue}>{Number(value || 0).toLocaleString()}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
     </View>
   );
 }
+
 function MenuGroup({ title, children }) {
   return (
     <>
-      <Text style={s.groupTitle}>{title}</Text>
-      <View style={s.group}>{children}</View>
+      <Text style={styles.groupTitle}>{title}</Text>
+      <View style={styles.group}>{children}</View>
     </>
   );
 }
-function Menu({ icon, color, title, sub, onPress }) {
+
+function Menu({ icon, title, subtitle, onPress, danger = false }) {
   return (
-    <TouchableOpacity style={s.menu} onPress={onPress}>
-      <View style={[s.menuIcon, { backgroundColor: color + '16' }]}>
-        <Ionicons name={icon} size={22} color={color} />
+    <TouchableOpacity style={styles.menu} onPress={onPress}>
+      <View style={[styles.menuIcon, danger && styles.dangerIcon]}>
+        <Ionicons name={icon} size={21} color={danger ? colors.danger : colors.goldDark} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={s.menuTitle}>{title}</Text>
-        <Text style={s.menuSub}>{sub}</Text>
+        <Text style={[styles.menuTitle, danger && { color: colors.danger }]}>{title}</Text>
+        <Text style={styles.menuSubtitle}>{subtitle}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={C.text2} />
+      <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
     </TouchableOpacity>
   );
 }
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  headerBg: { position: 'absolute', top: 0, left: 0, right: 0, height: 560 },
-  loading: { flex: 1, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
+  headerBackground: { position: 'absolute', top: 0, left: 0, right: 0, height: 350 },
+  scroll: { paddingBottom: 105 },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 18,
+    paddingHorizontal: spacing[20],
+    paddingTop: spacing[18],
+    paddingBottom: spacing[18],
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 30, fontWeight: '800' },
-  subtitle: { color: '#D5DDE8', fontSize: 11, marginTop: 4 },
-  topIcon: {
+  title: { color: colors.white, fontFamily: fontFamilies.medium, fontSize: 28, fontWeight: '800' },
+  subtitle: { ...typography.small, color: '#D5DDE8', marginTop: 3 },
+  headerButton: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,.18)',
-    backgroundColor: 'rgba(255,255,255,.06)',
+    borderColor: 'rgba(255,255,255,.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badge: {
-    position: 'absolute',
-    top: -5,
-    right: -4,
-    minWidth: 19,
-    height: 19,
-    borderRadius: 10,
-    backgroundColor: C.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: { color: C.navy, fontSize: 8, fontWeight: '900' },
-  profileCard: {
-    marginHorizontal: 18,
-    borderRadius: 23,
+  overview: {
+    marginHorizontal: spacing[18],
+    padding: spacing[18],
+    borderRadius: radius.xl,
+    backgroundColor: 'rgba(3,19,38,.92)',
     borderWidth: 1,
-    borderColor: 'rgba(246,185,26,.7)',
-    backgroundColor: 'rgba(6,22,45,.88)',
-    overflow: 'hidden',
+    borderColor: colors.goldDark,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[14],
   },
-  profileTop: { padding: 18, paddingRight: 155, flexDirection: 'row', gap: 13 },
-  avatarWrap: { position: 'relative' },
-  avatar: { width: 92, height: 92, borderRadius: 31, borderWidth: 2, borderColor: '#FFF' },
+  avatar: { width: 72, height: 72, borderRadius: 24, borderWidth: 2, borderColor: colors.gold },
   avatarFallback: {
-    width: 92,
-    height: 92,
-    borderRadius: 31,
-    backgroundColor: '#FFE7BD',
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: colors.goldSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  initial: { color: C.navy, fontSize: 32, fontWeight: '900' },
-  camera: {
-    position: 'absolute',
-    right: -7,
-    bottom: -5,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: C.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  name: { color: '#FFF', fontSize: 20, fontWeight: '900' },
-  role: { color: '#D3DCE8', fontSize: 11, marginTop: 4 },
-  company: { color: '#AEB8C7', fontSize: 9, marginTop: 3, marginBottom: 7 },
-  info: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
-  infoText: { color: '#D9E0EA', fontSize: 9, flex: 1 },
-  qrArea: { position: 'absolute', right: 15, top: 18, alignItems: 'center' },
-  active: {
+  initial: { color: colors.navy, fontSize: 28, fontWeight: '900' },
+  name: { ...typography.h3, color: colors.white },
+  email: { ...typography.small, color: '#D5DDE8', marginTop: 3 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing[10] },
+  badge: { borderRadius: radius.round, paddingHorizontal: 8, paddingVertical: 4 },
+  badgeText: { ...typography.caption, fontWeight: '800' },
+  summaryRow: {
     flexDirection: 'row',
-    gap: 5,
-    alignItems: 'center',
-    backgroundColor: 'rgba(22,163,74,.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(22,163,74,.3)',
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 15,
+    gap: spacing[10],
+    marginHorizontal: spacing[18],
+    marginTop: spacing[12],
   },
-  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#20D982' },
-  activeText: { color: '#20D982', fontSize: 8, fontWeight: '800' },
-  qrBox: {
-    marginTop: 10,
-    padding: 7,
-    backgroundColor: '#FFF',
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: C.gold,
-  },
-  viewBtn: {
-    marginTop: 8,
-    minHeight: 34,
-    borderWidth: 1,
-    borderColor: C.gold,
-    borderRadius: 10,
-    paddingHorizontal: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  viewText: { color: '#FFF', fontSize: 8, fontWeight: '800' },
-  stats: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,.14)',
-    marginTop: 8,
-    flexDirection: 'row',
-    paddingVertical: 15,
-  },
-  pstat: {
+  summary: {
     flex: 1,
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,.12)',
-  },
-  pstatIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pstatValue: { color: '#FFF', fontSize: 16, fontWeight: '900', marginTop: 5 },
-  pstatLabel: { color: '#AEB8C7', fontSize: 7, marginTop: 2 },
-  body: {
-    backgroundColor: C.bg,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: 18,
-    padding: 18,
-  },
-  groupTitle: {
-    color: C.text,
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 0.6,
-    marginTop: 10,
-    marginBottom: 7,
-  },
-  group: {
-    backgroundColor: '#FFF',
-    borderRadius: 19,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[16],
     borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
+    borderColor: colors.border,
+    ...shadows.soft,
+  },
+  summaryValue: { ...typography.h2, marginTop: spacing[8] },
+  summaryLabel: { ...typography.caption, marginTop: 2 },
+  body: { paddingHorizontal: spacing[18], paddingTop: spacing[8] },
+  groupTitle: { ...typography.label, marginTop: spacing[20], marginBottom: spacing[8] },
+  group: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing[14],
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.soft,
   },
   menu: {
-    minHeight: 69,
+    minHeight: 68,
     flexDirection: 'row',
-    gap: 11,
     alignItems: 'center',
+    gap: spacing[12],
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F3F6',
+    borderBottomColor: colors.border,
   },
   menuIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.goldSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuTitle: { color: C.text, fontSize: 11, fontWeight: '900' },
-  menuSub: { color: C.text2, fontSize: 8, marginTop: 3 },
-  logout: {
-    minHeight: 69,
-    marginTop: 14,
-    backgroundColor: '#FFF',
-    borderRadius: 19,
+  dangerIcon: { backgroundColor: colors.dangerSoft },
+  menuTitle: { ...typography.bodyMedium },
+  menuSubtitle: { ...typography.caption, marginTop: 2 },
+  signOut: {
+    minHeight: 66,
+    marginTop: spacing[22],
+    paddingHorizontal: spacing[16],
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
+    borderColor: colors.danger,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
-    gap: 11,
     alignItems: 'center',
+    gap: spacing[12],
   },
+  signOutTitle: { ...typography.bodyMedium, color: colors.danger },
 });

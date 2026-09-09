@@ -46,6 +46,8 @@ import AdminApprovalsScreen from '../screens/Admin/AdminApprovalsScreen';
 import AdminCardPreviewScreen from '../screens/Admin/AdminCardPreviewScreen';
 import CardPreviewScreen from '../screens/Cards/CardPreviewScreen';
 import QRCentreScreen from '../screens/Cards/QRCentreScreen';
+import BusinessModuleScreen from '../screens/Meta/BusinessModuleScreen';
+import ProfileModuleScreen from '../screens/Profile/ProfileModuleScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -132,6 +134,8 @@ export default function RootNavigator({ session, authExiting }) {
           <Stack.Screen name="WhatsAppChat" component={WhatsAppChatScreen} />
 
           <Stack.Screen name="WhatsAppTemplates" component={WhatsAppTemplatesScreen} />
+          <Stack.Screen name="BusinessModule" component={BusinessModuleScreen} />
+          <Stack.Screen name="ProfileModule" component={ProfileModuleScreen} />
         </>
       )}
     </Stack.Navigator>

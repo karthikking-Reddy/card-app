@@ -23,6 +23,9 @@ import {
   getWhatsAppConversationsPage,
   getWhatsAppInboxSummary,
 } from '../../services/whatsappService';
+import { findIntegration, getIntegrationStatus } from '../../services/integrationService';
+import ConnectionStatusBadge from '../../components/business/ConnectionStatusBadge';
+import { EmptyState, LoadingState } from '../../components/ui/ScreenState';
 
 export default function WhatsAppInboxScreen({ navigation }) {
   const requestIdRef = useRef(0);
@@ -40,6 +43,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [summary, setSummary] = useState({ total: 0, open: 0, unread: 0 });
+  const [cloudConnected, setCloudConnected] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -60,7 +64,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
       try {
         const session = await getCurrentSession();
         if (!session?.user) return;
-        const [result, totals] = await Promise.all([
+        const [result, totals, integrationResult] = await Promise.all([
           getWhatsAppConversationsPage({
             userId: session.user.id,
             page: nextPage,
@@ -68,6 +72,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
             search: debouncedSearch,
           }),
           getWhatsAppInboxSummary(session.user.id),
+          getIntegrationStatus().catch(() => []),
         ]);
         if (requestId !== requestIdRef.current) return;
         setConversations((current) =>
@@ -78,6 +83,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
         setPage(nextPage);
         setHasMore(result.hasMore);
         setSummary(totals);
+        setCloudConnected(findIntegration(integrationResult, 'whatsapp')?.status === 'connected');
       } catch (error) {
         Alert.alert('Unable to load WhatsApp inbox', 'Please check your connection and try again.');
       } finally {
@@ -100,11 +106,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
   const filtered = conversations;
 
   if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#06162D" />
-      </View>
-    );
+    return <LoadingState message="Loading WhatsApp inbox…" />;
   }
 
   return (
@@ -117,7 +119,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>WhatsApp Inbox</Text>
 
-          <Text style={styles.subtitle}>{unread} unread messages</Text>
+          <Text style={styles.subtitle}>{summary.unread} unread messages</Text>
         </View>
 
         <View style={styles.whatsappIcon}>
@@ -129,6 +131,17 @@ export default function WhatsAppInboxScreen({ navigation }) {
         contentContainerStyle={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
       >
+        {!cloudConnected ? (
+          <View style={styles.connectionBanner}>
+            <View style={{ flex: 1 }}>
+              <ConnectionStatusBadge status="setup_required" />
+              <Text style={styles.connectionText}>
+                WhatsApp Business API setup required for live business messaging. Existing stored
+                conversations remain visible below.
+              </Text>
+            </View>
+          </View>
+        ) : null}
         <View style={styles.summaryRow}>
           <Summary value={summary.total} label="Chats" />
 
@@ -177,18 +190,10 @@ export default function WhatsAppInboxScreen({ navigation }) {
         <Text style={styles.sectionLabel}>CONVERSATIONS</Text>
 
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="logo-whatsapp" size={37} color="#16A34A" />
-            </View>
-
-            <Text style={styles.emptyTitle}>No conversations yet</Text>
-
-            <Text style={styles.emptyText}>
-              Once WhatsApp Cloud API is connected, customer messages will appear here
-              automatically.
-            </Text>
-          </View>
+          <EmptyState
+            title="No conversations yet"
+            message="Live WhatsApp Business messages appear only after a verified Cloud API connection."
+          />
         ) : (
           filtered.map((conversation) => (
             <TouchableOpacity
@@ -372,6 +377,15 @@ const styles = StyleSheet.create({
     padding: 18,
     paddingBottom: 100,
   },
+  connectionBanner: {
+    backgroundColor: '#FFF6DD',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#D99A12',
+    padding: 14,
+    marginBottom: 14,
+  },
+  connectionText: { color: '#344054', fontSize: 10, lineHeight: 16, marginTop: 9 },
 
   summaryRow: {
     flexDirection: 'row',

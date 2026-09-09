@@ -53,13 +53,15 @@ export async function getNotifications(userId) {
   return data || [];
 }
 
-export async function markNotificationRead(notificationId) {
+export async function markNotificationRead(userId, notificationId) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { data, error } = await supabase
     .from('notifications')
     .update({
       is_read: true,
     })
     .eq('id', notificationId)
+    .eq('user_id', userId)
     .select()
     .single();
 

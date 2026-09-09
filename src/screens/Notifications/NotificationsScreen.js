@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
 
 import { getCurrentSession } from '../../services/authService';
 
@@ -35,9 +36,11 @@ export default function NotificationsScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async (nextPage = 0) => {
     nextPage > 0 ? setLoadingMore(true) : setLoading(true);
+    setLoadError('');
 
     try {
       const session = await getCurrentSession();
@@ -60,8 +63,8 @@ export default function NotificationsScreen({ navigation }) {
       setPage(nextPage);
       setHasMore(result.hasMore);
       setUnread(unreadCount);
-    } catch (error) {
-      Alert.alert('Unable to load notifications', error.message);
+    } catch {
+      setLoadError('We could not load notifications. Check your connection and try again.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -77,7 +80,7 @@ export default function NotificationsScreen({ navigation }) {
   async function openNotification(notification) {
     try {
       if (!notification.is_read) {
-        await markNotificationRead(notification.id);
+        await markNotificationRead(user.id, notification.id);
         setUnread((value) => Math.max(0, value - 1));
         setNotifications((items) =>
           items.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item))
@@ -91,8 +94,8 @@ export default function NotificationsScreen({ navigation }) {
 
         return;
       }
-    } catch (error) {
-      Alert.alert('Error', error.message);
+    } catch {
+      Alert.alert('Unable to update notification', 'Please try again.');
     }
   }
 
@@ -101,16 +104,24 @@ export default function NotificationsScreen({ navigation }) {
       await markAllNotificationsRead(user.id);
       setUnread(0);
       setNotifications((items) => items.map((item) => ({ ...item, is_read: true })));
-    } catch (error) {
-      Alert.alert('Error', error.message);
+    } catch {
+      Alert.alert('Unable to update notifications', 'Please try again.');
     }
   }
 
   if (loading) {
+    return <LoadingState message="Loading notifications…" />;
+  }
+
+  if (loadError && notifications.length === 0) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#06162D" />
-      </View>
+      <ErrorState
+        title="Notifications unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => load()}
+        fullScreen
+      />
     );
   }
 
@@ -123,8 +134,12 @@ export default function NotificationsScreen({ navigation }) {
 
         <Text style={styles.headerTitle}>Notifications</Text>
 
-        <TouchableOpacity onPress={markAll} disabled={unread === 0}>
-          <Text style={styles.markAll}>Read All</Text>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('BusinessModule', { module: 'notification_preferences' })
+          }
+        >
+          <Ionicons name="options-outline" size={23} color="#F6B91A" />
         </TouchableOpacity>
       </View>
 
@@ -135,15 +150,10 @@ export default function NotificationsScreen({ navigation }) {
         </Text>
 
         {notifications.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="notifications-outline" size={45} color="#98A2B3" />
-
-            <Text style={styles.emptyTitle}>No notifications yet</Text>
-
-            <Text style={styles.emptyText}>
-              New leads and important card activity will appear here.
-            </Text>
-          </View>
+          <EmptyState
+            title="No notifications yet"
+            message="Real lead, follow-up, card, integration and security activity will appear here."
+          />
         ) : (
           notifications.map((notification) => (
             <TouchableOpacity
@@ -153,17 +163,16 @@ export default function NotificationsScreen({ navigation }) {
             >
               <View style={styles.notificationIcon}>
                 <Ionicons
-                  name={
-                    notification.notification_type === 'new_lead'
-                      ? 'person-add-outline'
-                      : 'notifications-outline'
-                  }
+                  name={getNotificationPresentation(notification.notification_type).icon}
                   size={21}
-                  color="#06162D"
+                  color={getNotificationPresentation(notification.notification_type).color}
                 />
               </View>
 
               <View style={{ flex: 1 }}>
+                <Text style={styles.category}>
+                  {getNotificationPresentation(notification.notification_type).label}
+                </Text>
                 <Text style={styles.notificationTitle}>{notification.title}</Text>
 
                 <Text style={styles.notificationMessage}>{notification.message || ''}</Text>
@@ -190,9 +199,31 @@ export default function NotificationsScreen({ navigation }) {
             )}
           </TouchableOpacity>
         ) : null}
+        {unread > 0 ? (
+          <TouchableOpacity style={styles.readAllButton} onPress={markAll}>
+            <Text style={styles.readAllText}>Mark all as read</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function getNotificationPresentation(type) {
+  const key = String(type || '').toLowerCase();
+  if (key.includes('lead'))
+    return { label: 'New leads', icon: 'person-add-outline', color: '#2563EB' };
+  if (key.includes('follow'))
+    return { label: 'Follow-ups', icon: 'time-outline', color: '#D99A12' };
+  if (key.includes('meeting') || key.includes('appointment'))
+    return { label: 'Meetings', icon: 'calendar-outline', color: '#7C3AED' };
+  if (key.includes('card') || key.includes('approval'))
+    return { label: 'Card activity', icon: 'card-outline', color: '#061B36' };
+  if (key.includes('integration') || key.includes('meta') || key.includes('whatsapp'))
+    return { label: 'Integration status', icon: 'pulse-outline', color: '#D99A12' };
+  if (key.includes('security') || key.includes('login') || key.includes('password'))
+    return { label: 'Security', icon: 'shield-checkmark-outline', color: '#D92D3A' };
+  return { label: 'Product updates', icon: 'notifications-outline', color: '#061B36' };
 }
 
 const styles = StyleSheet.create({
@@ -324,6 +355,23 @@ const styles = StyleSheet.create({
     color: '#06162D',
     fontWeight: '800',
   },
+  category: {
+    color: '#D99A12',
+    fontSize: 8,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  readAllButton: {
+    minHeight: 46,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#D99A12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  readAllText: { color: '#061B36', fontSize: 11, fontWeight: '900' },
 
   notificationMessage: {
     color: '#667085',
