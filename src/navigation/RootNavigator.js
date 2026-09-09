@@ -7,7 +7,7 @@ import {
 } from '../screens/Admin/ManagementScreens';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import AuthScreen from '../screens/AuthScreen';
+import AuthScreen from '../screens/AuthExperienceScreen';
 
 import TabNavigator from './TabNavigator';
 
@@ -47,7 +47,7 @@ import AdminCardPreviewScreen from '../screens/Admin/AdminCardPreviewScreen';
 
 const Stack = createNativeStackNavigator();
 
-export default function RootNavigator({ session }) {
+export default function RootNavigator({ session, authExiting }) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -56,7 +56,7 @@ export default function RootNavigator({ session }) {
       }}
     >
       {!session ? (
-        <Stack.Screen name="Auth" component={AuthScreen} />
+        <Stack.Screen name="Auth">{() => <AuthScreen authSuccess={authExiting} />}</Stack.Screen>
       ) : (
         <>
           {/* =========================

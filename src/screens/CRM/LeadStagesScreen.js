@@ -203,8 +203,7 @@ export default function LeadStagesScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.help}>
-          Customize your lead pipeline. These stages will be used by Connections and follow-up
-          workflows.
+          Customize your lead pipeline. These stages will be used by Leads and follow-up workflows.
         </Text>
 
         {stages.map((stage, index) => (

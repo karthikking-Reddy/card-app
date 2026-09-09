@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   RefreshControl,
   ScrollView,
@@ -23,28 +22,31 @@ import Svg, {
 } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
+import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { colors, fontFamilies } from '../../theme';
 
 const C = {
-  navy: '#06162D',
-  gold: '#F6B91A',
-  bg: '#F5F7FB',
-  text: '#071A33',
-  text2: '#667085',
-  muted: '#98A2B3',
-  border: '#E6EAF0',
-  blue: '#0866FF',
-  blueSoft: '#EFF6FF',
-  green: '#16A34A',
-  greenSoft: '#ECFDF3',
+  navy: colors.navy,
+  gold: colors.gold,
+  bg: colors.background,
+  text: colors.text,
+  text2: colors.textSecondary,
+  muted: colors.textMuted,
+  border: colors.border,
+  blue: colors.blue,
+  blueSoft: colors.blueSoft,
+  green: colors.success,
+  greenSoft: colors.successSoft,
   purple: '#7C3AED',
   purpleSoft: '#F5F3FF',
   orange: '#EA7B00',
   orangeSoft: '#FFF7ED',
-  red: '#DC2626',
-  redSoft: '#FEF2F2',
+  red: colors.danger,
+  redSoft: colors.dangerSoft,
 };
 export default function InsightsScreen() {
   const [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(''),
     [refreshing, setRefreshing] = useState(false),
     [cards, setCards] = useState([]),
     [events, setEvents] = useState([]),
@@ -55,6 +57,7 @@ export default function InsightsScreen() {
     [range, setRange] = useState('30'),
     [cardId, setCardId] = useState('all');
   const load = useCallback(async (refresh = false) => {
+    setLoadError('');
     refresh ? setRefreshing(true) : setLoading(true);
     try {
       const {
@@ -103,6 +106,7 @@ export default function InsightsScreen() {
       setBlocks(br.data || []);
       setLinks(kr.data || []);
     } catch (e) {
+      setLoadError('We could not load your insights. Check your connection and try again.');
       Alert.alert('Unable to load insights', e?.message || 'Please try again.');
     } finally {
       setLoading(false);
@@ -158,11 +162,16 @@ export default function InsightsScreen() {
       .map(([date, value]) => ({ date, value }));
     return { views, clicks, wa, leads: leads.length, won, top, recent: ev.slice(0, 8), series };
   }, [events, connections, links, blocks, stages, range, cardId]);
-  if (loading)
+  if (loading) return <LoadingState message="Loading your insights…" />;
+  if (loadError && cards.length === 0)
     return (
-      <View style={s.loading}>
-        <ActivityIndicator size="large" color={C.gold} />
-      </View>
+      <ErrorState
+        title="Insights unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => load()}
+        fullScreen
+      />
     );
   return (
     <View style={s.root}>
@@ -452,7 +461,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { color: '#FFF', fontSize: 29, fontWeight: '900' },
+  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 29, fontWeight: '800' },
   subtitle: { color: '#D5DDE8', fontSize: 12, marginTop: 5 },
   rangeTop: {
     minHeight: 45,

@@ -43,7 +43,7 @@ export default function CRMExportScreen({ navigation }) {
             <Ionicons name="download-outline" size={30} color="#06162D" />
           </View>
 
-          <Text style={styles.heroTitle}>Export Connections</Text>
+          <Text style={styles.heroTitle}>Export Leads</Text>
 
           <Text style={styles.heroText}>
             Download your complete YNS CRM lead database as a CSV file.

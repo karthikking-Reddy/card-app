@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -28,31 +27,33 @@ import { supabase } from '../../../lib/supabase';
 
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge, { getApprovalStatusCopy } from '../../components/ApprovalStatusBadge';
+import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { colors } from '../../theme';
 
 const COLORS = {
-  navy: '#06162D',
-  navy2: '#0B2447',
+  navy: colors.navy,
+  navy2: colors.navySoft,
   navy3: '#102D52',
 
-  gold: '#F6B91A',
+  gold: colors.gold,
   gold2: '#F7C955',
-  goldSoft: '#FFF4D6',
+  goldSoft: colors.goldSoft,
 
-  white: '#FFFFFF',
+  white: colors.white,
 
-  background: '#F5F7FB',
+  background: colors.background,
 
-  text: '#071A33',
-  text2: '#667085',
-  muted: '#98A2B3',
+  text: colors.text,
+  text2: colors.textSecondary,
+  muted: colors.textMuted,
 
-  border: '#E6EAF0',
+  border: colors.border,
 
-  green: '#16A34A',
-  greenSoft: '#ECFDF3',
+  green: colors.success,
+  greenSoft: colors.successSoft,
 
-  blue: '#0866FF',
-  blueSoft: '#EFF6FF',
+  blue: colors.blue,
+  blueSoft: colors.blueSoft,
 
   purple: '#7C3AED',
   purpleSoft: '#F5F3FF',
@@ -65,6 +66,8 @@ const PUBLIC_CARD_BASE = 'https://card.ynscrm.online/card';
 
 export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
+
+  const [loadError, setLoadError] = useState('');
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -87,6 +90,7 @@ export default function HomeScreen({ navigation }) {
   const [approvalVisible, setApprovalVisible] = useState(false);
 
   const loadDashboard = useCallback(async (refresh = false) => {
+    setLoadError('');
     if (refresh) {
       setRefreshing(true);
     } else {
@@ -209,6 +213,8 @@ export default function HomeScreen({ navigation }) {
     } catch (error) {
       console.log('Home dashboard error:', error);
 
+      setLoadError('We could not load your dashboard. Check your connection and try again.');
+
       Alert.alert('Unable to load dashboard', error?.message || 'Please try again.');
     } finally {
       setLoading(false);
@@ -315,12 +321,18 @@ export default function HomeScreen({ navigation }) {
   }
 
   if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={COLORS.gold} />
+    return <LoadingState message="Loading your dashboard…" />;
+  }
 
-        <Text style={styles.loadingText}>Loading your dashboard...</Text>
-      </View>
+  if (loadError && !card && cards.length === 0) {
+    return (
+      <ErrorState
+        title="Dashboard unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => loadDashboard()}
+        fullScreen
+      />
     );
   }
 

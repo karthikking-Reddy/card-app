@@ -17,31 +17,34 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
 import { getConnectionSummary, getConnectionsPage } from '../../services/connectionService';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { colors, fontFamilies } from '../../theme';
 
 const C = {
-  navy: '#06162D',
-  gold: '#F6B91A',
-  white: '#FFF',
-  bg: '#F5F7FB',
-  text: '#071A33',
-  text2: '#667085',
-  muted: '#98A2B3',
-  border: '#E6EAF0',
-  blue: '#0866FF',
-  blueSoft: '#EFF6FF',
-  green: '#16A34A',
-  greenSoft: '#ECFDF3',
+  navy: colors.navy,
+  gold: colors.gold,
+  white: colors.white,
+  bg: colors.background,
+  text: colors.text,
+  text2: colors.textSecondary,
+  muted: colors.textMuted,
+  border: colors.border,
+  blue: colors.blue,
+  blueSoft: colors.blueSoft,
+  green: colors.success,
+  greenSoft: colors.successSoft,
   purple: '#7C3AED',
   purpleSoft: '#F5F3FF',
   orange: '#EA7B00',
   orangeSoft: '#FFF7ED',
-  red: '#DC2626',
-  redSoft: '#FEF2F2',
+  red: colors.danger,
+  redSoft: colors.dangerSoft,
 };
 
 export default function ConnectionsScreen({ navigation }) {
   const requestIdRef = useRef(0);
   const [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(''),
     [refreshing, setRefreshing] = useState(false),
     [user, setUser] = useState(null),
     [leads, setLeads] = useState([]),
@@ -64,6 +67,7 @@ export default function ConnectionsScreen({ navigation }) {
   const load = useCallback(
     async (refresh = false, nextPage = 0) => {
       const requestId = ++requestIdRef.current;
+      setLoadError('');
       if (nextPage > 0) setLoadingMore(true);
       else refresh ? setRefreshing(true) : setLoading(true);
       try {
@@ -111,6 +115,7 @@ export default function ConnectionsScreen({ navigation }) {
         setStages(stageRows);
         setCards(cr.data || []);
       } catch (e) {
+        setLoadError('We could not load your leads. Check your connection and try again.');
         Alert.alert('Unable to load leads', e?.message || 'Please try again.');
       } finally {
         if (requestId === requestIdRef.current) {
@@ -159,11 +164,16 @@ export default function ConnectionsScreen({ navigation }) {
       setSaving(false);
     }
   }
-  if (loading)
+  if (loading) return <LoadingState message="Loading your leads…" />;
+  if (loadError && leads.length === 0)
     return (
-      <View style={s.loading}>
-        <ActivityIndicator size="large" color={C.gold} />
-      </View>
+      <ErrorState
+        title="Leads unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => load()}
+        fullScreen
+      />
     );
   return (
     <View style={s.root}>
@@ -182,7 +192,7 @@ export default function ConnectionsScreen({ navigation }) {
         >
           <View style={s.header}>
             <View>
-              <Text style={s.title}>Connections</Text>
+              <Text style={s.title}>Leads</Text>
               <Text style={s.subtitle}>Manage your leads & customers</Text>
             </View>
             <TouchableOpacity style={s.addTop} onPress={() => setModal(true)}>
@@ -243,11 +253,12 @@ export default function ConnectionsScreen({ navigation }) {
               <Text style={s.sortText}>Newest</Text>
             </View>
             {filtered.length === 0 ? (
-              <View style={s.empty}>
-                <Ionicons name="people-outline" size={38} color={C.muted} />
-                <Text style={s.emptyTitle}>No leads found</Text>
-                <Text style={s.emptyText}>Add a new lead or change your filters.</Text>
-              </View>
+              <EmptyState
+                title="No leads found"
+                message="Add a new lead or change your search and filters."
+                actionLabel="Add Lead"
+                onAction={() => setModal(true)}
+              />
             ) : (
               filtered.map((lead) => (
                 <Lead
@@ -294,7 +305,7 @@ export default function ConnectionsScreen({ navigation }) {
             <View style={s.modalHead}>
               <View>
                 <Text style={s.modalTitle}>Add New Lead</Text>
-                <Text style={s.modalSub}>Create a connection in YNS CRM</Text>
+                <Text style={s.modalSub}>Create a lead in YNS CRM</Text>
               </View>
               <TouchableOpacity onPress={() => setModal(false)}>
                 <Ionicons name="close" size={26} color={C.text} />
@@ -430,7 +441,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { color: '#FFF', fontSize: 31, fontWeight: '900' },
+  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 31, fontWeight: '800' },
   subtitle: { color: '#D5DDE8', fontSize: 13, marginTop: 4 },
   addTop: {
     width: 53,

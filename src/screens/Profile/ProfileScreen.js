@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Linking,
@@ -20,25 +19,28 @@ import { supabase } from '../../../lib/supabase';
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
 import { getCurrentProfile, isAdminUser } from '../../services/profileService';
+import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { colors, fontFamilies } from '../../theme';
 
 const C = {
-  navy: '#06162D',
-  gold: '#F6B91A',
-  bg: '#F5F7FB',
-  text: '#071A33',
-  text2: '#667085',
-  muted: '#98A2B3',
-  border: '#E6EAF0',
-  blue: '#0866FF',
-  green: '#16A34A',
+  navy: colors.navy,
+  gold: colors.gold,
+  bg: colors.background,
+  text: colors.text,
+  text2: colors.textSecondary,
+  muted: colors.textMuted,
+  border: colors.border,
+  blue: colors.blue,
+  green: colors.success,
   purple: '#7C3AED',
   orange: '#EA7B00',
-  red: '#DC2626',
-  redSoft: '#FEF2F2',
+  red: colors.danger,
+  redSoft: colors.dangerSoft,
 };
 const PUBLIC = 'https://card.ynscrm.online/card';
 export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(''),
     [refreshing, setRefreshing] = useState(false),
     [user, setUser] = useState(null),
     [profile, setProfile] = useState(null),
@@ -48,6 +50,7 @@ export default function ProfileScreen({ navigation }) {
     [unread, setUnread] = useState(0),
     [approvalVisible, setApprovalVisible] = useState(false);
   const load = useCallback(async (refresh = false) => {
+    setLoadError('');
     refresh ? setRefreshing(true) : setLoading(true);
     try {
       const {
@@ -108,6 +111,7 @@ export default function ProfileScreen({ navigation }) {
         setUnread(0);
       }
     } catch {
+      setLoadError('We could not load your profile. Check your connection and try again.');
       Alert.alert('Unable to load profile', 'Please try again.');
     } finally {
       setLoading(false);
@@ -137,11 +141,16 @@ export default function ProfileScreen({ navigation }) {
       },
     ]);
   }
-  if (loading)
+  if (loading) return <LoadingState message="Loading your profile…" />;
+  if (loadError && !profile && !card)
     return (
-      <View style={s.loading}>
-        <ActivityIndicator size="large" color={C.gold} />
-      </View>
+      <ErrorState
+        title="Profile unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => load()}
+        fullScreen
+      />
     );
   return (
     <View style={s.root}>
@@ -446,7 +455,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { color: '#FFF', fontSize: 30, fontWeight: '900' },
+  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 30, fontWeight: '800' },
   subtitle: { color: '#D5DDE8', fontSize: 11, marginTop: 4 },
   topIcon: {
     width: 44,

@@ -8,3 +8,4 @@ ios/
 *.generated.*
 package-lock.json
 assets/
+docs/YNS_CARD_MASTER_CODEX_PROMPT.md

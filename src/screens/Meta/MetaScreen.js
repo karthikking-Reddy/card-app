@@ -18,30 +18,35 @@ import {
   findIntegration,
   getIntegrationStatus,
 } from '../../services/integrationService';
+import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { colors, fontFamilies } from '../../theme';
 
 const C = {
-  navy: '#06162D',
-  gold: '#F6B91A',
+  navy: colors.navy,
+  gold: colors.gold,
   text2: '#AEB8C7',
   border: 'rgba(255,255,255,.18)',
-  green: '#16A34A',
+  green: colors.success,
   greenSoft: 'rgba(22,163,74,.14)',
-  meta: '#0866FF',
-  whatsapp: '#16A34A',
+  meta: colors.meta,
+  whatsapp: colors.whatsapp,
   purple: '#7C3AED',
   orange: '#EA7B00',
 };
 export default function MetaScreen({ navigation }) {
   const [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(''),
     [refreshing, setRefreshing] = useState(false),
     [preparing, setPreparing] = useState(false),
     [connections, setConnections] = useState([]);
   const load = useCallback(async (refresh = false) => {
+    setLoadError('');
     refresh ? setRefreshing(true) : setLoading(true);
     try {
       setConnections(await getIntegrationStatus());
     } catch (e) {
       console.log('Integration status:', e);
+      setLoadError('We could not load your business tools. Check your connection and try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -58,7 +63,10 @@ export default function MetaScreen({ navigation }) {
     setPreparing(true);
     try {
       setConnections(await bootstrapIntegrations());
-      Alert.alert('Integration Ready', 'Secure integration foundation is prepared.');
+      Alert.alert(
+        'Setup prepared',
+        'The secure integration foundation is prepared. Provider authorization is still required.'
+      );
     } catch (e) {
       Alert.alert('Setup failed', e.message);
     } finally {
@@ -69,11 +77,16 @@ export default function MetaScreen({ navigation }) {
     const p = navigation.getParent?.();
     p ? p.navigate(name) : navigation.navigate(name);
   }
-  if (loading)
+  if (loading) return <LoadingState message="Loading business tools…" />;
+  if (loadError && connections.length === 0)
     return (
-      <View style={s.loading}>
-        <ActivityIndicator size="large" color={C.gold} />
-      </View>
+      <ErrorState
+        title="Business tools unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => load()}
+        fullScreen
+      />
     );
   return (
     <LinearGradient colors={['#06162D', '#071B35', '#0B2447']} style={s.root}>
@@ -93,9 +106,9 @@ export default function MetaScreen({ navigation }) {
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
                 <Ionicons name="infinite" size={31} color={C.meta} />
-                <Text style={s.title}>Meta Integration</Text>
+                <Text style={s.title}>Business Tools</Text>
               </View>
-              <Text style={s.subtitle}>Manage your Meta & WhatsApp</Text>
+              <Text style={s.subtitle}>Connect, communicate and automate</Text>
             </View>
             <TouchableOpacity
               style={s.help}
@@ -157,17 +170,27 @@ export default function MetaScreen({ navigation }) {
               <Metric
                 icon="megaphone-outline"
                 label="Lead Ads"
-                value={meta?.status === 'connected' ? 'Active' : 'Ready'}
+                value={meta?.status === 'connected' ? 'Active' : 'Setup required'}
                 color={C.meta}
               />
               <Metric
                 icon="chatbubbles-outline"
                 label="WhatsApp"
-                value={wa?.status === 'connected' ? 'Active' : 'Ready'}
+                value={wa?.status === 'connected' ? 'Active' : 'Setup required'}
                 color={C.whatsapp}
               />
-              <Metric icon="people-outline" label="CRM Sync" value="Ready" color={C.purple} />
-              <Metric icon="analytics-outline" label="Analytics" value="Ready" color={C.orange} />
+              <Metric
+                icon="people-outline"
+                label="CRM Sync"
+                value="Setup required"
+                color={C.purple}
+              />
+              <Metric
+                icon="analytics-outline"
+                label="Analytics"
+                value="Setup required"
+                color={C.orange}
+              />
             </View>
           </View>
           <View style={s.activity}>
@@ -216,7 +239,7 @@ export default function MetaScreen({ navigation }) {
               <Ionicons name="diamond-outline" size={25} color={C.gold} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.premiumTitle}>YNS Premium Meta Tools</Text>
+              <Text style={s.premiumTitle}>YNS Premium Business Tools</Text>
               <Text style={s.premiumSub}>
                 Advanced automation, AI replies, campaign attribution and business analytics.
               </Text>
@@ -318,7 +341,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 18,
   },
-  title: { color: '#FFF', fontSize: 26, fontWeight: '900' },
+  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 26, fontWeight: '800' },
   subtitle: { color: C.text2, fontSize: 11, marginTop: 4 },
   help: {
     height: 44,

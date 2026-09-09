@@ -1,13 +1,16 @@
+import { Platform } from 'react-native';
+
 export const colors = {
   /*
    * BRAND
    */
-  navy: '#0B1220',
-  navySoft: '#172033',
+  navy: '#061B36',
+  navySoft: '#123457',
+  navyDeep: '#031326',
 
-  gold: '#F4B740',
-  goldDark: '#C98B16',
-  goldSoft: '#FFF7E6',
+  gold: '#F4B91F',
+  goldDark: '#D99A12',
+  goldSoft: '#FFF6DD',
 
   blue: '#2563EB',
   blueSoft: '#EFF6FF',
@@ -15,7 +18,7 @@ export const colors = {
   /*
    * APP
    */
-  background: '#F5F7FA',
+  background: '#FAF8F2',
   surface: '#FFFFFF',
   surfaceSoft: '#F8FAFC',
 
@@ -29,13 +32,13 @@ export const colors = {
   /*
    * STATES
    */
-  success: '#16A34A',
+  success: '#16A36A',
   successSoft: '#ECFDF3',
 
   warning: '#D97706',
   warningSoft: '#FFF7ED',
 
-  danger: '#DC2626',
+  danger: '#D92D3A',
   dangerSoft: '#FEF2F2',
 
   info: '#2563EB',
@@ -56,7 +59,16 @@ export const colors = {
   black: '#000000',
   white: '#FFFFFF',
 
-  overlay: 'rgba(11,18,32,0.52)',
+  overlay: 'rgba(3,19,38,0.56)',
+};
+
+export const fontFamilies = {
+  regular: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }),
+  medium: Platform.select({
+    ios: 'System',
+    android: 'sans-serif-medium',
+    default: 'sans-serif',
+  }),
 };
 
 export const spacing = {
@@ -89,20 +101,23 @@ export const radius = {
 
 export const typography = {
   display: {
+    fontFamily: fontFamilies.medium,
     fontSize: 30,
     lineHeight: 37,
-    fontWeight: '900',
+    fontWeight: '800',
     color: colors.text,
   },
 
   h1: {
+    fontFamily: fontFamilies.medium,
     fontSize: 24,
     lineHeight: 31,
-    fontWeight: '900',
+    fontWeight: '800',
     color: colors.text,
   },
 
   h2: {
+    fontFamily: fontFamilies.medium,
     fontSize: 20,
     lineHeight: 27,
     fontWeight: '800',
@@ -110,6 +125,7 @@ export const typography = {
   },
 
   h3: {
+    fontFamily: fontFamilies.medium,
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '800',
@@ -117,6 +133,7 @@ export const typography = {
   },
 
   body: {
+    fontFamily: fontFamilies.regular,
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '400',
@@ -124,6 +141,7 @@ export const typography = {
   },
 
   bodyMedium: {
+    fontFamily: fontFamilies.medium,
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '600',
@@ -131,6 +149,7 @@ export const typography = {
   },
 
   small: {
+    fontFamily: fontFamilies.regular,
     fontSize: 12,
     lineHeight: 18,
     fontWeight: '400',
@@ -138,6 +157,7 @@ export const typography = {
   },
 
   label: {
+    fontFamily: fontFamilies.medium,
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '800',
@@ -146,12 +166,14 @@ export const typography = {
   },
 
   button: {
+    fontFamily: fontFamilies.medium,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: '800',
   },
 
   caption: {
+    fontFamily: fontFamilies.regular,
     fontSize: 10,
     lineHeight: 15,
     fontWeight: '500',
@@ -191,6 +213,7 @@ export const shadows = {
 
 export const theme = {
   colors,
+  fontFamilies,
   spacing,
   radius,
   typography,

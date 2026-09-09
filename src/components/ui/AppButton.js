@@ -107,6 +107,7 @@ export default function AppButton({
   size = 'medium',
 
   style,
+  accessibilityLabel,
 }) {
   const palette = variants[variant] || variants.primary;
 
@@ -126,6 +127,9 @@ export default function AppButton({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
       disabled={disabled || loading}
       onPress={handlePress}
       style={({ pressed }) => [

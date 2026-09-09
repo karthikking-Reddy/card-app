@@ -14,14 +14,9 @@ import MetaScreen from '../screens/Meta/MetaScreen';
 
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 
-const Tab = createBottomTabNavigator();
+import { colors, fontFamilies } from '../theme';
 
-const COLORS = {
-  navy: '#06162D',
-  gold: '#F6B91A',
-  inactive: '#8F9BAE',
-  white: '#FFFFFF',
-};
+const Tab = createBottomTabNavigator();
 
 const ICONS = {
   Home: {
@@ -63,13 +58,14 @@ export default function TabNavigator() {
 
         tabBarHideOnKeyboard: true,
 
-        tabBarActiveTintColor: COLORS.gold,
+        tabBarActiveTintColor: colors.gold,
 
-        tabBarInactiveTintColor: COLORS.inactive,
+        tabBarInactiveTintColor: colors.textMuted,
 
         tabBarLabelStyle: {
           fontSize: 9,
-          fontWeight: '700',
+          fontFamily: fontFamilies.medium,
+          fontWeight: '800',
           marginTop: 1,
           marginBottom: 2,
         },
@@ -77,7 +73,7 @@ export default function TabNavigator() {
         tabBarStyle: {
           height: 72,
 
-          backgroundColor: COLORS.navy,
+          backgroundColor: colors.navy,
 
           borderTopWidth: 0,
 
@@ -116,11 +112,19 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
 
-      <Tab.Screen name="Connections" component={ConnectionsScreen} />
+      <Tab.Screen
+        name="Connections"
+        component={ConnectionsScreen}
+        options={{ title: 'Leads', tabBarLabel: 'Leads' }}
+      />
 
       <Tab.Screen name="Insights" component={InsightsScreen} />
 
-      <Tab.Screen name="Meta" component={MetaScreen} />
+      <Tab.Screen
+        name="Meta"
+        component={MetaScreen}
+        options={{ title: 'Business', tabBarLabel: 'Business' }}
+      />
 
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
@@ -152,7 +156,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 2,
 
-    backgroundColor: COLORS.gold,
+    backgroundColor: colors.gold,
 
     position: 'absolute',
 
