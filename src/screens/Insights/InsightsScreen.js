@@ -6,23 +6,24 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, {
-  Defs,
-  LinearGradient as SvgGradient,
-  Stop,
-  Polyline,
-  Polygon,
-  Line,
-  Circle,
-} from 'react-native-svg';
+import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
-import { supabase } from '../../../lib/supabase';
-import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { getCurrentSession } from '../../services/authService';
+import {
+  buildInsightsSnapshot,
+  buildMetricComparison,
+  buildRollingSummary,
+  getAdvancedInsightsData,
+  INSIGHTS_RANGES,
+} from '../../services/advancedInsightsService';
+import { exportInsightsCsv } from '../../services/insightsReportService';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { colors, fontFamilies } from '../../theme';
 
 const C = {
@@ -37,149 +38,153 @@ const C = {
   blueSoft: colors.blueSoft,
   green: colors.success,
   greenSoft: colors.successSoft,
-  purple: '#7C3AED',
-  purpleSoft: '#F5F3FF',
-  orange: '#EA7B00',
-  orangeSoft: '#FFF7ED',
   red: colors.danger,
   redSoft: colors.dangerSoft,
+  orange: '#EA7B00',
+  orangeSoft: '#FFF7ED',
+  purple: '#7C3AED',
+  purpleSoft: '#F5F3FF',
 };
-export default function InsightsScreen() {
-  const [loading, setLoading] = useState(true),
-    [loadError, setLoadError] = useState(''),
-    [refreshing, setRefreshing] = useState(false),
-    [cards, setCards] = useState([]),
-    [events, setEvents] = useState([]),
-    [connections, setConnections] = useState([]),
-    [links, setLinks] = useState([]),
-    [blocks, setBlocks] = useState([]),
-    [stages, setStages] = useState([]),
-    [range, setRange] = useState('30'),
-    [cardId, setCardId] = useState('all');
-  const load = useCallback(async (refresh = false) => {
-    setLoadError('');
-    refresh ? setRefreshing(true) : setLoading(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const u = session?.user;
-      if (!u) return;
-      const cr = await supabase
-        .from('digital_cards')
-        .select('*')
-        .eq('user_id', u.id)
-        .order('is_primary', { ascending: false });
-      if (cr.error) throw cr.error;
-      const cs = cr.data || [];
-      setCards(cs);
-      const ids = cs.map((x) => x.id);
-      const [er, lr, sr, br, kr] = await Promise.all([
-        ids.length
-          ? supabase
-              .from('card_events')
-              .select('*')
-              .in('card_id', ids)
-              .order('created_at', { ascending: false })
-          : Promise.resolve({ data: [] }),
-        supabase
-          .from('connections')
-          .select('*')
-          .eq('owner_user_id', u.id)
-          .order('created_at', { ascending: false }),
-        supabase.from('lead_stages').select('*').eq('user_id', u.id),
-        ids.length
-          ? supabase.from('card_blocks').select('id,card_id,title,block_type').in('card_id', ids)
-          : Promise.resolve({ data: [] }),
-        ids.length
-          ? supabase.from('card_links').select('id,card_id,label,link_type').in('card_id', ids)
-          : Promise.resolve({ data: [] }),
-      ]);
-      if (er.error) throw er.error;
-      if (lr.error) throw lr.error;
-      if (sr.error) throw sr.error;
-      if (br.error) throw br.error;
-      if (kr.error) throw kr.error;
-      setEvents(er.data || []);
-      setConnections(lr.data || []);
-      setStages(sr.data || []);
-      setBlocks(br.data || []);
-      setLinks(kr.data || []);
-    } catch (e) {
-      setLoadError('We could not load your insights. Check your connection and try again.');
-      Alert.alert('Unable to load insights', e?.message || 'Please try again.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+
+const SERIES = [
+  ['views', 'Views'],
+  ['unique', 'Visitors'],
+  ['contacts', 'Contact Actions'],
+  ['leads', 'Leads'],
+  ['won', 'Won'],
+];
+
+export default function InsightsScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [source, setSource] = useState(null);
+  const [range, setRange] = useState('30');
+  const [cardId, setCardId] = useState('all');
+  const [seriesMetric, setSeriesMetric] = useState('views');
+  const [compare, setCompare] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const load = useCallback(
+    async (refresh = false) => {
+      setLoadError('');
+      refresh ? setRefreshing(true) : setLoading(true);
+      try {
+        const session = await getCurrentSession();
+        if (!session?.user) return;
+        const result = await getAdvancedInsightsData(session.user.id, range);
+        setSource(result);
+        setCardId((current) =>
+          current !== 'all' && !result.cards.some((card) => card.id === current) ? 'all' : current
+        );
+      } catch {
+        setLoadError('We could not load your analytics. Check your connection and try again.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [range]
+  );
+
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load])
   );
-  const data = useMemo(() => {
-    const min = range === 'all' ? 0 : Date.now() - Number(range) * 86400000;
-    const match = (id) => cardId === 'all' || id === cardId;
-    const ev = events.filter(
-      (x) => match(x.card_id) && (min === 0 || new Date(x.created_at).getTime() >= min)
-    );
-    const leads = connections.filter(
-      (x) => match(x.card_id) && (min === 0 || new Date(x.created_at).getTime() >= min)
-    );
-    const views = ev.filter((x) => x.event_type === 'card_view').length;
-    const clicks = ev.filter(
-      (x) => String(x.event_type || '').endsWith('_click') || x.event_type === 'block_click'
-    ).length;
-    const wa = ev.filter((x) => String(x.event_type || '').includes('whatsapp')).length;
-    const wonSet = new Set(stages.filter((x) => x.is_won).map((x) => x.stage_key));
-    const won = leads.filter((x) => wonSet.has(x.stage)).length;
-    const map = {};
-    links.forEach((x) => (map[x.id] = { title: x.label || x.link_type, type: x.link_type }));
-    blocks.forEach((x) => (map[x.id] = { title: x.title || x.block_type, type: x.block_type }));
-    const counts = {};
-    ev.forEach((x) => {
-      const id = x.link_id || x.block_id;
-      if (!id) return;
-      const m = map[id] || {
-        title: x.metadata?.title || 'Link',
-        type: x.metadata?.block_type || x.event_type,
-      };
-      counts[id] ??= { id, title: m.title, type: m.type, count: 0 };
-      counts[id].count++;
-    });
-    const top = Object.values(counts)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-    const daily = {};
-    ev.filter((x) => x.event_type === 'card_view').forEach((x) => {
-      const d = new Date(x.created_at).toISOString().slice(0, 10);
-      daily[d] = (daily[d] || 0) + 1;
-    });
-    const series = Object.entries(daily)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-14)
-      .map(([date, value]) => ({ date, value }));
-    return { views, clicks, wa, leads: leads.length, won, top, recent: ev.slice(0, 8), series };
-  }, [events, connections, links, blocks, stages, range, cardId]);
-  if (loading) return <LoadingState message="Loading your insights…" />;
-  if (loadError && cards.length === 0)
+
+  const current = useMemo(
+    () =>
+      source
+        ? buildInsightsSnapshot(source, { selectedCardId: cardId, range, seriesMetric })
+        : null,
+    [source, cardId, range, seriesMetric]
+  );
+  const previous = useMemo(
+    () =>
+      source
+        ? buildInsightsSnapshot(source, {
+            selectedCardId: cardId,
+            range,
+            seriesMetric,
+            period: 'previous',
+          })
+        : null,
+    [source, cardId, range, seriesMetric]
+  );
+  const comparisons = useMemo(
+    () => (current && previous ? buildMetricComparison(current, previous) : null),
+    [current, previous]
+  );
+  const weekly = useMemo(
+    () => (source ? buildRollingSummary(source, 7, cardId) : null),
+    [source, cardId]
+  );
+  const monthly = useMemo(
+    () => (source ? buildRollingSummary(source, 30, cardId) : null),
+    [source, cardId]
+  );
+
+  function openRoot(name, params) {
+    const parent = navigation.getParent?.();
+    parent ? parent.navigate(name, params) : navigation.navigate(name, params);
+  }
+
+  async function downloadReport() {
+    if (exporting || !current) return;
+    setExporting(true);
+    try {
+      const rangeLabel = INSIGHTS_RANGES.find(([key]) => key === range)?.[1] || range;
+      const cardLabel =
+        cardId === 'all'
+          ? 'All Cards'
+          : source.cards.find((card) => card.id === cardId)?.name || 'Selected Card';
+      await exportInsightsCsv({ snapshot: current, rangeLabel, cardLabel });
+    } catch {
+      Alert.alert(
+        'Report unavailable',
+        'The analytics report could not be prepared. Please try again.'
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  if (loading) return <LoadingState message="Loading business insights…" />;
+  if (loadError && !source)
     return (
       <ErrorState
         title="Insights unavailable"
         message={loadError}
         actionLabel="Try Again"
-        onAction={() => load()}
+        onAction={load}
         fullScreen
       />
     );
+  if (!source?.cards.length)
+    return (
+      <EmptyState
+        title="No insights yet"
+        message="Create and share a digital card to begin tracking engagement."
+        actionLabel="Create Card"
+        onAction={() => openRoot('MyCards')}
+        fullScreen
+      />
+    );
+
+  const noActivity = !current.events.length && !current.leads.length;
+  const primary = source.cards.find((card) => card.is_primary) || source.cards[0];
+  const chartWidth = Math.max(250, Math.min(width - 68, 620));
+  const recommendations = buildRecommendations(source, current);
+
   return (
     <View style={s.root}>
-      <LinearGradient colors={['#06162D', '#0B2447']} style={s.headerBg} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <LinearGradient colors={[C.navy, '#0B2447']} style={s.headerBg} />
+      <SafeAreaView style={s.flex} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={s.scroll}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -190,144 +195,332 @@ export default function InsightsScreen() {
         >
           <View style={s.header}>
             <View>
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                <Ionicons name="bar-chart" size={28} color={C.gold} />
-                <Text style={s.title}>Insights</Text>
-              </View>
-              <Text style={s.subtitle}>Track your performance</Text>
+              <Text style={s.title}>Insights</Text>
+              <Text style={s.subtitle}>Business performance from real activity</Text>
             </View>
-            <View style={s.rangeTop}>
-              <Ionicons name="calendar-outline" size={18} color="#FFF" />
-              <Text style={s.rangeTopText}>{range === 'all' ? 'All Time' : `${range} Days`}</Text>
-            </View>
+            <TouchableOpacity
+              style={s.reportButton}
+              onPress={downloadReport}
+              disabled={exporting}
+              accessibilityLabel="Download insights report"
+            >
+              <Ionicons
+                name={exporting ? 'hourglass-outline' : 'download-outline'}
+                size={21}
+                color={C.gold}
+              />
+            </TouchableOpacity>
           </View>
           <View style={s.body}>
-            <Text style={s.sectionTitle}>Overview</Text>
+            <Text style={s.controlLabel}>DATE RANGE</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10 }}
+              contentContainerStyle={s.chipRow}
             >
-              <Metric icon="eye-outline" label="Profile Views" value={data.views} tone="blue" />
-              <Metric
-                icon="navigate-outline"
-                label="Card Clicks"
-                value={data.clicks}
-                tone="purple"
-              />
-              <Metric icon="logo-whatsapp" label="WhatsApp Clicks" value={data.wa} tone="green" />
-              <Metric
-                icon="person-add-outline"
-                label="New Leads"
-                value={data.leads}
-                tone="orange"
+              {INSIGHTS_RANGES.map(([key, label]) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  active={range === key}
+                  onPress={() => setRange(key)}
+                />
+              ))}
+              <Chip
+                label="Custom"
+                onPress={() =>
+                  Alert.alert(
+                    'Custom range',
+                    'A native date-range picker is deferred until a stable project-compatible picker is selected.'
+                  )
+                }
               />
             </ScrollView>
+            <Text style={s.controlLabel}>CARD</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={{ marginTop: 13 }}
-              contentContainerStyle={{ gap: 7 }}
+              contentContainerStyle={s.chipRow}
             >
-              {[
-                ['7', '7 Days'],
-                ['30', '30 Days'],
-                ['90', '90 Days'],
-                ['all', 'All'],
-              ].map(([v, l]) => (
-                <Chip key={v} label={l} active={range === v} onPress={() => setRange(v)} />
+              <Chip label="All Cards" active={cardId === 'all'} onPress={() => setCardId('all')} />
+              <Chip
+                label="Primary Card"
+                active={cardId === primary.id}
+                onPress={() => setCardId(primary.id)}
+              />
+              {source.cards.map((card) => (
+                <Chip
+                  key={card.id}
+                  label={card.name || card.card_slug}
+                  active={cardId === card.id}
+                  onPress={() => setCardId(card.id)}
+                />
               ))}
             </ScrollView>
-            {cards.length > 1 && (
+            <TouchableOpacity style={s.compareRow} onPress={() => setCompare((value) => !value)}>
+              <Ionicons
+                name={compare ? 'checkbox' : 'square-outline'}
+                size={21}
+                color={compare ? C.gold : C.muted}
+              />
+              <View style={s.flex}>
+                <Text style={s.compareTitle}>Compare previous period</Text>
+                <Text style={s.compareText}>Uses an equal preceding date window</Text>
+              </View>
+            </TouchableOpacity>
+
+            {noActivity ? (
+              <EmptyState
+                title="No insights yet"
+                message="Share your digital card or QR code to begin tracking engagement."
+              />
+            ) : null}
+
+            <SectionTitle title="Performance" action={() => showDefinitions()} />
+            <View style={s.metricGrid}>
+              <Metric
+                label="Unique Visitors"
+                value={
+                  current.metrics.uniqueVisitors.available
+                    ? current.metrics.uniqueVisitors.value
+                    : '—'
+                }
+                comparison={compare ? comparisons.uniqueVisitors : null}
+                unavailable={!current.metrics.uniqueVisitors.available}
+              />
+              <Metric
+                label="Card Views"
+                value={current.metrics.views}
+                comparison={compare ? comparisons.views : null}
+              />
+              <Metric
+                label="Contact Actions"
+                value={current.metrics.contactActions}
+                comparison={compare ? comparisons.contactActions : null}
+              />
+              <Metric
+                label="Contact Saves"
+                value={current.metrics.contactSaves}
+                comparison={compare ? comparisons.contactSaves : null}
+              />
+              <Metric
+                label="New Leads"
+                value={current.metrics.leads}
+                comparison={compare ? comparisons.leads : null}
+              />
+              <Metric
+                label="Conversion Rate"
+                value={
+                  current.metrics.conversionRate == null
+                    ? '—'
+                    : `${current.metrics.conversionRate.toFixed(1)}%`
+                }
+                comparison={compare ? comparisons.conversionRate : null}
+                unavailable={current.metrics.conversionRate == null}
+              />
+            </View>
+
+            <Panel title="Conversion Funnel">
+              <View style={s.funnelRow}>
+                <Funnel label="Visitors" metric={current.funnel.visitors} />
+                <Arrow />
+                <Funnel label="Engaged" metric={current.funnel.engaged} />
+                <Arrow />
+                <Funnel label="Leads" value={current.funnel.leads} />
+                <Arrow />
+                <Funnel label="Won" metric={current.funnel.won} />
+              </View>
+              <FunnelRates funnel={current.funnel} />
+              <Text style={s.honesty}>
+                {!current.funnel.visitors.available || !current.funnel.engaged.available
+                  ? 'Visitor stages are unavailable when historical events lack anonymous visitor tokens. '
+                  : ''}
+                Won cohort attribution is unavailable because enquiry events are not linked to the
+                resulting lead ID.
+              </Text>
+            </Panel>
+
+            <Panel title="Performance Over Time">
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={{ marginTop: 8 }}
-                contentContainerStyle={{ gap: 7 }}
+                contentContainerStyle={s.chipRow}
               >
-                <Chip
-                  label="All Cards"
-                  active={cardId === 'all'}
-                  onPress={() => setCardId('all')}
-                />
-                {cards.map((c) => (
+                {SERIES.map(([key, label]) => (
                   <Chip
-                    key={c.id}
-                    label={c.name || c.card_slug}
-                    active={cardId === c.id}
-                    onPress={() => setCardId(c.id)}
+                    key={key}
+                    label={label}
+                    active={seriesMetric === key}
+                    onPress={() => setSeriesMetric(key)}
                   />
                 ))}
               </ScrollView>
-            )}
-            <View style={s.chartCard}>
-              <View style={s.sectionRow}>
-                <Text style={s.sectionTitle}>Views Over Time</Text>
-                <Text style={s.smallBlue}>Views</Text>
+              <LineChart series={current.series} width={chartWidth} />
+              <Text style={s.honesty}>
+                {range === 'year' ? 'Monthly' : range === '90' ? 'Weekly' : 'Daily'} grouping. Scale
+                begins at zero.
+              </Text>
+            </Panel>
+
+            <Panel title="Top Links & Sections">
+              <RankedList
+                items={current.topContent}
+                renderMeta={(item) =>
+                  `${item.clicks} clicks${item.uniqueClicks == null ? '' : ` • ${item.uniqueClicks} unique`} • ${item.cardName}`
+                }
+                empty="No attributable link or section clicks in this period."
+              />
+            </Panel>
+            <UnavailablePanel
+              title="Top Services"
+              text="Service-detail events are not currently linked to service IDs, so views and enquiry conversion cannot be attributed safely."
+            />
+            <UnavailablePanel
+              title="Top Portfolio"
+              text="Portfolio views and influenced enquiries are not currently recorded with portfolio item IDs."
+            />
+
+            <Panel title="Traffic Sources">
+              <RankedList items={current.trafficSources} empty="No card views in this period." />
+              <Text style={s.honesty}>
+                Unknown is retained when acquisition source is not captured; it is not relabelled as
+                Direct.
+              </Text>
+            </Panel>
+            <UnavailablePanel
+              title="Visitor Insights"
+              text="Device, browser, language and approximate location are not reliably captured. No identity, exact location or raw IP is inferred."
+            />
+            <Panel title="Contact Actions">
+              <RankedList
+                items={current.contactActions.map((item) => ({
+                  ...item,
+                  label: eventLabel(item.label),
+                }))}
+                empty="No contact actions in this period."
+              />
+              <Text style={s.honesty}>
+                These are clicks or app opens, not confirmed calls, messages or appointments.
+              </Text>
+            </Panel>
+            <UnavailablePanel
+              title="QR Analytics"
+              text="Current QR codes contain the static public URL. QR scan and campaign attribution events are not recorded, so scan counts are unavailable."
+            />
+
+            <Panel title="Lead & Pipeline Analytics">
+              <StatRow
+                label="Estimated Pipeline Value"
+                value={`₹${current.estimatedPipeline.toLocaleString('en-IN')}`}
+              />
+              <StatRow label="Created in range, now Won" value={current.won} />
+              <StatRow label="Created in range, now Lost" value={current.lost} />
+              <SubList title="By Stage" items={current.leadsByStage} />
+              <SubList title="By Source" items={current.leadsBySource} />
+              <SubList title="By Card" items={current.leadsByCard} />
+              <Text style={s.honesty}>
+                Won Revenue is unavailable because authoritative won-value data is not stored.
+                Estimated pipeline is never presented as revenue.
+              </Text>
+            </Panel>
+
+            <Panel title="Recommended Actions">
+              <RankedList
+                items={recommendations}
+                renderMeta={(item) => item.detail}
+                empty="No action is recommended from the currently available data."
+                onPress={(item) => openRoot(item.route, item.params)}
+              />
+            </Panel>
+            <Panel title="Weekly & Monthly Summary">
+              <SummaryRow label="Last 7 days" data={weekly} />
+              <SummaryRow label="Last 30 days" data={monthly} />
+              <Text style={s.honesty}>
+                In-app summary only. No email, WhatsApp or push delivery is claimed.
+              </Text>
+            </Panel>
+            <Panel title="Reports">
+              <Text style={s.panelText}>
+                Card Performance CSV includes the selected range, card scope, generated date, real
+                metrics and definitions.
+              </Text>
+              <TouchableOpacity
+                style={s.primaryButton}
+                onPress={downloadReport}
+                disabled={exporting}
+              >
+                <Ionicons name="download-outline" size={19} color="#FFF" />
+                <Text style={s.primaryText}>
+                  {exporting ? 'Preparing…' : 'Download Card Performance CSV'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={s.honesty}>
+                Campaign/QR, team and won-revenue reports remain unavailable until their underlying
+                data exists.
+              </Text>
+            </Panel>
+
+            {noActivity ? (
+              <View style={s.emptyActions}>
+                <Action
+                  label="Share Card"
+                  onPress={() => openRoot('QRCentre', { cardId: primary.id })}
+                />
+                <Action
+                  label="Open QR Centre"
+                  onPress={() => openRoot('QRCentre', { cardId: primary.id })}
+                />
+                <Action
+                  label="Preview Card"
+                  onPress={() => openRoot('CardPreview', { cardId: primary.id })}
+                />
               </View>
-              <LineChart series={data.series} />
-            </View>
-            <View style={s.listCard}>
-              <View style={s.sectionRow}>
-                <Text style={s.sectionTitle}>Top Performing Links</Text>
-                <Text style={s.smallBlue}>{data.top.length} items</Text>
-              </View>
-              {data.top.length === 0 ? (
-                <Empty text="No link clicks in this period." />
-              ) : (
-                data.top.map((x) => <TopRow key={x.id} item={x} />)
-              )}
-            </View>
-            <View style={s.listCard}>
-              <View style={s.sectionRow}>
-                <Text style={s.sectionTitle}>Recent Activity</Text>
-                <Text style={s.smallBlue}>Latest</Text>
-              </View>
-              {data.recent.length === 0 ? (
-                <Empty text="No activity yet." />
-              ) : (
-                data.recent.map((x) => <Activity key={x.id} item={x} />)
-              )}
-            </View>
-            <View style={s.funnel}>
-              <Text style={s.sectionTitle}>Conversion Summary</Text>
-              <View style={s.funnelRow}>
-                <Funnel label="Views" value={data.views} />
-                <Ionicons name="chevron-forward" size={18} color={C.muted} />
-                <Funnel label="Clicks" value={data.clicks} />
-                <Ionicons name="chevron-forward" size={18} color={C.muted} />
-                <Funnel label="Leads" value={data.leads} />
-                <Ionicons name="chevron-forward" size={18} color={C.muted} />
-                <Funnel label="Won" value={data.won} />
-              </View>
-            </View>
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
-function Metric({ icon, label, value, tone }) {
-  const p =
-    tone === 'green'
-      ? [C.green, C.greenSoft]
-      : tone === 'purple'
-        ? [C.purple, C.purpleSoft]
-        : tone === 'orange'
-          ? [C.orange, C.orangeSoft]
-          : [C.blue, C.blueSoft];
-  return (
-    <View style={[s.metric, { backgroundColor: p[1] }]}>
-      <View style={s.metricIcon}>
-        <Ionicons name={icon} size={26} color={p[0]} />
-      </View>
-      <Text style={s.metricLabel}>{label}</Text>
-      <Text style={s.metricValue}>{Number(value || 0).toLocaleString()}</Text>
-      <Text style={{ color: C.green, fontSize: 8, fontWeight: '800', marginTop: 5 }}>
-        ↑ Current period
-      </Text>
-    </View>
+
+function showDefinitions() {
+  Alert.alert(
+    'Metric definitions',
+    'Unique Visitors: distinct anonymous visitor tokens when complete.\n\nCard Views: recorded public card openings.\n\nContact Actions: recorded phone, email, WhatsApp and related contact clicks.\n\nContact Saves: recorded VCF saves.\n\nNew Leads: CRM leads created in the period.\n\nConversion Rate: new leads divided by trustworthy unique visitors.'
   );
+}
+function buildRecommendations(source, snapshot) {
+  const items = [];
+  if (source.cards.some((card) => !card.whatsapp))
+    items.push({
+      id: 'whatsapp',
+      label: 'Add WhatsApp',
+      detail: 'Improve the contact options on an incomplete card.',
+      route: 'MyCards',
+    });
+  if ((source.followups.overdue || 0) > 0)
+    items.push({
+      id: 'followups',
+      label: `${source.followups.overdue} overdue follow-up${source.followups.overdue === 1 ? '' : 's'}`,
+      detail: 'Review due CRM tasks.',
+      route: 'FollowUps',
+    });
+  if (source.cards.some((card) => !card.profile_image_url || !card.bio))
+    items.push({
+      id: 'profile',
+      label: 'Complete card identity',
+      detail: 'Add a profile photo and about information.',
+      route: 'MyCards',
+    });
+  if (snapshot.metrics.views > 0)
+    items.push({
+      id: 'preview',
+      label: 'Review your public card',
+      detail: 'Check the visitor experience after recent activity.',
+      route: 'CardPreview',
+      params: { cardId: source.cards.find((card) => card.is_primary)?.id || source.cards[0].id },
+    });
+  return items;
 }
 function Chip({ label, active, onPress }) {
   return (
@@ -336,187 +529,306 @@ function Chip({ label, active, onPress }) {
     </TouchableOpacity>
   );
 }
-function LineChart({ series }) {
-  const W = 320,
-    H = 170,
-    P = 18;
-  if (series.length === 0)
+function SectionTitle({ title, action }) {
+  return (
+    <View style={s.sectionRow}>
+      <Text style={s.sectionTitle}>{title}</Text>
+      {action ? (
+        <TouchableOpacity onPress={action}>
+          <Ionicons name="information-circle-outline" size={22} color={C.blue} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+function Metric({ label, value, comparison, unavailable }) {
+  const tone =
+    comparison?.direction === 'down' ? C.red : comparison?.direction === 'up' ? C.green : C.text2;
+  return (
+    <View style={s.metric}>
+      <Text style={s.metricLabel}>{label}</Text>
+      <Text style={s.metricValue}>{value}</Text>
+      <Text style={[s.metricCompare, { color: tone }]}>
+        {unavailable ? 'Unavailable' : comparison?.label || 'Current period'}
+      </Text>
+    </View>
+  );
+}
+function Panel({ title, children }) {
+  return (
+    <View style={s.panel}>
+      <Text style={s.panelTitle}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+function UnavailablePanel({ title, text }) {
+  return (
+    <Panel title={title}>
+      <View style={s.unavailable}>
+        <Ionicons name="analytics-outline" size={22} color={C.muted} />
+        <Text style={s.unavailableText}>{text}</Text>
+      </View>
+    </Panel>
+  );
+}
+function Funnel({ label, metric, value }) {
+  const available = metric ? metric.available : true;
+  return (
+    <View style={s.funnelItem}>
+      <Text style={s.funnelValue}>{available ? (metric?.value ?? value) : '—'}</Text>
+      <Text style={s.funnelLabel}>{label}</Text>
+    </View>
+  );
+}
+function Arrow() {
+  return <Ionicons name="chevron-forward" size={16} color={C.muted} />;
+}
+function FunnelRates({ funnel }) {
+  const rate = (next, prior) => (prior > 0 ? `${((next / prior) * 100).toFixed(1)}%` : '—');
+  const visitors = funnel.visitors.available ? funnel.visitors.value : null;
+  const engaged = funnel.engaged.available ? funnel.engaged.value : null;
+  return (
+    <View style={s.rateRow}>
+      <Text style={s.rateText}>
+        {visitors == null || engaged == null ? '—' : rate(engaged, visitors)} engaged
+      </Text>
+      <Text style={s.rateText}>
+        {engaged == null ? '—' : rate(funnel.leads, engaged)} became leads
+      </Text>
+      <Text style={s.rateText}>Won attribution —</Text>
+    </View>
+  );
+}
+function LineChart({ series, width }) {
+  const [selected, setSelected] = useState(null);
+  const height = 170,
+    pad = 20;
+  if (series.length < 2)
     return (
       <View style={s.chartEmpty}>
-        <Text style={{ color: C.muted, fontSize: 10 }}>No view data yet.</Text>
+        <Text style={s.unavailableText}>
+          {series.length
+            ? 'More data points are needed for a meaningful trend.'
+            : 'No data for this metric in the selected period.'}
+        </Text>
       </View>
     );
-  const max = Math.max(...series.map((x) => x.value), 1);
-  const pts = series.map((x, i) => [
-    P + (i * (W - P * 2)) / Math.max(series.length - 1, 1),
-    H - P - (x.value / max) * (H - P * 2),
+  const max = Math.max(...series.map((item) => item.value), 1);
+  const points = series.map((item, index) => [
+    pad + (index * (width - pad * 2)) / Math.max(series.length - 1, 1),
+    height - pad - (item.value / max) * (height - pad * 2),
   ]);
-  const line = pts.map((p) => p.join(',')).join(' '),
-    poly = `${P},${H - P} ${line} ${W - P},${H - P}`;
   return (
-    <View style={{ alignItems: 'center', marginTop: 10 }}>
-      <Svg width={W} height={H}>
-        <Defs>
-          <SvgGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#7C3AED" stopOpacity="0.25" />
-            <Stop offset="1" stopColor="#7C3AED" stopOpacity="0.02" />
-          </SvgGradient>
-        </Defs>
-        {[0.25, 0.5, 0.75].map((v, i) => (
-          <Line
-            key={i}
-            x1={P}
-            x2={W - P}
-            y1={P + (H - P * 2) * v}
-            y2={P + (H - P * 2) * v}
-            stroke="#E8ECF2"
-            strokeWidth="1"
-          />
-        ))}
-        <Polygon points={poly} fill="url(#fill)" />
+    <View style={s.chartWrap}>
+      {selected ? (
+        <Text style={s.chartSelection}>
+          {selected.date}: {selected.value}
+        </Text>
+      ) : (
+        <Text style={s.chartSelection}>Tap a point for its value</Text>
+      )}
+      <Svg width={width} height={height}>
+        <Line x1={pad} x2={width - pad} y1={height - pad} y2={height - pad} stroke={C.border} />
         <Polyline
-          points={line}
+          points={points.map((point) => point.join(',')).join(' ')}
           fill="none"
-          stroke="#0866FF"
+          stroke={C.blue}
           strokeWidth="3"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        {pts.map((p, i) => (
-          <Circle key={i} cx={p[0]} cy={p[1]} r="3.5" fill="#0866FF" />
+        {points.map((point, index) => (
+          <Circle
+            key={series[index].date}
+            cx={point[0]}
+            cy={point[1]}
+            r={selected?.date === series[index].date ? 6 : 4}
+            fill={C.blue}
+            onPress={() => setSelected(series[index])}
+            accessible
+            accessibilityLabel={`${series[index].date}: ${series[index].value}`}
+          />
         ))}
       </Svg>
-    </View>
-  );
-}
-function iconFor(v) {
-  v = String(v || '');
-  if (v.includes('whatsapp')) return ['logo-whatsapp', C.green, C.greenSoft];
-  if (v.includes('email')) return ['mail-outline', C.red, C.redSoft];
-  if (v.includes('phone')) return ['call-outline', C.blue, C.blueSoft];
-  if (v.includes('website')) return ['globe-outline', C.blue, C.blueSoft];
-  return ['link-outline', C.purple, C.purpleSoft];
-}
-function TopRow({ item }) {
-  const [icon, main, soft] = iconFor(item.type);
-  return (
-    <View style={s.topRow}>
-      <View style={[s.rowIcon, { backgroundColor: soft }]}>
-        <Ionicons name={icon} size={20} color={main} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={s.rowTitle}>{item.title}</Text>
-        <Text style={s.rowSub}>{item.count} clicks</Text>
-      </View>
-      <Text style={{ color: C.green, fontSize: 9, fontWeight: '800' }}>↑ {item.count}</Text>
-      <Ionicons name="chevron-forward" size={18} color={C.text2} />
-    </View>
-  );
-}
-function Activity({ item }) {
-  const [icon, main, soft] = iconFor(item.event_type);
-  return (
-    <View style={s.topRow}>
-      <View style={[s.rowIcon, { backgroundColor: soft }]}>
-        <Ionicons name={icon} size={20} color={main} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={s.rowTitle}>
-          {String(item.event_type || 'activity')
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, (m) => m.toUpperCase())}
-        </Text>
-        <Text style={s.rowSub}>
-          {item.source || 'organic'} • {new Date(item.created_at).toLocaleDateString()}
-        </Text>
+      <View style={s.axis}>
+        <Text style={s.axisText}>{series[0].date}</Text>
+        <Text style={s.axisText}>{series[series.length - 1].date}</Text>
       </View>
     </View>
   );
 }
-function Funnel({ label, value }) {
+function RankedList({ items, empty, renderMeta, onPress }) {
+  if (!items.length) return <Text style={s.emptyText}>{empty}</Text>;
+  return items.slice(0, 8).map((item, index) => {
+    const row = (
+      <>
+        <View style={s.rank}>
+          <Text style={s.rankText}>{index + 1}</Text>
+        </View>
+        <View style={s.flex}>
+          <Text style={s.rowTitle}>{item.title || item.label}</Text>
+          <Text style={s.rowMeta}>{renderMeta ? renderMeta(item) : `${item.value}`}</Text>
+        </View>
+        {onPress ? <Ionicons name="chevron-forward" size={18} color={C.muted} /> : null}
+      </>
+    );
+    return onPress ? (
+      <TouchableOpacity key={item.id || item.label} style={s.row} onPress={() => onPress(item)}>
+        {row}
+      </TouchableOpacity>
+    ) : (
+      <View key={item.id || item.label} style={s.row}>
+        {row}
+      </View>
+    );
+  });
+}
+function SubList({ title, items }) {
   return (
-    <View style={{ alignItems: 'center', flex: 1 }}>
-      <Text style={{ color: C.text, fontSize: 19, fontWeight: '900' }}>{value}</Text>
-      <Text style={{ color: C.text2, fontSize: 8, marginTop: 2 }}>{label}</Text>
+    <View style={s.subList}>
+      <Text style={s.subTitle}>{title}</Text>
+      {items.length ? (
+        items
+          .slice(0, 5)
+          .map((item) => <StatRow key={item.label} label={item.label} value={item.value} />)
+      ) : (
+        <Text style={s.emptyText}>No data in this period.</Text>
+      )}
     </View>
   );
 }
-function Empty({ text }) {
+function StatRow({ label, value }) {
   return (
-    <View style={{ padding: 25, alignItems: 'center' }}>
-      <Ionicons name="analytics-outline" size={28} color={C.muted} />
-      <Text style={{ color: C.muted, fontSize: 9, marginTop: 7 }}>{text}</Text>
+    <View style={s.statRow}>
+      <Text style={s.statLabel}>{label}</Text>
+      <Text style={s.statValue}>{value}</Text>
     </View>
   );
 }
+function SummaryRow({ label, data }) {
+  return (
+    <View style={s.summary}>
+      <Text style={s.summaryTitle}>{label}</Text>
+      <Text style={s.summaryText}>
+        {data.views} views • {data.contactActions} actions • {data.leads} enquiries • {data.won} won
+        • {data.overdue == null ? 'card-filtered overdue unavailable' : `${data.overdue} overdue`}
+      </Text>
+    </View>
+  );
+}
+function Action({ label, onPress }) {
+  return (
+    <TouchableOpacity style={s.secondaryButton} onPress={onPress}>
+      <Text style={s.secondaryText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+function eventLabel(value) {
+  const map = {
+    whatsapp_click: 'WhatsApp clicks',
+    phone_click: 'Phone clicks',
+    email_click: 'Email clicks',
+    website_click: 'Website clicks',
+    location_click: 'Directions opened',
+    appointment_request: 'Appointment requests',
+    save_contact_click: 'Contact saves',
+    contact_save: 'Contact saves',
+    file_download: 'File downloads',
+    pdf_click: 'PDF opens',
+    drive_click: 'Drive opens',
+    instagram_click: 'Instagram clicks',
+    facebook_click: 'Facebook clicks',
+    linkedin_click: 'LinkedIn clicks',
+    youtube_click: 'YouTube clicks',
+    google_review_click: 'Google Review clicks',
+  };
+  return map[value] || String(value).replace(/_/g, ' ');
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  headerBg: { position: 'absolute', top: 0, left: 0, right: 0, height: 205 },
-  loading: { flex: 1, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
+  flex: { flex: 1 },
+  headerBg: { position: 'absolute', top: 0, left: 0, right: 0, height: 190 },
+  scroll: { paddingBottom: 105 },
   header: {
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 28,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 29, fontWeight: '800' },
-  subtitle: { color: '#D5DDE8', fontSize: 12, marginTop: 5 },
-  rangeTop: {
-    minHeight: 45,
+  title: { color: '#FFF', fontFamily: fontFamilies.medium, fontSize: 30, fontWeight: '800' },
+  subtitle: { color: '#D5DDE8', fontSize: 12, marginTop: 4 },
+  reportButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,.2)',
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    flexDirection: 'row',
-    gap: 7,
-    alignItems: 'center',
-  },
-  rangeTopText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
-  body: { backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 18 },
-  sectionTitle: { color: C.text, fontSize: 16, fontWeight: '900' },
-  metric: {
-    width: 145,
-    minHeight: 150,
-    borderRadius: 18,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,.03)',
-  },
-  metricIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFFAA',
+    borderColor: C.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metricLabel: { color: C.text, fontSize: 10, marginTop: 11 },
-  metricValue: { color: C.text, fontSize: 27, fontWeight: '900', marginTop: 4 },
+  body: { backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 18 },
+  controlLabel: {
+    color: C.text2,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 8,
+    marginBottom: 7,
+  },
+  chipRow: { gap: 7 },
   chip: {
+    minHeight: 40,
     paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 11,
-    backgroundColor: '#FFF',
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: C.border,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chipActive: { backgroundColor: C.navy, borderColor: C.navy },
+  chipActive: { backgroundColor: C.navy, borderColor: C.gold },
   chipText: { color: C.text2, fontSize: 9, fontWeight: '800' },
   chipTextActive: { color: '#FFF' },
-  chartCard: {
+  compareRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 15,
     backgroundColor: '#FFF',
-    borderRadius: 20,
     borderWidth: 1,
     borderColor: C.border,
-    padding: 15,
-    marginTop: 14,
   },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  smallBlue: { color: C.blue, fontSize: 9, fontWeight: '800' },
-  chartEmpty: { height: 170, alignItems: 'center', justifyContent: 'center' },
-  listCard: {
+  compareTitle: { color: C.text, fontSize: 11, fontWeight: '800' },
+  compareText: { color: C.text2, fontSize: 8, marginTop: 2 },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 9,
+  },
+  sectionTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
+  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  metric: {
+    width: '48%',
+    minHeight: 112,
+    padding: 14,
+    borderRadius: 17,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  metricLabel: { color: C.text2, fontSize: 9, fontWeight: '700' },
+  metricValue: { color: C.text, fontSize: 25, fontWeight: '900', marginTop: 8 },
+  metricCompare: { fontSize: 8, fontWeight: '800', marginTop: 7 },
+  panel: {
     backgroundColor: '#FFF',
     borderRadius: 20,
     borderWidth: 1,
@@ -524,30 +836,85 @@ const s = StyleSheet.create({
     padding: 15,
     marginTop: 12,
   },
-  topRow: {
-    minHeight: 57,
+  panelTitle: { color: C.text, fontSize: 16, fontWeight: '900', marginBottom: 10 },
+  panelText: { color: C.text2, fontSize: 10, lineHeight: 16 },
+  funnelRow: { flexDirection: 'row', alignItems: 'center' },
+  funnelItem: { flex: 1, alignItems: 'center' },
+  funnelValue: { color: C.text, fontSize: 20, fontWeight: '900' },
+  funnelLabel: { color: C.text2, fontSize: 8, marginTop: 3 },
+  honesty: { color: C.text2, fontSize: 8, lineHeight: 13, marginTop: 10 },
+  rateRow: { flexDirection: 'row', gap: 5, marginTop: 10 },
+  rateText: { flex: 1, color: C.blue, fontSize: 7, textAlign: 'center' },
+  chartWrap: { alignItems: 'center', marginTop: 8 },
+  chartSelection: { color: C.blue, fontSize: 9, fontWeight: '800' },
+  chartEmpty: { minHeight: 145, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  axis: { width: '100%', flexDirection: 'row', justifyContent: 'space-between' },
+  axisText: { color: C.muted, fontSize: 7 },
+  unavailable: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.bg,
+    borderRadius: 13,
+    padding: 12,
+  },
+  unavailableText: { flex: 1, color: C.text2, fontSize: 9, lineHeight: 14 },
+  emptyText: { color: C.muted, fontSize: 9, textAlign: 'center', paddingVertical: 18 },
+  row: {
+    minHeight: 55,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F3F6',
   },
-  rowIcon: {
-    width: 39,
-    height: 39,
-    borderRadius: 12,
+  rank: {
+    width: 29,
+    height: 29,
+    borderRadius: 9,
+    backgroundColor: C.blueSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowTitle: { color: C.text, fontSize: 11, fontWeight: '800' },
-  rowSub: { color: C.text2, fontSize: 8, marginTop: 2 },
-  funnel: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 15,
+  rankText: { color: C.blue, fontSize: 10, fontWeight: '900' },
+  rowTitle: { color: C.text, fontSize: 10, fontWeight: '800' },
+  rowMeta: { color: C.text2, fontSize: 8, marginTop: 3 },
+  statRow: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F3F6',
+  },
+  statLabel: { color: C.text2, fontSize: 9 },
+  statValue: { color: C.text, fontSize: 11, fontWeight: '900' },
+  subList: { marginTop: 12 },
+  subTitle: { color: C.text, fontSize: 10, fontWeight: '900', marginBottom: 4 },
+  summary: { backgroundColor: C.bg, borderRadius: 13, padding: 12, marginBottom: 8 },
+  summaryTitle: { color: C.text, fontSize: 10, fontWeight: '900' },
+  summaryText: { color: C.text2, fontSize: 8, lineHeight: 13, marginTop: 4 },
+  primaryButton: {
+    minHeight: 50,
+    backgroundColor: C.navy,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 12,
   },
-  funnelRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14 },
+  primaryText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+  emptyActions: { gap: 8, marginTop: 12 },
+  secondaryButton: {
+    minHeight: 46,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: C.gold,
+    backgroundColor: '#FFF4D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryText: { color: C.navy, fontSize: 10, fontWeight: '800' },
 });
