@@ -16,7 +16,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
-import { getConnectionSummary, getConnectionsPage } from '../../services/connectionService';
+import {
+  createConnection,
+  addLeadActivity,
+  findPossibleDuplicates,
+  getConnectionSummary,
+  getConnectionsPage,
+  getPriorityLabel,
+  getSourceLabel,
+} from '../../services/connectionService';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { colors, fontFamilies } from '../../theme';
 
@@ -53,13 +61,27 @@ export default function ConnectionsScreen({ navigation }) {
     [search, setSearch] = useState(''),
     [debouncedSearch, setDebouncedSearch] = useState(''),
     [filter, setFilter] = useState('all'),
+    [priorityFilter, setPriorityFilter] = useState('all'),
+    [sourceFilter, setSourceFilter] = useState('all'),
+    [followupFilter, setFollowupFilter] = useState('all'),
+    [filtersVisible, setFiltersVisible] = useState(false),
     [page, setPage] = useState(0),
     [hasMore, setHasMore] = useState(false),
     [loadingMore, setLoadingMore] = useState(false),
     [summary, setSummary] = useState({ total: 0, open: 0, won: 0, lost: 0 }),
     [modal, setModal] = useState(false),
     [saving, setSaving] = useState(false),
-    [form, setForm] = useState({ name: '', phone: '', email: '', company: '', requirement: '' });
+    [form, setForm] = useState({
+      name: '',
+      phone: '',
+      email: '',
+      company: '',
+      requirement: '',
+      stage: '',
+      priority: 'normal',
+      estimated_value: '',
+      notes: '',
+    });
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
@@ -100,6 +122,9 @@ export default function ConnectionsScreen({ navigation }) {
             page: nextPage,
             search: debouncedSearch,
             stage: filter,
+            priority: priorityFilter,
+            source: sourceFilter,
+            followup: followupFilter,
           }),
           getConnectionSummary(u.id, wonStages, lostStages),
         ]);
@@ -125,7 +150,7 @@ export default function ConnectionsScreen({ navigation }) {
         }
       }
     },
-    [debouncedSearch, filter]
+    [debouncedSearch, filter, priorityFilter, sourceFilter, followupFilter]
   );
   useFocusEffect(
     useCallback(() => {
@@ -133,30 +158,83 @@ export default function ConnectionsScreen({ navigation }) {
     }, [load])
   );
   const filtered = leads;
-  async function addLead() {
+  async function addLead(createAnyway = false) {
     if (!form.name.trim()) return Alert.alert('Name required', 'Enter the lead name.');
+    const email = form.email.trim().toLowerCase();
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+      return Alert.alert('Invalid email', 'Enter a valid email address.');
+    }
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (form.phone.trim() && (phoneDigits.length < 7 || phoneDigits.length > 15)) {
+      return Alert.alert('Invalid phone', 'Enter a phone number with 7 to 15 digits.');
+    }
     const card = cards.find((x) => x.is_primary) || cards[0];
     if (!card) return Alert.alert('Card required', 'Create a digital card first.');
     setSaving(true);
     try {
+      if (!createAnyway) {
+        const duplicates = await findPossibleDuplicates(user.id, {
+          phone: form.phone,
+          email,
+        });
+        if (duplicates.length) {
+          const existing = duplicates[0];
+          setSaving(false);
+          Alert.alert(
+            'Possible duplicate found',
+            `${existing.name || 'An existing lead'} has a matching phone number or email.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Open Existing',
+                onPress: () =>
+                  navigation.getParent()?.navigate('LeadDetail', { connectionId: existing.id }),
+              },
+              { text: 'Create Anyway', onPress: () => addLead(true) },
+            ]
+          );
+          return;
+        }
+      }
       const st =
-        stages.find((x) => x.stage_key === 'new' && x.is_active) || stages.find((x) => x.is_active);
-      const { error } = await supabase.from('connections').insert({
-        owner_user_id: user.id,
-        card_id: card.id,
+        stages.find((x) => x.stage_key === form.stage && x.is_active) ||
+        stages.find((x) => x.stage_key === 'new' && x.is_active) ||
+        stages.find((x) => x.is_active);
+      const estimatedValue = form.estimated_value.trim()
+        ? Number(form.estimated_value.replace(/,/g, ''))
+        : null;
+      if (estimatedValue !== null && (!Number.isFinite(estimatedValue) || estimatedValue < 0)) {
+        throw new Error('Enter a valid non-negative estimated value.');
+      }
+      const created = await createConnection(user.id, card.id, {
         name: form.name.trim(),
         phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
+        email: email || null,
         company: form.company.trim() || null,
         requirement: form.requirement.trim() || null,
         stage: st?.stage_key || 'new',
-        source: 'mobile_app',
+        source: 'manual',
         source_detail: 'manual',
-        priority: 'normal',
+        priority: form.priority,
+        estimated_value: estimatedValue,
+        notes: form.notes.trim() || null,
       });
-      if (error) throw error;
+      await addLeadActivity(user.id, created.id, 'lead_created', 'Lead created manually');
+      if (form.notes.trim()) {
+        await addLeadActivity(user.id, created.id, 'note_added', 'Note added', form.notes.trim());
+      }
       setModal(false);
-      setForm({ name: '', phone: '', email: '', company: '', requirement: '' });
+      setForm({
+        name: '',
+        phone: '',
+        email: '',
+        company: '',
+        requirement: '',
+        stage: '',
+        priority: 'normal',
+        estimated_value: '',
+        notes: '',
+      });
       await load(true);
     } catch (e) {
       Alert.alert('Unable to add lead', e.message);
@@ -211,10 +289,53 @@ export default function ConnectionsScreen({ navigation }) {
                   style={s.searchInput}
                 />
               </View>
-              <TouchableOpacity style={s.filterBtn} onPress={() => setFilter('all')}>
+              <TouchableOpacity
+                style={s.filterBtn}
+                onPress={() => setFiltersVisible((value) => !value)}
+              >
                 <Ionicons name="options-outline" size={22} color={C.text} />
               </TouchableOpacity>
             </View>
+            {filtersVisible ? (
+              <View style={s.filterPanel}>
+                <FilterRow
+                  label="Priority"
+                  value={priorityFilter}
+                  onChange={setPriorityFilter}
+                  options={[
+                    ['all', 'All'],
+                    ['low', 'Low'],
+                    ['medium', 'Medium'],
+                    ['high', 'High'],
+                  ]}
+                />
+                <FilterRow
+                  label="Source"
+                  value={sourceFilter}
+                  onChange={setSourceFilter}
+                  options={[
+                    ['all', 'All'],
+                    ['manual', 'Manual'],
+                    ['public_card', 'Card Enquiry'],
+                    ['qr', 'QR'],
+                    ['website', 'Website'],
+                    ['whatsapp', 'WhatsApp'],
+                    ['meta_lead_ad', 'Meta'],
+                  ]}
+                />
+                <FilterRow
+                  label="Follow-up"
+                  value={followupFilter}
+                  onChange={setFollowupFilter}
+                  options={[
+                    ['all', 'All'],
+                    ['overdue', 'Overdue'],
+                    ['upcoming', 'Upcoming'],
+                    ['none', 'None'],
+                  ]}
+                />
+              </View>
+            ) : null}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -230,6 +351,23 @@ export default function ConnectionsScreen({ navigation }) {
               <Summary icon="trophy-outline" label="Won" value={summary.won} tone="purple" />
               <Summary icon="person-remove-outline" label="Lost" value={summary.lost} tone="red" />
             </ScrollView>
+            <View style={s.crmTools}>
+              <CrmTool
+                icon="calendar-outline"
+                label="Follow-ups"
+                onPress={() => navigation.getParent()?.navigate('FollowUps')}
+              />
+              <CrmTool
+                icon="git-branch-outline"
+                label="Pipeline"
+                onPress={() => navigation.getParent()?.navigate('LeadStages')}
+              />
+              <CrmTool
+                icon="download-outline"
+                label="Export"
+                onPress={() => navigation.getParent()?.navigate('CRMExport')}
+              />
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -317,6 +455,7 @@ export default function ConnectionsScreen({ navigation }) {
               ['EMAIL', 'email'],
               ['COMPANY', 'company'],
               ['REQUIREMENT', 'requirement'],
+              ['NOTES', 'notes'],
             ].map(([label, key]) => (
               <View key={key}>
                 <Text style={s.label}>{label}</Text>
@@ -329,10 +468,10 @@ export default function ConnectionsScreen({ navigation }) {
                     key === 'phone' ? 'phone-pad' : key === 'email' ? 'email-address' : 'default'
                   }
                   autoCapitalize={key === 'email' ? 'none' : 'sentences'}
-                  multiline={key === 'requirement'}
+                  multiline={key === 'requirement' || key === 'notes'}
                   style={[
                     s.input,
-                    key === 'requirement' && {
+                    (key === 'requirement' || key === 'notes') && {
                       height: 80,
                       textAlignVertical: 'top',
                       paddingTop: 12,
@@ -341,6 +480,47 @@ export default function ConnectionsScreen({ navigation }) {
                 />
               </View>
             ))}
+            <Text style={s.label}>ESTIMATED VALUE</Text>
+            <TextInput
+              value={form.estimated_value}
+              onChangeText={(v) => setForm((f) => ({ ...f, estimated_value: v }))}
+              placeholder="Potential deal amount"
+              placeholderTextColor={C.muted}
+              keyboardType="decimal-pad"
+              style={s.input}
+            />
+            <Text style={s.label}>PRIORITY</Text>
+            <View style={s.optionRow}>
+              {[
+                ['low', 'Low'],
+                ['normal', 'Medium'],
+                ['high', 'High'],
+              ].map(([value, label]) => (
+                <Chip
+                  key={value}
+                  label={label}
+                  active={form.priority === value}
+                  onPress={() => setForm((f) => ({ ...f, priority: value }))}
+                />
+              ))}
+            </View>
+            <Text style={s.label}>STAGE</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.optionRow}
+            >
+              {stages
+                .filter((stage) => stage.is_active)
+                .map((stage) => (
+                  <Chip
+                    key={stage.id}
+                    label={stage.label}
+                    active={(form.stage || 'new') === stage.stage_key}
+                    onPress={() => setForm((f) => ({ ...f, stage: stage.stage_key }))}
+                  />
+                ))}
+            </ScrollView>
             <TouchableOpacity
               style={[s.save, saving && { opacity: 0.6 }]}
               disabled={saving}
@@ -372,11 +552,35 @@ function Summary({ icon, label, value, tone }) {
     </View>
   );
 }
+function CrmTool({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity style={s.crmTool} onPress={onPress}>
+      <Ionicons name={icon} size={18} color={C.navy} />
+      <Text style={s.crmToolText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 function Chip({ label, active, onPress }) {
   return (
     <TouchableOpacity style={[s.chip, active && s.chipActive]} onPress={onPress}>
       <Text style={[s.chipText, active && s.chipTextActive]}>{label}</Text>
     </TouchableOpacity>
+  );
+}
+function FilterRow({ label, value, onChange, options }) {
+  return (
+    <View>
+      <Text style={s.filterLabel}>{label}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.optionRow}
+      >
+        {options.map(([key, text]) => (
+          <Chip key={key} label={text} active={value === key} onPress={() => onChange(key)} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 function stageTone(v) {
@@ -403,6 +607,7 @@ function Lead({ lead, stages, onPress }) {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={s.leadName}>{lead.name || 'Unnamed Lead'}</Text>
+        {lead.company ? <Text style={s.leadCompany}>{lead.company}</Text> : null}
         {lead.phone && <Text style={s.leadMeta}>{lead.phone}</Text>}
         {lead.email && (
           <Text numberOfLines={1} style={s.leadMeta}>
@@ -416,6 +621,19 @@ function Lead({ lead, stages, onPress }) {
           <Text style={[s.stageText, { color: main }]}>{st?.label || lead.stage || 'New'}</Text>
         </View>
         <Text style={s.time}>{timeAgo(lead.created_at)}</Text>
+        <Text style={s.priority}>
+          {getPriorityLabel(lead.priority)} • {getSourceLabel(lead.source, lead.source_detail)}
+        </Text>
+        {lead.estimated_value != null ? (
+          <Text style={s.value}>Est. ₹{Number(lead.estimated_value).toLocaleString('en-IN')}</Text>
+        ) : null}
+        {lead.next_follow_up_at ? (
+          <Text
+            style={new Date(lead.next_follow_up_at) < new Date() ? s.followupOverdue : s.followup}
+          >
+            Follow-up {new Date(lead.next_follow_up_at).toLocaleDateString()}
+          </Text>
+        ) : null}
       </View>
       <Ionicons name="chevron-forward" size={20} color={C.text2} />
     </TouchableOpacity>
@@ -478,6 +696,20 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   summaryRow: { gap: 10, marginTop: 15 },
+  crmTools: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  crmTool: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 13,
+    backgroundColor: '#FFF4D6',
+    borderWidth: 1,
+    borderColor: C.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  crmToolText: { color: C.navy, fontSize: 9, fontWeight: '800' },
   summaryCard: { width: 135, minHeight: 130, borderWidth: 1, borderRadius: 18, padding: 14 },
   sumIcon: {
     width: 38,
@@ -543,6 +775,7 @@ const s = StyleSheet.create({
     borderColor: '#FFF',
   },
   leadName: { color: C.text, fontSize: 13, fontWeight: '900' },
+  leadCompany: { color: C.text, fontSize: 9, fontWeight: '700', marginTop: 2 },
   leadMeta: { color: C.text2, fontSize: 9, marginTop: 2 },
   stage: {
     flexDirection: 'row',
@@ -554,6 +787,21 @@ const s = StyleSheet.create({
   },
   stageText: { fontSize: 8, fontWeight: '800' },
   time: { color: C.muted, fontSize: 8 },
+  priority: { color: C.text2, fontSize: 8, maxWidth: 145, textAlign: 'right' },
+  value: { color: C.green, fontSize: 8, fontWeight: '800' },
+  followup: { color: C.blue, fontSize: 8 },
+  followupOverdue: { color: C.red, fontSize: 8, fontWeight: '800' },
+  filterPanel: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 12,
+    marginTop: 10,
+    gap: 9,
+  },
+  filterLabel: { color: C.text2, fontSize: 9, fontWeight: '800', marginBottom: 6 },
+  optionRow: { flexDirection: 'row', gap: 7 },
   addLead: {
     minHeight: 52,
     borderRadius: 15,

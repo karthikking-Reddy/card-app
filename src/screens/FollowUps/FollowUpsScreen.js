@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -15,8 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
 
 import { getCurrentSession } from '../../services/authService';
+import { getPriorityLabel } from '../../services/connectionService';
 
 import {
   completeFollowupTask,
@@ -27,11 +29,15 @@ import {
 } from '../../services/followupTaskService';
 
 export default function FollowUpsScreen({ navigation }) {
+  const requestIdRef = useRef(0);
+  const [userId, setUserId] = useState(null);
   const [tasks, setTasks] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
-  const [filter, setFilter] = useState('pending');
+  const [filter, setFilter] = useState('today');
+  const [loadError, setLoadError] = useState('');
+  const [workingId, setWorkingId] = useState(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -39,6 +45,8 @@ export default function FollowUpsScreen({ navigation }) {
 
   const load = useCallback(
     async (nextPage = 0) => {
+      const requestId = ++requestIdRef.current;
+      setLoadError('');
       nextPage > 0 ? setLoadingMore(true) : setLoading(true);
 
       try {
@@ -47,11 +55,18 @@ export default function FollowUpsScreen({ navigation }) {
         if (!session?.user) {
           return;
         }
+        setUserId(session.user.id);
 
         const [result, totals] = await Promise.all([
-          getFollowupTasksPage({ userId: session.user.id, page: nextPage, status: filter }),
+          getFollowupTasksPage({
+            userId: session.user.id,
+            page: nextPage,
+            status: filter === 'completed' ? 'completed' : 'pending',
+            view: filter === 'completed' ? 'all' : filter,
+          }),
           getFollowupSummary(session.user.id),
         ]);
+        if (requestId !== requestIdRef.current) return;
         setTasks((current) =>
           nextPage === 0
             ? result.data
@@ -60,11 +75,13 @@ export default function FollowUpsScreen({ navigation }) {
         setPage(nextPage);
         setHasMore(result.hasMore);
         setSummary(totals);
-      } catch (error) {
-        Alert.alert('Unable to load follow-ups', error.message);
+      } catch {
+        setLoadError('We could not load follow-ups. Check your connection and try again.');
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [filter]
@@ -79,16 +96,20 @@ export default function FollowUpsScreen({ navigation }) {
   const filtered = tasks;
 
   async function toggle(task) {
+    if (!userId || workingId) return;
+    setWorkingId(task.id);
     try {
       if (task.status === 'completed') {
-        await reopenFollowupTask(task.id);
+        await reopenFollowupTask(userId, task.id);
       } else {
-        await completeFollowupTask(task.id);
+        await completeFollowupTask(userId, task.id);
       }
 
       await load();
     } catch (error) {
       Alert.alert('Unable to update task', error.message);
+    } finally {
+      setWorkingId(null);
     }
   }
 
@@ -104,7 +125,7 @@ export default function FollowUpsScreen({ navigation }) {
 
         onPress: async () => {
           try {
-            await deleteFollowupTask(task.id);
+            await deleteFollowupTask(userId, task.id);
 
             await load();
           } catch (error) {
@@ -115,13 +136,17 @@ export default function FollowUpsScreen({ navigation }) {
     ]);
   }
 
-  if (loading) {
+  if (loading) return <LoadingState message="Loading follow-ups…" />;
+  if (loadError && !tasks.length)
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#06162D" />
-      </View>
+      <ErrorState
+        title="Follow-ups unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={() => load()}
+        fullScreen
+      />
     );
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -137,18 +162,18 @@ export default function FollowUpsScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.summaryRow}>
-          <Summary value={summary.pending} label="Pending" />
-
+          <Summary value={summary.dueToday || 0} label="Due Today" />
+          <Summary value={summary.upcoming || 0} label="Upcoming" />
           <Summary value={summary.overdue} label="Overdue" />
-
-          <Summary value={summary.total} label="Total" />
+          <Summary value={summary.completed || 0} label="Completed" />
         </View>
 
         <View style={styles.filters}>
           {[
-            ['pending', 'Pending'],
+            ['today', 'Due Today'],
+            ['upcoming', 'Upcoming'],
+            ['overdue', 'Overdue'],
             ['completed', 'Completed'],
-            ['all', 'All'],
           ].map(([key, label]) => (
             <TouchableOpacity
               key={key}
@@ -165,11 +190,12 @@ export default function FollowUpsScreen({ navigation }) {
         <Text style={styles.sectionTitle}>FOLLOW-UP TASKS</Text>
 
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={44} color="#98A2B3" />
-
-            <Text style={styles.emptyTitle}>No follow-ups here</Text>
-          </View>
+          <EmptyState
+            title="No follow-ups here"
+            message="Schedule a follow-up from a lead detail screen."
+            actionLabel="Open Leads"
+            onAction={() => navigation.navigate('MainTabs', { screen: 'Connections' })}
+          />
         ) : (
           filtered.map((task) => {
             const lead = task.connections;
@@ -189,12 +215,16 @@ export default function FollowUpsScreen({ navigation }) {
                   }
                 }}
               >
-                <TouchableOpacity onPress={() => toggle(task)}>
-                  <Ionicons
-                    name={task.status === 'completed' ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={25}
-                    color={task.status === 'completed' ? '#16A34A' : '#06162D'}
-                  />
+                <TouchableOpacity onPress={() => toggle(task)} disabled={workingId === task.id}>
+                  {workingId === task.id ? (
+                    <ActivityIndicator size="small" color="#06162D" />
+                  ) : (
+                    <Ionicons
+                      name={task.status === 'completed' ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={25}
+                      color={task.status === 'completed' ? '#16A34A' : '#06162D'}
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <View style={{ flex: 1 }}>
@@ -211,9 +241,10 @@ export default function FollowUpsScreen({ navigation }) {
                     <Text style={[styles.date, isOverdue && styles.overdueDate]}>
                       {isOverdue ? 'OVERDUE • ' : ''}
 
-                      {new Date(task.due_at).toLocaleDateString()}
+                      {new Date(task.due_at).toLocaleString()}
                     </Text>
                   ) : null}
+                  <Text style={styles.date}>Priority: {getPriorityLabel(task.priority)}</Text>
                 </View>
 
                 <TouchableOpacity onPress={() => remove(task)}>
@@ -313,11 +344,12 @@ const styles = StyleSheet.create({
 
   summaryRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 9,
   },
 
   summary: {
-    flex: 1,
+    width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 17,
     padding: 15,
@@ -351,12 +383,13 @@ const styles = StyleSheet.create({
 
   filters: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 16,
   },
 
   filter: {
-    flex: 1,
+    width: '48%',
     paddingVertical: 10,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',

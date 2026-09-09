@@ -17,12 +17,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
+import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
 
 import {
   addLeadActivity,
   getConnection,
   getLeadActivities,
   updateConnection,
+  getPriorityLabel,
+  getSourceLabel,
 } from '../../services/connectionService';
 
 import { getCurrentSession } from '../../services/authService';
@@ -55,13 +58,18 @@ export default function LeadDetailScreen({ navigation, route }) {
   const [taskTitle, setTaskTitle] = useState('Follow up');
 
   const [taskDate, setTaskDate] = useState('');
+  const [taskPriority, setTaskPriority] = useState('normal');
 
   const [loading, setLoading] = useState(true);
 
   const [saving, setSaving] = useState(false);
+  const [dealValue, setDealValue] = useState('');
+  const [workingAction, setWorkingAction] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
 
     if (!connectionId) {
       setLoading(false);
@@ -78,11 +86,11 @@ export default function LeadDetailScreen({ navigation, route }) {
       setUser(session.user);
 
       const [connection, stageData, activityData, taskData] = await Promise.all([
-        getConnection(connectionId),
+        getConnection(session.user.id, connectionId),
 
         getLeadStages(session.user.id),
 
-        getLeadActivities(connectionId),
+        getLeadActivities(session.user.id, connectionId),
 
         getConnectionFollowups(session.user.id, connectionId),
       ]);
@@ -96,8 +104,9 @@ export default function LeadDetailScreen({ navigation, route }) {
       setTasks(taskData);
 
       setNotes(connection.notes || '');
-    } catch (error) {
-      Alert.alert('Unable to load lead', error.message);
+      setDealValue(connection.estimated_value == null ? '' : String(connection.estimated_value));
+    } catch {
+      setLoadError('We could not load this lead. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -122,32 +131,48 @@ export default function LeadDetailScreen({ navigation, route }) {
   }, [stages, lead?.stage]);
 
   async function changeStage(stage) {
+    if (saving || lead.stage === stage.stage_key) return;
+    setSaving(true);
     try {
-      const updated = await updateConnection(connectionId, {
+      const updated = await updateConnection(user.id, connectionId, {
         stage: stage.stage_key,
-
-        last_contacted_at: new Date().toISOString(),
       });
 
       setLead(updated);
 
-      await addLeadActivity(connectionId, 'stage_changed', `Stage changed to ${stage.label}`);
+      const activityType = stage.is_won
+        ? 'deal_won'
+        : stage.is_lost
+          ? 'deal_lost'
+          : 'stage_changed';
+      const activityTitle = stage.is_won
+        ? `Marked Won — ${stage.label}`
+        : stage.is_lost
+          ? `Marked Lost — ${stage.label}`
+          : `Stage changed to ${stage.label}`;
+      await addLeadActivity(user.id, connectionId, activityType, activityTitle);
 
       await load();
     } catch (error) {
       Alert.alert('Stage update failed', error.message);
+    } finally {
+      setSaving(false);
     }
   }
 
   async function saveNotes() {
+    if (!notes.trim()) {
+      Alert.alert('Note required', 'Enter a note before saving.');
+      return;
+    }
     setSaving(true);
 
     try {
-      await updateConnection(connectionId, {
+      await updateConnection(user.id, connectionId, {
         notes: notes.trim(),
       });
 
-      await addLeadActivity(connectionId, 'note_updated', 'Lead notes updated');
+      await addLeadActivity(user.id, connectionId, 'note_added', 'Note added', notes.trim());
 
       Alert.alert('Saved', 'Lead notes updated.');
 
@@ -157,6 +182,31 @@ export default function LeadDetailScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function updateOpportunity(values, activityTitle) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const updated = await updateConnection(user.id, connectionId, values);
+      setLead(updated);
+      await addLeadActivity(user.id, connectionId, 'lead_updated', activityTitle);
+      Alert.alert('Saved', 'Lead opportunity details updated.');
+      await load();
+    } catch (error) {
+      Alert.alert('Update failed', error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function saveDealValue() {
+    const value = dealValue.trim() ? Number(dealValue.replace(/,/g, '')) : null;
+    if (value !== null && (!Number.isFinite(value) || value < 0)) {
+      Alert.alert('Invalid value', 'Enter a valid non-negative estimated deal value.');
+      return;
+    }
+    updateOpportunity({ estimated_value: value }, 'Estimated deal value updated');
   }
 
   async function addFollowup() {
@@ -188,16 +238,17 @@ export default function LeadDetailScreen({ navigation, route }) {
 
         due_at: date.toISOString(),
 
-        priority: 'normal',
+        priority: taskPriority,
       });
 
-      await updateConnection(connectionId, {
+      await updateConnection(user.id, connectionId, {
         next_follow_up_at: date.toISOString(),
 
         stage: lead.stage === 'new' ? 'follow_up' : lead.stage,
       });
 
       await addLeadActivity(
+        user.id,
         connectionId,
         'followup_created',
         'Follow-up scheduled',
@@ -207,6 +258,7 @@ export default function LeadDetailScreen({ navigation, route }) {
       setTaskTitle('Follow up');
 
       setTaskDate('');
+      setTaskPriority('normal');
 
       await load();
     } catch (error) {
@@ -219,11 +271,16 @@ export default function LeadDetailScreen({ navigation, route }) {
   async function toggleTask(task) {
     try {
       if (task.status === 'completed') {
-        await reopenFollowupTask(task.id);
+        await reopenFollowupTask(user.id, task.id);
       } else {
-        await completeFollowupTask(task.id);
+        await completeFollowupTask(user.id, task.id);
 
-        await addLeadActivity(connectionId, 'followup_completed', `Completed: ${task.title}`);
+        await addLeadActivity(
+          user.id,
+          connectionId,
+          'followup_completed',
+          `Completed: ${task.title}`
+        );
       }
 
       await load();
@@ -244,7 +301,7 @@ export default function LeadDetailScreen({ navigation, route }) {
 
         onPress: async () => {
           try {
-            await deleteFollowupTask(task.id);
+            await deleteFollowupTask(user.id, task.id);
 
             await load();
           } catch (error) {
@@ -259,27 +316,50 @@ export default function LeadDetailScreen({ navigation, route }) {
     return String(value || '').replace(/[^\d+]/g, '');
   }
 
-  function call() {
-    if (!lead?.phone) return;
-
-    Linking.openURL(`tel:${cleanPhone(lead.phone)}`);
+  async function openContactAction(key, url, title) {
+    if (workingAction) return;
+    setWorkingAction(key);
+    try {
+      await Linking.openURL(url);
+      await updateConnection(user.id, connectionId, {
+        last_contacted_at: new Date().toISOString(),
+      });
+      await addLeadActivity(user.id, connectionId, 'contact_attempt', title);
+      await load();
+    } catch {
+      Alert.alert('Unable to open', 'This contact action is unavailable on this device.');
+    } finally {
+      setWorkingAction('');
+    }
   }
 
   function whatsapp() {
     if (!lead?.phone) return;
-
     const number = cleanPhone(lead.phone).replace('+', '');
-
-    Linking.openURL(`https://wa.me/${number}`);
+    openContactAction('whatsapp', `https://wa.me/${number}`, 'WhatsApp opened');
   }
 
-  if (loading) {
+  function call() {
+    if (!lead?.phone) return;
+    openContactAction('call', `tel:${cleanPhone(lead.phone)}`, 'Phone call opened');
+  }
+
+  function email() {
+    if (!lead?.email) return;
+    openContactAction('email', `mailto:${encodeURIComponent(lead.email)}`, 'Email composer opened');
+  }
+
+  if (loading) return <LoadingState message="Loading lead details…" />;
+  if (loadError)
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#06162D" />
-      </View>
+      <ErrorState
+        title="Lead unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={load}
+        fullScreen
+      />
     );
-  }
 
   if (!connectionId || !lead) {
     return (
@@ -336,6 +416,12 @@ export default function LeadDetailScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           ) : null}
+          {lead.email ? (
+            <TouchableOpacity style={styles.contactButton} onPress={email}>
+              <Ionicons name="mail-outline" size={20} color="#06162D" />
+              <Text style={styles.contactText}>Email</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <Text style={styles.sectionTitle}>LEAD STAGE</Text>
@@ -359,6 +445,61 @@ export default function LeadDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        <Text style={styles.sectionTitle}>OPPORTUNITY</Text>
+        <View style={styles.card}>
+          <Info label="Priority" value={getPriorityLabel(lead.priority)} />
+          <Info label="Lead Source" value={getSourceLabel(lead.source, lead.source_detail)} />
+          <Info
+            label="Created"
+            value={lead.created_at ? new Date(lead.created_at).toLocaleString() : null}
+          />
+          <Text style={styles.label}>Estimated pipeline value</Text>
+          <TextInput
+            value={dealValue}
+            onChangeText={setDealValue}
+            keyboardType="decimal-pad"
+            placeholder="Potential deal amount"
+            placeholderTextColor="#98A2B3"
+            style={styles.input}
+          />
+          <TouchableOpacity style={styles.saveButton} onPress={saveDealValue} disabled={saving}>
+            <Text style={styles.saveText}>Save Estimated Value</Text>
+          </TouchableOpacity>
+          <Text style={styles.revenueHelp}>
+            Estimated value is potential pipeline, not earned revenue. Revenue counts only after a
+            Won stage.
+          </Text>
+          <Text style={styles.label}>Priority</Text>
+          <View style={styles.priorityRow}>
+            {[
+              ['low', 'Low'],
+              ['normal', 'Medium'],
+              ['high', 'High'],
+            ].map(([value, label]) => (
+              <TouchableOpacity
+                key={value}
+                style={[
+                  styles.priorityChip,
+                  (lead.priority || 'normal') === value && styles.priorityChipActive,
+                ]}
+                onPress={() =>
+                  updateOpportunity({ priority: value }, `Priority changed to ${label}`)
+                }
+                disabled={saving}
+              >
+                <Text
+                  style={[
+                    styles.priorityText,
+                    (lead.priority || 'normal') === value && styles.priorityTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         <Text style={styles.sectionTitle}>CONTACT INFORMATION</Text>
 
@@ -397,6 +538,27 @@ export default function LeadDetailScreen({ navigation, route }) {
             style={styles.input}
           />
 
+          <Text style={styles.label}>Priority</Text>
+          <View style={styles.priorityRow}>
+            {[
+              ['low', 'Low'],
+              ['normal', 'Medium'],
+              ['high', 'High'],
+            ].map(([value, label]) => (
+              <TouchableOpacity
+                key={value}
+                style={[styles.priorityChip, taskPriority === value && styles.priorityChipActive]}
+                onPress={() => setTaskPriority(value)}
+              >
+                <Text
+                  style={[styles.priorityText, taskPriority === value && styles.priorityTextActive]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <TouchableOpacity style={styles.saveButton} onPress={addFollowup} disabled={saving}>
             <Ionicons name="calendar-outline" size={19} color="#FFFFFF" />
 
@@ -431,6 +593,7 @@ export default function LeadDetailScreen({ navigation, route }) {
                 {task.due_at ? (
                   <Text style={styles.taskDate}>{new Date(task.due_at).toLocaleDateString()}</Text>
                 ) : null}
+                <Text style={styles.taskDate}>Priority: {getPriorityLabel(task.priority)}</Text>
               </View>
 
               <TouchableOpacity onPress={() => removeTask(task)}>
@@ -617,6 +780,7 @@ const styles = StyleSheet.create({
 
   contactRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginTop: 18,
   },
@@ -859,4 +1023,17 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 5,
   },
+  revenueHelp: { color: '#667085', fontSize: 10, lineHeight: 15, marginTop: 9, marginBottom: 13 },
+  priorityRow: { flexDirection: 'row', gap: 8 },
+  priorityChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+    alignItems: 'center',
+  },
+  priorityChipActive: { backgroundColor: '#06162D', borderColor: '#F6B91A' },
+  priorityText: { color: '#667085', fontSize: 11, fontWeight: '700' },
+  priorityTextActive: { color: '#FFFFFF' },
 });

@@ -30,6 +30,31 @@ export const STAGE_LABELS = {
 
 export const CONNECTION_PAGE_SIZE = 25;
 
+export const PRIORITY_LABELS = { low: 'Low', normal: 'Medium', medium: 'Medium', high: 'High' };
+
+export const SOURCE_LABELS = {
+  public_card: 'Digital Card Enquiry',
+  card_enquiry: 'Digital Card Enquiry',
+  qr: 'QR',
+  qr_code: 'QR',
+  manual: 'Manual',
+  mobile_app: 'Manual',
+  website: 'Website',
+  whatsapp: 'WhatsApp',
+  meta: 'Meta Lead Ad',
+  meta_lead_ad: 'Meta Lead Ad',
+  import: 'Import',
+};
+
+export function getSourceLabel(source, sourceDetail) {
+  const key = String(sourceDetail || source || '').toLowerCase();
+  return SOURCE_LABELS[key] || SOURCE_LABELS[String(source || '').toLowerCase()] || 'Other';
+}
+
+export function getPriorityLabel(priority) {
+  return PRIORITY_LABELS[String(priority || '').toLowerCase()] || 'Medium';
+}
+
 function pageResult(data, page, pageSize) {
   const rows = data || [];
   return { data: rows.slice(0, pageSize), page, pageSize, hasMore: rows.length > pageSize };
@@ -41,6 +66,9 @@ export async function getConnectionsPage({
   pageSize = CONNECTION_PAGE_SIZE,
   search = '',
   stage = 'all',
+  priority = 'all',
+  source = 'all',
+  followup = 'all',
 } = {}) {
   if (!userId) throw new Error('A signed-in user is required.');
 
@@ -53,6 +81,30 @@ export async function getConnectionsPage({
     .order('id', { ascending: false });
 
   if (stage && stage !== 'all') query = query.eq('stage', stage);
+  if (priority && priority !== 'all') {
+    query =
+      priority === 'medium'
+        ? query.in('priority', ['normal', 'medium'])
+        : query.eq('priority', priority);
+  }
+  if (source && source !== 'all') {
+    if (source === 'manual') {
+      query = query.or('source.eq.manual,source.eq.mobile_app,source_detail.eq.manual');
+    } else if (source === 'meta_lead_ad') {
+      query = query.in('source', ['meta', 'meta_lead_ad']);
+    } else if (source === 'public_card') {
+      query = query.in('source', ['public_card', 'card_enquiry']);
+    } else if (source === 'qr') {
+      query = query.in('source', ['qr', 'qr_code']);
+    } else {
+      query = query.eq('source', source);
+    }
+  }
+  const now = new Date().toISOString();
+  if (followup === 'overdue')
+    query = query.not('next_follow_up_at', 'is', null).lt('next_follow_up_at', now);
+  if (followup === 'upcoming') query = query.gte('next_follow_up_at', now);
+  if (followup === 'none') query = query.is('next_follow_up_at', null);
   const term = search.trim().replace(/[,%()]/g, ' ');
   if (term) {
     const pattern = `%${term}%`;
@@ -126,11 +178,13 @@ export async function getAllConnections(userId) {
 
   return data || [];
 }
-export async function getConnection(connectionId) {
+export async function getConnection(userId, connectionId) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { data, error } = await supabase
     .from('connections')
     .select('*')
     .eq('id', connectionId)
+    .eq('owner_user_id', userId)
     .single();
 
   if (error) throw error;
@@ -138,10 +192,12 @@ export async function getConnection(connectionId) {
   return data;
 }
 
-export async function createConnection(cardId, values) {
+export async function createConnection(userId, cardId, values) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { data, error } = await supabase
     .from('connections')
     .insert({
+      owner_user_id: userId,
       card_id: cardId,
       ...values,
     })
@@ -153,7 +209,8 @@ export async function createConnection(cardId, values) {
   return data;
 }
 
-export async function updateConnection(connectionId, values) {
+export async function updateConnection(userId, connectionId, values) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { data, error } = await supabase
     .from('connections')
     .update({
@@ -161,6 +218,7 @@ export async function updateConnection(connectionId, values) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', connectionId)
+    .eq('owner_user_id', userId)
     .select()
     .single();
 
@@ -170,12 +228,14 @@ export async function updateConnection(connectionId, values) {
 }
 
 export async function addLeadActivity(
+  userId,
   connectionId,
   activityType,
   title,
   description = '',
   metadata = {}
 ) {
+  await getConnection(userId, connectionId);
   const { data, error } = await supabase
     .from('lead_activities')
     .insert({
@@ -193,7 +253,8 @@ export async function addLeadActivity(
   return data;
 }
 
-export async function getLeadActivities(connectionId) {
+export async function getLeadActivities(userId, connectionId) {
+  await getConnection(userId, connectionId);
   const { data, error } = await supabase
     .from('lead_activities')
     .select('*')
@@ -202,6 +263,29 @@ export async function getLeadActivities(connectionId) {
 
   if (error) throw error;
 
+  return data || [];
+}
+
+export async function findPossibleDuplicates(userId, { phone = '', email = '' } = {}) {
+  if (!userId) throw new Error('A signed-in user is required.');
+  const normalizedPhone = String(phone).replace(/\D/g, '');
+  const normalizedEmail = String(email)
+    .trim()
+    .toLowerCase()
+    .replace(/[,%()]/g, '');
+  if (!normalizedPhone && !normalizedEmail) return [];
+
+  let query = supabase
+    .from('connections')
+    .select('id,name,phone,email,company,stage')
+    .eq('owner_user_id', userId)
+    .limit(10);
+  const clauses = [];
+  if (normalizedEmail) clauses.push(`email.ilike.${normalizedEmail}`);
+  if (normalizedPhone) clauses.push(`phone.ilike.%${normalizedPhone.slice(-10)}%`);
+  if (clauses.length) query = query.or(clauses.join(','));
+  const { data, error } = await query;
+  if (error) throw error;
   return data || [];
 }
 

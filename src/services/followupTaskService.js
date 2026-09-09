@@ -7,6 +7,7 @@ export async function getFollowupTasksPage({
   page = 0,
   pageSize = FOLLOWUP_PAGE_SIZE,
   status = 'pending',
+  view = 'all',
 } = {}) {
   if (!userId) throw new Error('A signed-in user is required.');
   const from = page * pageSize;
@@ -17,6 +18,16 @@ export async function getFollowupTasksPage({
     .order('due_at', { ascending: true, nullsFirst: false })
     .order('id', { ascending: true });
   if (status && status !== 'all') query = query.eq('status', status);
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  if (view === 'today') {
+    query = query.gte('due_at', now.toISOString()).lt('due_at', startOfTomorrow.toISOString());
+  }
+  if (view === 'upcoming') query = query.gte('due_at', startOfTomorrow.toISOString());
+  if (view === 'overdue') query = query.not('due_at', 'is', null).lt('due_at', now.toISOString());
   const { data, error } = await query.range(from, from + pageSize);
   if (error) throw error;
   const rows = data || [];
@@ -30,20 +41,42 @@ export async function getFollowupTasksPage({
 
 export async function getFollowupSummary(userId) {
   if (!userId) throw new Error('A signed-in user is required.');
-  const now = new Date().toISOString();
   const base = () =>
     supabase
       .from('followup_tasks')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
-  const [total, pending, overdue] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [total, pending, overdue, dueToday, upcoming, completed] = await Promise.all([
     base(),
     base().eq('status', 'pending'),
-    base().eq('status', 'pending').not('due_at', 'is', null).lt('due_at', now),
+    base().eq('status', 'pending').not('due_at', 'is', null).lt('due_at', new Date().toISOString()),
+    base()
+      .eq('status', 'pending')
+      .gte('due_at', new Date().toISOString())
+      .lt('due_at', tomorrow.toISOString()),
+    base().eq('status', 'pending').gte('due_at', tomorrow.toISOString()),
+    base().eq('status', 'completed'),
   ]);
-  const error = total.error || pending.error || overdue.error;
+  const error =
+    total.error ||
+    pending.error ||
+    overdue.error ||
+    dueToday.error ||
+    upcoming.error ||
+    completed.error;
   if (error) throw error;
-  return { total: total.count || 0, pending: pending.count || 0, overdue: overdue.count || 0 };
+  return {
+    total: total.count || 0,
+    pending: pending.count || 0,
+    overdue: overdue.count || 0,
+    dueToday: dueToday.count || 0,
+    upcoming: upcoming.count || 0,
+    completed: completed.count || 0,
+  };
 }
 
 export async function getFollowupTasks(userId) {
@@ -115,7 +148,8 @@ export async function createFollowupTask(userId, connectionId, values) {
   return data;
 }
 
-export async function updateFollowupTask(taskId, values) {
+export async function updateFollowupTask(userId, taskId, values) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { data, error } = await supabase
     .from('followup_tasks')
     .update({
@@ -123,6 +157,7 @@ export async function updateFollowupTask(taskId, values) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', taskId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -133,22 +168,27 @@ export async function updateFollowupTask(taskId, values) {
   return data;
 }
 
-export async function completeFollowupTask(taskId) {
-  return updateFollowupTask(taskId, {
+export async function completeFollowupTask(userId, taskId) {
+  return updateFollowupTask(userId, taskId, {
     status: 'completed',
     completed_at: new Date().toISOString(),
   });
 }
 
-export async function reopenFollowupTask(taskId) {
-  return updateFollowupTask(taskId, {
+export async function reopenFollowupTask(userId, taskId) {
+  return updateFollowupTask(userId, taskId, {
     status: 'pending',
     completed_at: null,
   });
 }
 
-export async function deleteFollowupTask(taskId) {
-  const { error } = await supabase.from('followup_tasks').delete().eq('id', taskId);
+export async function deleteFollowupTask(userId, taskId) {
+  if (!userId) throw new Error('A signed-in user is required.');
+  const { error } = await supabase
+    .from('followup_tasks')
+    .delete()
+    .eq('id', taskId)
+    .eq('user_id', userId);
 
   if (error) {
     throw error;

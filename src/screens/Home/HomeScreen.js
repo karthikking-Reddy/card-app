@@ -30,6 +30,7 @@ import ApprovalStatusBadge, { getApprovalStatusCopy } from '../../components/App
 import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { colors } from '../../theme';
 import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
+import { getCrmDashboardSummary } from '../../services/crmDashboardService';
 
 const COLORS = {
   navy: colors.navy,
@@ -81,6 +82,7 @@ export default function HomeScreen({ navigation }) {
   const [connections, setConnections] = useState([]);
 
   const [totalLeads, setTotalLeads] = useState(0);
+  const [crmSummary, setCrmSummary] = useState({ won: 0, followups: 0, overdue: 0 });
 
   const [notificationCount, setNotificationCount] = useState(0);
 
@@ -143,7 +145,7 @@ export default function HomeScreen({ navigation }) {
         const monthStart = new Date();
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
-        const [eventsResult, leadsResult, leadCountResult] = await Promise.all([
+        const [eventsResult, leadsResult, leadCountResult, crmResult] = await Promise.all([
           supabase
             .from('card_events')
             .select('id,event_type,created_at')
@@ -163,6 +165,7 @@ export default function HomeScreen({ navigation }) {
             .from('connections')
             .select('id', { count: 'exact', head: true })
             .eq('owner_user_id', currentUser.id),
+          getCrmDashboardSummary(currentUser.id),
         ]);
 
         if (eventsResult.error) {
@@ -178,6 +181,7 @@ export default function HomeScreen({ navigation }) {
 
         leadData = leadsResult.data || [];
         setTotalLeads(leadCountResult.count || 0);
+        setCrmSummary(crmResult);
       }
 
       setEvents(eventData);
@@ -666,6 +670,15 @@ export default function HomeScreen({ navigation }) {
                 <Ionicons name="arrow-forward" size={16} color={COLORS.blue} />
               </TouchableOpacity>
             </View>
+            <View style={styles.crmSummaryRow}>
+              <CrmMetric label="FOLLOW-UPS" value={crmSummary.followups} />
+              <CrmMetric
+                label="OVERDUE"
+                value={crmSummary.overdue}
+                danger={crmSummary.overdue > 0}
+              />
+              <CrmMetric label="WON" value={crmSummary.won} />
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -742,6 +755,15 @@ function QuickAction({ icon, label, tone, onPress }) {
 
       <Text style={styles.quickText}>{label}</Text>
     </TouchableOpacity>
+  );
+}
+
+function CrmMetric({ label, value, danger = false }) {
+  return (
+    <View style={styles.crmMetric}>
+      <Text style={[styles.crmMetricValue, danger && styles.crmMetricDanger]}>{value}</Text>
+      <Text style={styles.crmMetricLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -1599,6 +1621,26 @@ const styles = StyleSheet.create({
 
     marginTop: 2,
   },
+
+  crmSummaryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+
+  crmMetric: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    padding: 11,
+    alignItems: 'center',
+  },
+
+  crmMetricValue: { color: COLORS.text, fontSize: 18, fontWeight: '900' },
+  crmMetricDanger: { color: COLORS.red },
+  crmMetricLabel: { color: COLORS.muted, fontSize: 7, fontWeight: '900', marginTop: 3 },
 
   summaryDivider: {
     width: 1,

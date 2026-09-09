@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
 
 import { getCurrentSession } from '../../services/authService';
 
@@ -45,9 +46,11 @@ export default function LeadStagesScreen({ navigation }) {
   const [isLost, setIsLost] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
 
     try {
       const session = await getCurrentSession();
@@ -61,8 +64,8 @@ export default function LeadStagesScreen({ navigation }) {
       const data = await getLeadStages(session.user.id);
 
       setStages(data);
-    } catch (error) {
-      Alert.alert('Unable to load stages', error.message);
+    } catch {
+      setLoadError('We could not load your pipeline stages.');
     } finally {
       setLoading(false);
     }
@@ -111,7 +114,7 @@ export default function LeadStagesScreen({ navigation }) {
 
   async function toggleStage(stage, value) {
     try {
-      await updateLeadStage(stage.id, {
+      await updateLeadStage(user.id, stage.id, {
         is_active: value,
       });
 
@@ -146,7 +149,7 @@ export default function LeadStagesScreen({ navigation }) {
     setStages(updated);
 
     try {
-      const saved = await reorderLeadStages(updated);
+      const saved = await reorderLeadStages(user.id, updated);
 
       setStages(saved);
     } catch (error) {
@@ -168,7 +171,7 @@ export default function LeadStagesScreen({ navigation }) {
 
         onPress: async () => {
           try {
-            await deleteLeadStage(stage.id, stage.stage_key);
+            await deleteLeadStage(user.id, stage.id, stage.stage_key);
 
             await load();
           } catch (error) {
@@ -179,13 +182,17 @@ export default function LeadStagesScreen({ navigation }) {
     ]);
   }
 
-  if (loading) {
+  if (loading) return <LoadingState message="Loading CRM pipeline…" />;
+  if (loadError)
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#06162D" />
-      </View>
+      <ErrorState
+        title="Pipeline unavailable"
+        message={loadError}
+        actionLabel="Try Again"
+        onAction={load}
+        fullScreen
+      />
     );
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -197,7 +204,7 @@ export default function LeadStagesScreen({ navigation }) {
         <Text style={styles.headerTitle}>CRM Stages</Text>
 
         <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Ionicons name="add-circle-outline" size={27} color="#06162D" />
+          <Ionicons name="add-circle-outline" size={27} color="#F6B91A" />
         </TouchableOpacity>
       </View>
 
@@ -206,6 +213,14 @@ export default function LeadStagesScreen({ navigation }) {
           Customize your lead pipeline. These stages will be used by Leads and follow-up workflows.
         </Text>
 
+        {!stages.length ? (
+          <EmptyState
+            title="No pipeline stages"
+            message="Add your first CRM stage to organize leads."
+            actionLabel="Add Stage"
+            onAction={() => setModalVisible(true)}
+          />
+        ) : null}
         {stages.map((stage, index) => (
           <View key={stage.id} style={styles.stage}>
             <View style={styles.order}>

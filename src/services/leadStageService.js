@@ -54,7 +54,8 @@ export async function createLeadStage(userId, values) {
   return data;
 }
 
-export async function updateLeadStage(stageId, values) {
+export async function updateLeadStage(userId, stageId, values) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { data, error } = await supabase
     .from('lead_stages')
     .update({
@@ -62,6 +63,7 @@ export async function updateLeadStage(stageId, values) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', stageId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -72,13 +74,15 @@ export async function updateLeadStage(stageId, values) {
   return data;
 }
 
-export async function deleteLeadStage(stageId, stageKey) {
+export async function deleteLeadStage(userId, stageId, stageKey) {
+  if (!userId) throw new Error('A signed-in user is required.');
   const { count, error: countError } = await supabase
     .from('connections')
     .select('id', {
       count: 'exact',
       head: true,
     })
+    .eq('owner_user_id', userId)
     .eq('stage', stageKey);
 
   if (countError) {
@@ -91,17 +95,21 @@ export async function deleteLeadStage(stageId, stageKey) {
     );
   }
 
-  const { error } = await supabase.from('lead_stages').delete().eq('id', stageId);
+  const { error } = await supabase
+    .from('lead_stages')
+    .delete()
+    .eq('id', stageId)
+    .eq('user_id', userId);
 
   if (error) {
     throw error;
   }
 }
 
-export async function reorderLeadStages(stages) {
+export async function reorderLeadStages(userId, stages) {
   await Promise.all(
     stages.map((stage, index) =>
-      updateLeadStage(stage.id, {
+      updateLeadStage(userId, stage.id, {
         sort_order: index + 1,
       })
     )
