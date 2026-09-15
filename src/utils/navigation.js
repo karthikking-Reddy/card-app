@@ -18,7 +18,11 @@ export function safeGoBack(navigation, options = {}) {
   }
 
   if (options.fallbackRoute) {
-    navigation.navigate(options.fallbackRoute, options.fallbackParams);
+    if (options.replaceFallback && navigation.replace) {
+      navigation.replace(options.fallbackRoute, options.fallbackParams);
+    } else {
+      navigation.navigate(options.fallbackRoute, options.fallbackParams);
+    }
     return;
   }
 

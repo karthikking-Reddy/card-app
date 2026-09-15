@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,12 +18,16 @@ import { getCurrentSession } from '../../services/authService';
 import { getCard, getCardById, updateCard } from '../../services/cardService';
 import { uploadProfileImage, removeProfileImages } from '../../services/storageService';
 import { resetToMainTab, safeGoBack } from '../../utils/navigation';
+import { areCardEditableValuesEqual, getCardEditableValues } from '../../utils/cardEditorState';
 
 export default function CardScreen({ navigation, route }) {
   const [user, setUser] = useState(null);
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const initialValuesRef = useRef(null);
+  const allowNavigationRef = useRef(false);
+  const leavePromptOpenRef = useRef(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -38,6 +42,42 @@ export default function CardScreen({ navigation, route }) {
     industry: '',
     location: '',
   });
+  const isDirty =
+    initialValuesRef.current !== null &&
+    !areCardEditableValuesEqual(initialValuesRef.current, form);
+
+  useEffect(() => {
+    return navigation.addListener('beforeRemove', (event) => {
+      if (!isDirty || allowNavigationRef.current) return;
+
+      event.preventDefault();
+      if (leavePromptOpenRef.current) return;
+      leavePromptOpenRef.current = true;
+
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. If you leave now, your changes will be lost.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              leavePromptOpenRef.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              leavePromptOpenRef.current = false;
+              allowNavigationRef.current = true;
+              navigation.dispatch(event.data.action);
+            },
+          },
+        ]
+      );
+    });
+  }, [isDirty, navigation]);
 
   useEffect(() => {
     load();
@@ -45,6 +85,8 @@ export default function CardScreen({ navigation, route }) {
 
   async function load() {
     try {
+      allowNavigationRef.current = false;
+      initialValuesRef.current = null;
       const session = await getCurrentSession();
 
       if (!session?.user) return;
@@ -55,20 +97,9 @@ export default function CardScreen({ navigation, route }) {
         ? await getCardById(session.user.id, route.params.cardId)
         : await getCard(session.user.id);
       setCard(currentCard);
-
-      setForm({
-        name: currentCard.name || '',
-        designation: currentCard.designation || '',
-        company: currentCard.company || '',
-        phone: currentCard.phone || '',
-        email: currentCard.email || '',
-        website: currentCard.website || '',
-        whatsapp: currentCard.whatsapp || currentCard.phone || '',
-        tagline: currentCard.tagline || '',
-        bio: currentCard.bio || '',
-        industry: currentCard.industry || '',
-        location: currentCard.location || '',
-      });
+      const loadedValues = getCardEditableValues(currentCard);
+      initialValuesRef.current = loadedValues;
+      setForm(loadedValues);
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -109,6 +140,8 @@ export default function CardScreen({ navigation, route }) {
       });
 
       setCard(updated);
+      initialValuesRef.current = getCardEditableValues(updated);
+      allowNavigationRef.current = true;
       resetToMainTab(navigation, 'Home');
       Alert.alert('Saved', 'Your digital card has been updated successfully.');
     } catch (error) {
@@ -187,7 +220,11 @@ export default function CardScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}>
+        <TouchableOpacity
+          onPress={() =>
+            safeGoBack(navigation, { fallbackRoute: 'MyCards', replaceFallback: true })
+          }
+        >
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
