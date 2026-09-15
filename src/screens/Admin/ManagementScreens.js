@@ -20,7 +20,7 @@ import * as service from '../../services/adminManagementService';
 function Frame({ navigation, title, children }) {
   return (
     <SafeAreaView style={s.root}>
-      <AppHeader title={title} navigation={navigation} showBack />
+      <AppHeader title={title} navigation={navigation} showBack fallbackTab="Profile" />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.body}>
         {children}
       </ScrollView>

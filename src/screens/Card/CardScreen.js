@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { getCurrentSession } from '../../services/authService';
 import { getCard, getCardById, updateCard } from '../../services/cardService';
 import { uploadProfileImage, removeProfileImages } from '../../services/storageService';
+import { resetToMainTab, safeGoBack } from '../../utils/navigation';
 
 export default function CardScreen({ navigation, route }) {
   const [user, setUser] = useState(null);
@@ -108,7 +109,7 @@ export default function CardScreen({ navigation, route }) {
       });
 
       setCard(updated);
-
+      resetToMainTab(navigation, 'Home');
       Alert.alert('Saved', 'Your digital card has been updated successfully.');
     } catch (error) {
       Alert.alert('Save failed', error.message);
@@ -186,7 +187,7 @@ export default function CardScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

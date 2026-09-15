@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { getCurrentProfile, isAdminUser } from '../../services/profileService';
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
+import { safeGoBack } from '../../utils/navigation';
 
 export default function AdminCardPreviewScreen({ navigation, route }) {
   const cardId = route.params?.cardId;
@@ -108,7 +109,7 @@ export default function AdminCardPreviewScreen({ navigation, route }) {
 function Header({ navigation }) {
   return (
     <View style={s.header}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
+      <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'AdminApprovals' })}>
         <Ionicons name="arrow-back" size={25} color="#FFF" />
       </TouchableOpacity>
       <View>

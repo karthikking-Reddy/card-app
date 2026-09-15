@@ -14,6 +14,7 @@ import { getCurrentSession } from '../../services/authService';
 import { getCards } from '../../services/cardService';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
+import { safeGoBack } from '../../utils/navigation';
 
 function safeFilePart(value) {
   return (
@@ -42,20 +43,31 @@ export default function QRCentreScreen({ navigation, route }) {
       if (!session?.user) return;
       const items = await getCards(session.user.id);
       setCards(items);
-      const requested = items.find((item) => item.id === route.params?.cardId);
-      setSelectedCard(
-        requested ||
-          items.find((item) => item.id === selectedCard?.id) ||
+      const requestedCardId = route.params?.cardId;
+      if (requestedCardId) {
+        const requested = items.find((item) => item.id === requestedCardId);
+        if (!requested) {
+          setSelectedCard(null);
+          setError('The selected card could not be found. Return to My Cards and try again.');
+          return;
+        }
+        setSelectedCard(requested);
+        return;
+      }
+      setSelectedCard((current) => {
+        return (
+          items.find((item) => item.id === current?.id) ||
           items.find((item) => item.is_primary) ||
           items[0] ||
           null
-      );
+        );
+      });
     } catch {
       setError('We could not load your cards. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
-  }, [route.params?.cardId, selectedCard?.id]);
+  }, [route.params?.cardId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,10 +99,12 @@ export default function QRCentreScreen({ navigation, route }) {
 
   const availability = getCardPublicAvailability(selectedCard);
   const publicUrl = availability.available ? getPublicCardUrl(selectedCard) : null;
+  const unavailableState = getUnavailableState(selectedCard, availability);
 
   function handleUnavailable() {
-    if (availability.code === 'approval') setApprovalVisible(true);
-    else
+    if (['draft', 'pending', 'rejected'].includes(selectedCard?.approval_status)) {
+      setApprovalVisible(true);
+    } else
       Alert.alert('Public sharing unavailable', availability.message, [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -195,7 +209,10 @@ export default function QRCentreScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Go back">
+        <TouchableOpacity
+          onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={25} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
@@ -256,12 +273,16 @@ export default function QRCentreScreen({ navigation, route }) {
           ) : (
             <View style={styles.unavailable}>
               <Ionicons name="lock-closed-outline" size={34} color={colors.goldDark} />
-              <Text style={styles.unavailableTitle}>Public QR unavailable</Text>
-              <Text style={styles.unavailableText}>{availability.message}</Text>
+              <Text style={styles.unavailableTitle}>{unavailableState.title}</Text>
+              <Text style={styles.unavailableText}>{unavailableState.message}</Text>
+              {selectedCard?.approval_status === 'rejected' && selectedCard.rejection_reason ? (
+                <View style={styles.rejectionReason}>
+                  <Text style={styles.rejectionLabel}>Rejection reason:</Text>
+                  <Text style={styles.rejectionText}>{selectedCard.rejection_reason}</Text>
+                </View>
+              ) : null}
               <TouchableOpacity style={styles.resolveButton} onPress={handleUnavailable}>
-                <Text style={styles.resolveText}>
-                  {availability.code === 'approval' ? 'Review Approval' : 'Open Card Settings'}
-                </Text>
+                <Text style={styles.resolveText}>{unavailableState.action}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -319,6 +340,49 @@ function escapeVCard(value) {
     .replace(/\\/g, '\\\\')
     .replace(/\n/g, '\\n')
     .replace(/([,;])/g, '\\$1');
+}
+
+function getUnavailableState(card, availability) {
+  if (card?.approval_status === 'draft') {
+    return {
+      title: 'Card approval required',
+      message: 'Submit this card for administrator approval before sharing its public QR.',
+      action: 'Request Approval',
+    };
+  }
+  if (card?.approval_status === 'pending') {
+    return {
+      title: 'Waiting for approval',
+      message: 'Your card has been submitted and is waiting for administrator approval.',
+      action: 'View Status',
+    };
+  }
+  if (card?.approval_status === 'rejected') {
+    return {
+      title: 'Card needs changes',
+      message: 'Update the requested details, then submit this card for approval again.',
+      action: 'Review & Request Again',
+    };
+  }
+  if (availability.code === 'private') {
+    return {
+      title: 'Public sharing is disabled',
+      message: availability.message,
+      action: 'Open Card Settings',
+    };
+  }
+  if (availability.code === 'inactive') {
+    return {
+      title: 'Card is inactive',
+      message: availability.message,
+      action: 'Open Card Settings',
+    };
+  }
+  return {
+    title: 'Public QR unavailable',
+    message: availability.message,
+    action: availability.code === 'approval' ? 'Review Approval' : 'Open Card Settings',
+  };
 }
 
 const styles = StyleSheet.create({
@@ -394,6 +458,15 @@ const styles = StyleSheet.create({
   },
   unavailableTitle: { ...typography.h3, marginTop: spacing[10] },
   unavailableText: { ...typography.small, textAlign: 'center', marginTop: spacing[6] },
+  rejectionReason: {
+    width: '100%',
+    marginTop: spacing[12],
+    padding: spacing[12],
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSoft,
+  },
+  rejectionLabel: { ...typography.label, color: colors.danger },
+  rejectionText: { ...typography.small, color: colors.danger, marginTop: spacing[4] },
   resolveButton: {
     marginTop: spacing[16],
     backgroundColor: colors.goldSoft,

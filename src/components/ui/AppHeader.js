@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius, typography } from '../../theme';
+import { safeGoBack } from '../../utils/navigation';
 
 export default function AppHeader({
   title,
@@ -12,6 +13,10 @@ export default function AppHeader({
 
   showBack = false,
 
+  fallbackTab = 'Home',
+
+  fallbackRoute,
+
   rightIcon,
 
   onRightPress,
@@ -19,7 +24,10 @@ export default function AppHeader({
   return (
     <View style={styles.header}>
       {showBack ? (
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigation?.goBack()}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => safeGoBack(navigation, { fallbackTab, fallbackRoute })}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
       ) : null}

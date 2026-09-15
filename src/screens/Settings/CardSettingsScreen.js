@@ -20,6 +20,7 @@ import { getCurrentSession } from '../../services/authService';
 
 import { getCard, getCardById, updateCard } from '../../services/cardService';
 import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
+import { safeGoBack } from '../../utils/navigation';
 
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
@@ -143,7 +144,7 @@ export default function CardSettingsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

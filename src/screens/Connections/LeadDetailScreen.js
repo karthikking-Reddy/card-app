@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
 import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
+import { safeGoBack } from '../../utils/navigation';
 
 import {
   addLeadActivity,
@@ -400,7 +401,7 @@ export default function LeadDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Connections' })}>
             <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Lead Detail</Text>
@@ -417,7 +418,7 @@ export default function LeadDetailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Connections' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

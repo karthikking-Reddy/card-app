@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { exportConnectionsCsv } from '../../services/crmExportService';
+import { safeGoBack } from '../../utils/navigation';
 
 export default function CRMExportScreen({ navigation }) {
   const [exporting, setExporting] = useState(false);
@@ -28,7 +29,7 @@ export default function CRMExportScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Connections' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

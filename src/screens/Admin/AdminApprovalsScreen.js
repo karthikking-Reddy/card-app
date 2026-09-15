@@ -22,6 +22,7 @@ import {
   rejectCard,
 } from '../../services/cardApprovalService';
 import { getCurrentProfile, isAdminUser } from '../../services/profileService';
+import { safeGoBack } from '../../utils/navigation';
 
 export default function AdminApprovalsScreen({ navigation }) {
   const [items, setItems] = useState([]),
@@ -207,7 +208,7 @@ export default function AdminApprovalsScreen({ navigation }) {
 function Header({ navigation }) {
   return (
     <View style={s.header}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
+      <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Profile' })}>
         <Ionicons name="arrow-back" size={25} color="#FFF" />
       </TouchableOpacity>
       <View>

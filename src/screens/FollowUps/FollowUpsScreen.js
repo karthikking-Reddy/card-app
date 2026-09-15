@@ -19,6 +19,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/ui/Screen
 
 import { getCurrentSession } from '../../services/authService';
 import { getPriorityLabel } from '../../services/connectionService';
+import { safeGoBack } from '../../utils/navigation';
 
 import {
   completeFollowupTask,
@@ -151,7 +152,7 @@ export default function FollowUpsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Connections' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

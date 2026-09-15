@@ -19,6 +19,7 @@ import {
   deletePortfolioItem,
   getPortfolioItems,
 } from '../../services/portfolioService';
+import { safeGoBack } from '../../utils/navigation';
 
 export default function PortfolioScreen({ navigation, route }) {
   const [card, setCard] = useState(null);
@@ -109,7 +110,7 @@ export default function PortfolioScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

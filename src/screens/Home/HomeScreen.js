@@ -314,25 +314,7 @@ export default function HomeScreen({ navigation }) {
   }
 
   function showQr() {
-    if (!card?.card_slug) {
-      Alert.alert('Card unavailable', 'Create a digital card first.');
-
-      return;
-    }
-
-    if (publicAvailability.code === 'approval') {
-      setApprovalVisible(true);
-      return;
-    }
-    if (!publicAvailability.available) {
-      Alert.alert('QR unavailable', publicAvailability.message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Card Settings', onPress: () => openRoot('CardSettings', { cardId: card.id }) },
-      ]);
-      return;
-    }
-
-    setQrVisible(true);
+    openRoot('QRCentre', card?.id ? { cardId: card.id } : undefined);
   }
 
   if (loading) {
@@ -548,7 +530,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={shareCard}
               />
 
-              <QuickAction icon="qr-code-outline" label="QR Code" tone="green" onPress={showQr} />
+              <QuickAction icon="qr-code-outline" label="QR Centre" tone="green" onPress={showQr} />
 
               <QuickAction
                 icon="people-outline"

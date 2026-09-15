@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import ConnectionStatusBadge from '../../components/business/ConnectionStatusBadge';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { safeGoBack } from '../../utils/navigation';
 
 const MODULES = {
   whatsapp_setup: {
@@ -104,7 +105,10 @@ export default function BusinessModuleScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Go back">
+        <TouchableOpacity
+          onPress={() => safeGoBack(navigation, { fallbackTab: 'Meta' })}
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>

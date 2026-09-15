@@ -18,6 +18,7 @@ import { supabase } from '../../../lib/supabase';
 import { ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { getCurrentProfile, updateCurrentProfileName } from '../../services/profileService';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { safeGoBack } from '../../utils/navigation';
 
 const INFO_MODULES = {
   preferences: {
@@ -204,7 +205,10 @@ function AccountDeletionFoundation({ navigation }) {
 function PageHeader({ navigation, title, subtitle }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Go back">
+      <TouchableOpacity
+        onPress={() => safeGoBack(navigation, { fallbackTab: 'Profile' })}
+        accessibilityLabel="Go back"
+      >
         <Ionicons name="arrow-back" size={24} color={colors.white} />
       </TouchableOpacity>
       <View style={{ flex: 1 }}>

@@ -19,6 +19,7 @@ import { getCurrentSession } from '../../services/authService';
 import { getCard, getCardById } from '../../services/cardService';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
+import { safeGoBack } from '../../utils/navigation';
 
 const THEME_COLORS = {
   standard: [colors.navy, '#0C3157'],
@@ -86,7 +87,10 @@ export default function CardPreviewScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Go back">
+        <TouchableOpacity
+          onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={25} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>

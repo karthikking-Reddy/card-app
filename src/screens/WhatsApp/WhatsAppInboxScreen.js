@@ -26,6 +26,7 @@ import {
 import { findIntegration, getIntegrationStatus } from '../../services/integrationService';
 import ConnectionStatusBadge from '../../components/business/ConnectionStatusBadge';
 import { EmptyState, LoadingState } from '../../components/ui/ScreenState';
+import { safeGoBack } from '../../utils/navigation';
 
 export default function WhatsAppInboxScreen({ navigation }) {
   const requestIdRef = useRef(0);
@@ -112,7 +113,7 @@ export default function WhatsAppInboxScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Meta' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useFocusEffect } from '@react-navigation/native';
+import { safeGoBack } from '../../utils/navigation';
 
 import {
   getWhatsAppMessagesPage,
@@ -250,7 +251,7 @@ export default function WhatsAppChatScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Meta' })}>
             <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.contactName}>WhatsApp Chat</Text>
@@ -268,7 +269,7 @@ export default function WhatsAppChatScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Meta' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

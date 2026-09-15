@@ -22,6 +22,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getCurrentSession } from '../../services/authService';
 
 import { getCards } from '../../services/cardService';
+import { safeGoBack } from '../../utils/navigation';
 
 import {
   BLOCK_LIBRARY,
@@ -338,7 +339,7 @@ export default function BlockBuilderScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

@@ -26,6 +26,7 @@ import { createCard, deleteCard, getCards, setPrimaryCard } from '../../services
 
 import ApprovalStatusBadge from '../../components/ApprovalStatusBadge';
 import ApprovalRequiredModal from '../../components/ApprovalRequiredModal';
+import { safeGoBack } from '../../utils/navigation';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/ScreenState';
 import { getCardPublicAvailability, getPublicCardUrl } from '../../utils/cardPublicAccess';
 
@@ -201,7 +202,7 @@ export default function MyCardsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackTab: 'Home' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 

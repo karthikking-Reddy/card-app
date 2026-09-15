@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getCurrentSession } from '../../services/authService';
 import { getCard, getCardById } from '../../services/cardService';
 import { ensureDefaultLinks, updateCardLink } from '../../services/linkService';
+import { safeGoBack } from '../../utils/navigation';
 
 const TYPES = [
   ['whatsapp', 'WhatsApp', 'logo-whatsapp'],
@@ -116,7 +117,7 @@ export default function SocialLinksScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, { fallbackRoute: 'MyCards' })}>
           <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
         </TouchableOpacity>
 
