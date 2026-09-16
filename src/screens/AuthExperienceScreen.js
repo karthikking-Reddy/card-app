@@ -3,6 +3,7 @@ import {
   AccessibilityInfo,
   Alert,
   Animated,
+  ActivityIndicator,
   Easing,
   KeyboardAvoidingView,
   Platform,
@@ -11,19 +12,21 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import Svg, { Path } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import AnimatedAuthButton from '../components/auth/AnimatedAuthButton';
 import AuthBrandHeader from '../components/auth/AuthBrandHeader';
-import AppButton from '../components/ui/AppButton';
 import { colors, radius, shadows, typography } from '../theme';
 import { signInWithGoogle } from '../services/googleAuthService';
 
 export default function AuthExperienceScreen({ authSuccess = false }) {
+  const { height: viewportHeight } = useWindowDimensions();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -279,7 +282,10 @@ export default function AuthExperienceScreen({ authSuccess = false }) {
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingTop: getLoginTopOffset(viewportHeight) },
+              ]}
             >
               <Animated.View
                 style={[
@@ -386,14 +392,10 @@ export default function AuthExperienceScreen({ authSuccess = false }) {
                       <Text style={styles.orText}>OR CONTINUE WITH</Text>
                       <View style={styles.orLine} />
                     </View>
-                    <AppButton
-                      title="Continue with Google"
-                      icon="logo-google"
-                      variant="secondary"
+                    <GoogleButton
                       loading={loading}
                       disabled={modeSwitching || authSuccess}
                       onPress={socialLogin}
-                      accessibilityLabel="Continue with Google"
                     />
                     <TouchableOpacity
                       onPress={() => switchMode(isSignup ? 'login' : 'signup', true)}
@@ -506,8 +508,59 @@ function TrustItem({ icon, title, subtitle }) {
   );
 }
 
+function GoogleButton({ loading, disabled, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.googleButton, disabled && styles.googleButtonDisabled]}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.72}
+      accessibilityRole="button"
+      accessibilityLabel="Continue with Google"
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.navy} />
+      ) : (
+        <>
+          <GoogleGIcon />
+          <Text style={styles.googleButtonText}>Continue with Google</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function GoogleGIcon() {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" accessibilityLabel="Google">
+      <Path
+        fill="#4285F4"
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.4Z"
+      />
+      <Path
+        fill="#34A853"
+        d="M12 22c2.7 0 4.97-.9 6.62-2.37l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M6.39 13.92A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.31-1.92V7.46H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.54l3.35-2.62Z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M12 5.95c1.47 0 2.79.51 3.83 1.5l2.87-2.88A9.64 9.64 0 0 0 12 2a10 10 0 0 0-8.96 5.46l3.35 2.62C7.18 7.71 9.39 5.95 12 5.95Z"
+      />
+    </Svg>
+  );
+}
+
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function getLoginTopOffset(viewportHeight) {
+  const responsiveOffset = 202 + (viewportHeight - 800) * 0.27;
+  return Math.round(Math.min(234, Math.max(185, responsiveOffset)));
 }
 
 function getFriendlyError(error) {
@@ -533,16 +586,15 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 202,
-    paddingBottom: 14,
+    paddingBottom: 4,
   },
   sheet: {
-    marginHorizontal: 12,
+    marginHorizontal: 11,
     backgroundColor: colors.white,
     borderRadius: 22,
-    paddingHorizontal: 19,
-    paddingTop: 20,
-    paddingBottom: 19,
+    paddingHorizontal: 18,
+    paddingTop: 17,
+    paddingBottom: 15,
     ...shadows.medium,
   },
   securityBadge: {
@@ -552,19 +604,34 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: colors.goldSoft,
     paddingHorizontal: 15,
-    paddingVertical: 9,
+    paddingVertical: 8,
     borderRadius: radius.round,
   },
-  securityText: { ...typography.label, color: '#55421F', fontSize: 10 },
-  heading: { ...typography.display, textAlign: 'center', marginTop: 13 },
-  headingSubtitle: { ...typography.small, textAlign: 'center', marginTop: 4, paddingHorizontal: 8 },
-  form: { marginTop: 12 },
+  securityText: { ...typography.label, color: '#55421F', fontSize: 9.5 },
+  heading: {
+    ...typography.display,
+    color: colors.navy,
+    fontSize: 29,
+    lineHeight: 36,
+    textAlign: 'center',
+    marginTop: 9,
+  },
+  headingSubtitle: {
+    ...typography.small,
+    color: colors.navySoft,
+    textAlign: 'center',
+    marginTop: 2,
+    paddingHorizontal: 8,
+  },
+  form: { marginTop: 8 },
   fieldLabel: {
     ...typography.label,
-    color: '#475467',
-    fontSize: 10,
-    marginBottom: 7,
-    marginTop: 8,
+    color: colors.navy,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    marginTop: 7,
   },
   passwordLabelRow: {
     flexDirection: 'row',
@@ -572,15 +639,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginTop: 2,
   },
-  forgotText: { color: colors.blue, fontSize: 10, fontWeight: '700', marginBottom: 7 },
+  forgotText: { color: colors.blue, fontSize: 10, fontWeight: '700', marginBottom: 6 },
   inputShell: {
-    minHeight: 54,
+    minHeight: 49,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderColor: '#DDE2EA',
+    borderRadius: 13,
     overflow: 'hidden',
   },
   inputShellError: {
@@ -588,38 +655,56 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   inputIconBox: {
-    width: 51,
-    minHeight: 53,
+    width: 45,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceSoft,
+    backgroundColor: 'transparent',
   },
-  inputIconBoxError: { backgroundColor: colors.dangerSoft },
-  input: { flex: 1, minHeight: 52, color: colors.text, fontSize: 13, paddingHorizontal: 13 },
-  eyeButton: { width: 49, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  inputIconBoxError: { backgroundColor: 'transparent' },
+  input: { flex: 1, minHeight: 47, color: colors.navy, fontSize: 13, paddingHorizontal: 8 },
+  eyeButton: { width: 45, minHeight: 47, alignItems: 'center', justifyContent: 'center' },
   inlineError: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 7,
+    marginTop: 6,
     paddingHorizontal: 2,
   },
   inlineErrorText: { color: colors.danger, fontSize: 11, lineHeight: 16, fontWeight: '700' },
-  orRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 14 },
-  orLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  orRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 10 },
+  orLine: { flex: 1, height: 1, backgroundColor: '#EEF0F4' },
   orText: {
     ...typography.caption,
-    color: colors.textSecondary,
-    fontSize: 9,
+    color: colors.textMuted,
+    fontSize: 8.5,
     fontWeight: '700',
     marginHorizontal: 10,
+  },
+  googleButton: {
+    width: '100%',
+    minHeight: 49,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  googleButtonDisabled: { opacity: 0.62 },
+  googleButtonText: {
+    ...typography.button,
+    color: colors.navy,
+    fontSize: 13.5,
   },
   createAccountRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 13,
-    minHeight: 28,
+    marginTop: 8,
+    minHeight: 26,
   },
   createAccountMuted: { ...typography.small, fontSize: 11 },
   createAccountGold: {
@@ -629,9 +714,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   trustBar: {
-    marginTop: 8,
+    marginTop: 3,
     marginHorizontal: 13,
-    minHeight: 60,
+    minHeight: 58,
     paddingHorizontal: 4,
     flexDirection: 'row',
     alignItems: 'center',
@@ -644,7 +729,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trustTitle: { color: colors.text, fontSize: 8, fontWeight: '800' },
+  trustTitle: { color: colors.navy, fontSize: 8, fontWeight: '800' },
   trustSubtitle: { color: colors.textSecondary, fontSize: 7, marginTop: 1 },
   trustDivider: { width: 1, height: 32, backgroundColor: colors.border, marginHorizontal: 6 },
 });
